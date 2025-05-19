@@ -1,0 +1,6 @@
+@Travelogue.API_HostAddress = http://localhost:5070
+
+GET {{Travelogue.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
