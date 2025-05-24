@@ -39,13 +39,13 @@ public class RoleController : ControllerBase
 
     [HttpGet("search-paged")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetPagedHotelWithSearch(int pageNumber = 1, int pageSize = 10, string name = "")
+    public async Task<IActionResult> GetPagedCraftVillageWithSearch(int pageNumber = 1, int pageSize = 10, string name = "")
     {
-        var hotels = await _roleService.GetPagedRolesWithSearchAsync(pageNumber, pageSize, name, new CancellationToken());
+        var craftVillages = await _roleService.GetPagedRolesWithSearchAsync(pageNumber, pageSize, name, new CancellationToken());
         return Ok(PagedResponseModel<object>.OkResponseModel(
-            data: hotels.Items,
+            data: craftVillages.Items,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "role"),
-            totalCount: hotels.TotalCount,
+            totalCount: craftVillages.TotalCount,
             pageSize: pageSize,
             pageNumber: pageNumber
         ));

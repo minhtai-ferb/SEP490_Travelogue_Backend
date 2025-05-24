@@ -8,8 +8,8 @@ public sealed class FavoriteLocation : BaseEntity
     public Guid LocationId { get; set; }
 
     [ForeignKey("UserId")]
-    public User User { get; set; }
+    public User? User { get; set; }
 
     [ForeignKey("LocationId")]
-    public Location Location { get; set; }
+    public Location? Location { get; set; }
 }

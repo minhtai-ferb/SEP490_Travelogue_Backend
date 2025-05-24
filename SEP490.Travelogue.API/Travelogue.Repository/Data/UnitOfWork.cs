@@ -23,8 +23,8 @@ public class UnitOfWork : IUnitOfWork
     private IPasswordResetTokenRepository _passwordResetTokenRepository = null!;
     private ILocationRepository _locationRepository = null!;
     private IFavoriteLocationRepository _favoriteLocationRepository = null!;
-    private ILocationRestaurantSuggestionRepository _locationRestaurantSuggestionRepository = null!;
-    private ILocationHotelSuggestionRepository _locationHotelSuggestionRepository = null!;
+    private ILocationCuisineSuggestionRepository _locationCuisineSuggestionRepository = null!;
+    private ILocationCraftVillageSuggestionRepository _locationCraftVillageSuggestionRepository = null!;
     private ITypeLocationRepository _typeLocationRepository = null!;
     private IExperienceRepository _experienceRepository = null!;
     private IEventRepository _activityRepository = null!;
@@ -32,8 +32,11 @@ public class UnitOfWork : IUnitOfWork
     private ITypeExperienceRepository _typeExperienceRepository = null!;
     private IHotelRepository _hotelRepository = null!;
     private IHotelMediaRepository _hotelMediaRepository = null!;
-    private IRestaurantRepository _restaurantRepository = null!;
-    private IRestaurantMediaRepository _restaurantMediaRepository = null!;
+    private ILocationHotelSuggestionRepository _locationHotelSuggestionRepository = null!;
+    private ICraftVillageRepository _craftVillageRepository = null!;
+    private ICraftVillageMediaRepository _craftVillageMediaRepository = null!;
+    private ICuisineRepository _cuisineRepository = null!;
+    private ICuisineMediaRepository _cuisineMediaRepository = null!;
     private IMediaRepository _mediaRepository = null!;
     private IDistrictRepository _districtRepository = null!;
     private INewsRepository _newsRepository = null!;
@@ -58,15 +61,19 @@ public class UnitOfWork : IUnitOfWork
     {
         get { return _favoriteLocationRepository ??= new FavoriteLocationRepository(_dbContext); }
     }
-
     public IHotelMediaRepository HotelMediaRepository
     {
         get { return _hotelMediaRepository ??= new HotelMediaRepository(_dbContext); }
     }
 
-    public IRestaurantMediaRepository RestaurantMediaRepository
+    public ICraftVillageMediaRepository CraftVillageMediaRepository
     {
-        get { return _restaurantMediaRepository ??= new RestaurantMediaRepository(_dbContext); }
+        get { return _craftVillageMediaRepository ??= new CraftVillageMediaRepository(_dbContext); }
+    }
+
+    public ICuisineMediaRepository CuisineMediaRepository
+    {
+        get { return _cuisineMediaRepository ??= new CuisineMediaRepository(_dbContext); }
     }
 
     public IDistrictMediaRepository DistrictMediaRepository
@@ -96,9 +103,13 @@ public class UnitOfWork : IUnitOfWork
     {
         get { return _hotelRepository ??= new HotelRepository(_dbContext); }
     }
-    public IRestaurantRepository RestaurantRepository
+    public ICraftVillageRepository CraftVillageRepository
     {
-        get { return _restaurantRepository ??= new RestaurantRepository(_dbContext); }
+        get { return _craftVillageRepository ??= new CraftVillageRepository(_dbContext); }
+    }
+    public ICuisineRepository CuisineRepository
+    {
+        get { return _cuisineRepository ??= new CuisineRepository(_dbContext); }
     }
     public IMediaRepository MediaRepository
     {
@@ -130,9 +141,14 @@ public class UnitOfWork : IUnitOfWork
         get { return _locationHotelSuggestionRepository ??= new LocationHotelSuggestionRepository(_dbContext); }
     }
 
-    public ILocationRestaurantSuggestionRepository LocationRestaurantSuggestionRepository
+    public ILocationCraftVillageSuggestionRepository LocationCraftVillageSuggestionRepository
     {
-        get { return _locationRestaurantSuggestionRepository ??= new LocationRestaurantSuggestionRepository(_dbContext); }
+        get { return _locationCraftVillageSuggestionRepository ??= new LocationCraftVillageSuggestionRepository(_dbContext); }
+    }
+
+    public ILocationCuisineSuggestionRepository LocationCuisineSuggestionRepository
+    {
+        get { return _locationCuisineSuggestionRepository ??= new LocationCuisineSuggestionRepository(_dbContext); }
     }
 
     public IPasswordResetTokenRepository PasswordResetTokenRepository

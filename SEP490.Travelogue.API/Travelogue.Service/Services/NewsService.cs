@@ -27,7 +27,7 @@ public interface INewsService
     Task<NewsMediaResponse> AddNewsWithMediaAsync(NewsCreateWithMediaFileModel newsCreateModel, string? thumbnailSelected, CancellationToken cancellationToken);
     Task UpdateNewsAsync(Guid id, NewsUpdateWithMediaFileModel newsUpdateModel, string? thumbnailSelected, CancellationToken cancellationToken);
     Task<bool> DeleteMediaAsync(Guid id, List<string> deletedImages, CancellationToken cancellationToken);
-    //Task<HotelMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
+    //Task<CraftVillageMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
     Task<NewsMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
     Task<NewsMediaResponse> UploadMediaAsync(
         Guid id,

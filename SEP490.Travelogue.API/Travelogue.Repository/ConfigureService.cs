@@ -20,8 +20,8 @@ public static class ConfigureService
         //services.AddScoped<ILocationRepository, LocationRepository>();
         //services.AddScoped<IExperienceRepository, ExperienceRepository>();
         //services.AddScoped<IEventRepository, EventRepository>();
-        //services.AddScoped<IHotelRepository, HotelRepository>();
-        //services.AddScoped<IRestaurantRepository, RestaurantRepository>();
+        //services.AddScoped<ICraftVillageRepository, CraftVillageRepository>();
+        //services.AddScoped<ICuisineRepository, CuisineRepository>();
         //services.AddScoped<IMediaRepository, MediaRepository>();
         //services.AddScoped<IDistrictRepository, DistrictRepository>();
         //services.AddScoped<INewsRepository, NewsRepository>();

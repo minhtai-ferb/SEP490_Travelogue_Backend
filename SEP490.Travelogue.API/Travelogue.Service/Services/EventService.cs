@@ -175,7 +175,6 @@ public class EventService : IEventService
                 .Where(em => events.Select(e => e.Id).Contains(em.EventId))
                 .ToListAsync(cancellationToken);
 
-
             // Ánh xạ sự kiện sang EventDataModel
             var eventDataModels = _mapper.Map<List<EventDataModel>>(events);
 

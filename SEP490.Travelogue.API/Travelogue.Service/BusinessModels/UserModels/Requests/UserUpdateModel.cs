@@ -1,6 +1,4 @@
-﻿using Travelogue.Repository.Entities.Enums;
-
-namespace Travelogue.Service.BusinessModels.UserModels.Requests;
+﻿namespace Travelogue.Service.BusinessModels.UserModels.Requests;
 public class UserUpdateModel
 {
     public string? PhoneNumber { get; set; }

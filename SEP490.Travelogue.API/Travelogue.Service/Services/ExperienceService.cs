@@ -7,7 +7,6 @@ using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Service.BusinessModels.ExperienceModels;
-using Travelogue.Service.BusinessModels.HotelModels;
 using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.Commons.Helpers;
 using Travelogue.Service.Commons.Implementations;

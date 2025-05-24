@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Travelogue.Repository.Bases.Responses;
 using Travelogue.Service.BusinessModels.ExperienceModels;
-using Travelogue.Service.BusinessModels.LocationModels;
 using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 

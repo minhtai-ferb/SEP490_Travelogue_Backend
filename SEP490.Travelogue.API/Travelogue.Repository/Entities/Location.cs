@@ -29,6 +29,10 @@ public sealed class Location : BaseEntity
     public ICollection<Experience>? Experiences { get; set; }
     public ICollection<Event>? Activities { get; set; }
     public ICollection<LocationMedia>? LocationMedias { get; set; }
-    public ICollection<LocationHotelSuggestion> LocationHotelSuggestions { get; set; } = new List<LocationHotelSuggestion>();
+    public ICollection<LocationCraftVillageSuggestion> LocationCraftVillageSuggestions { get; set; } = new List<LocationCraftVillageSuggestion>();
+    public ICollection<LocationCuisineSuggestion> LocationCuisineSuggestions { get; set; } = new List<LocationCuisineSuggestion>();
+    public ICollection<TripPlanLocation> TripPlanLocations { get; set; } = new List<TripPlanLocation>();
     public ICollection<FavoriteLocation> FavoriteLocations { get; set; } = new List<FavoriteLocation>();
+    public ICollection<LocationInterest> LocationInterests { get; set; } = new List<LocationInterest>();
+    public ICollection<TourPlan> TourPlans { get; set; } = new List<TourPlan>();
 }

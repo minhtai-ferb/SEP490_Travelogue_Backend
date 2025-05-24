@@ -63,8 +63,8 @@ public static class ConfigureService
         //services.AddScoped<IExperienceService, ExperienceService>();
         //services.AddScoped<IEventService, EventService>();
         //services.AddScoped<ITypeEventService, TypeEventService>();
-        //services.AddScoped<IHotelService, HotelService>();
-        //services.AddScoped<IRestaurantService, RestaurantService>();
+        //services.AddScoped<ICraftVillageService, CraftVillageService>();
+        //services.AddScoped<ICuisineService, CuisineService>();
         //services.AddScoped<IDistrictService, DistrictService>();
     }
 }

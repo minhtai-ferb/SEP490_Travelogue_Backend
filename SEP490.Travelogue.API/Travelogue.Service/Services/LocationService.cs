@@ -27,13 +27,13 @@ public interface ILocationService
     //Task<PagedResult<LocationDataModel>> GetPagedLocationsWithSearchAsync(int pageNumber, int pageSize, string title, CancellationToken cancellationToken);
     Task<PagedResult<LocationDataModel>> GetPagedLocationsWithSearchAsync(string? title, Guid? typeId, Guid? districtId, HeritageRank? heritageRank, int pageNumber, int pageSize, CancellationToken cancellationToken);
     //Task<PagedResult<LocationDataModel>> GetPagedLocationsWithSearchAsync(int pageNumber, int pageSize, string title, Guid typeId, CancellationToken cancellationToken);
-    Task<bool> UpdateRecommendedHotelsAsync(Guid locationId, List<Guid> hotelIds, CancellationToken cancellationToken);
-    Task<bool> AddRecommendedHotelsAsync(Guid locationId, List<Guid> hotelIds, CancellationToken cancellationToken);
-    Task<LocationHotelSuggestionDataResponse> GetRecommendedHotelsAsync(Guid locationId, CancellationToken cancellationToken);
+    Task<bool> UpdateRecommendedCraftVillagesAsync(Guid locationId, List<Guid> craftVillageIds, CancellationToken cancellationToken);
+    Task<bool> AddRecommendedCraftVillagesAsync(Guid locationId, List<Guid> craftVillageIds, CancellationToken cancellationToken);
+    Task<LocationCraftVillageSuggestionDataResponse> GetRecommendedCraftVillagesAsync(Guid locationId, CancellationToken cancellationToken);
 
-    Task<bool> UpdateRecommendedRestaurantsAsync(Guid locationId, List<Guid> restaurantIds, CancellationToken cancellationToken);
-    Task<bool> AddRecommendedRestaurantsAsync(Guid locationId, List<Guid> restaurantIds, CancellationToken cancellationToken);
-    Task<LocationRestaurantSuggestionDataResponse> GetRecommendedRestaurantsAsync(Guid locationId, CancellationToken cancellationToken);
+    Task<bool> UpdateRecommendedCuisinesAsync(Guid locationId, List<Guid> cuisineIds, CancellationToken cancellationToken);
+    Task<bool> AddRecommendedCuisinesAsync(Guid locationId, List<Guid> cuisineIds, CancellationToken cancellationToken);
+    Task<LocationCuisineSuggestionDataResponse> GetRecommendedCuisinesAsync(Guid locationId, CancellationToken cancellationToken);
 
     Task<PagedResult<LocationDataModel>> GetFavoriteLocationsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task AddFavoriteLocationAsync(Guid locationId, CancellationToken cancellationToken);
@@ -140,17 +140,17 @@ public class LocationService : ILocationService
                 await _unitOfWork.NewsRepository.ActiveEntities.FirstOrDefaultAsync(e => e.LocationId == id, cancellationToken) != null;
 
             // xóa các trường recomment nếu location bị xóa
-            await _unitOfWork.LocationHotelSuggestionRepository.ActiveEntities
+            await _unitOfWork.LocationCraftVillageSuggestionRepository.ActiveEntities
                 .Where(s => s.LocationId == id)
                 .ForEachAsync(s => s.IsDeleted = true, cancellationToken);
             //    .ToListAsync(cancellationToken);
-            //existingHotelSuggestions.ForEach(s => s.IsDeleted = true);
+            //existingCraftVillageSuggestions.ForEach(s => s.IsDeleted = true);
 
-            await _unitOfWork.LocationRestaurantSuggestionRepository.ActiveEntities
+            await _unitOfWork.LocationCuisineSuggestionRepository.ActiveEntities
                 .Where(s => s.LocationId == id)
                 .ForEachAsync(s => s.IsDeleted = true, cancellationToken);
             //    .ToListAsync(cancellationToken);
-            //existingRestaurantSuggestions.ForEach(s => s.IsDeleted = true);
+            //existingCuisineSuggestions.ForEach(s => s.IsDeleted = true);
 
             if (isInUsing)
             {
@@ -676,7 +676,7 @@ public class LocationService : ILocationService
         }
     }
 
-    public async Task<LocationHotelSuggestionDataResponse> GetRecommendedHotelsAsync(Guid locationId, CancellationToken cancellationToken)
+    public async Task<LocationCraftVillageSuggestionDataResponse> GetRecommendedCraftVillagesAsync(Guid locationId, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
@@ -687,26 +687,26 @@ public class LocationService : ILocationService
                 throw CustomExceptionFactory.CreateNotFoundError("location");
             }
 
-            var hotelsData = await _unitOfWork.LocationHotelSuggestionRepository
+            var craftVillagesData = await _unitOfWork.LocationCraftVillageSuggestionRepository
                 .ActiveEntities
                 .Where(h => h.LocationId == locationId && !h.IsDeleted)
                 .Select(h => new
                 {
-                    h.HotelId,
-                    h.Hotel.Name,
-                    h.Hotel.Description,
-                    h.Hotel.Address
+                    h.CraftVillageId,
+                    h.CraftVillage.Name,
+                    h.CraftVillage.Description,
+                    h.CraftVillage.Address
                 })
                 .ToListAsync(cancellationToken);
 
-            var hotelIds = hotelsData.Select(h => h.HotelId).ToList();
+            var craftVillageIds = craftVillagesData.Select(h => h.CraftVillageId).ToList();
 
-            var hotelMedias = await _unitOfWork.HotelMediaRepository
+            var craftVillageMedias = await _unitOfWork.CraftVillageMediaRepository
                 .ActiveEntities
-                .Where(m => hotelIds.Contains(m.HotelId))
+                .Where(m => craftVillageIds.Contains(m.CraftVillageId))
                 .Select(m => new
                 {
-                    m.HotelId,
+                    m.CraftVillageId,
                     Media = new MediaResponse
                     {
                         MediaUrl = m.MediaUrl,
@@ -718,24 +718,24 @@ public class LocationService : ILocationService
                 })
                 .ToListAsync(cancellationToken);
 
-            var mediaLookup = hotelMedias.ToLookup(m => m.HotelId, m => m.Media);
+            var mediaLookup = craftVillageMedias.ToLookup(m => m.CraftVillageId, m => m.Media);
 
-            var hotels = hotelsData.Select(data => new HotelResponse
+            var craftVillages = craftVillagesData.Select(data => new CraftVillageResponse
             {
-                Id = data.HotelId,
+                Id = data.CraftVillageId,
                 Name = data.Name,
                 Description = data.Description ?? string.Empty,
                 Address = data.Address ?? string.Empty,
-                Medias = mediaLookup[data.HotelId].ToList()
+                Medias = mediaLookup[data.CraftVillageId].ToList()
             }).ToList();
 
             await transaction.CommitAsync(cancellationToken);
 
-            return new LocationHotelSuggestionDataResponse
+            return new LocationCraftVillageSuggestionDataResponse
             {
                 LocationId = existingLocation.Id,
                 LocationName = existingLocation.Name,
-                RecommendedHotels = hotels
+                RecommendedCraftVillages = craftVillages
             };
         }
         catch (CustomException)
@@ -750,7 +750,7 @@ public class LocationService : ILocationService
         }
     }
 
-    public async Task<bool> AddRecommendedHotelsAsync(Guid locationId, List<Guid> hotelIds, CancellationToken cancellationToken)
+    public async Task<bool> AddRecommendedCraftVillagesAsync(Guid locationId, List<Guid> craftVillageIds, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
@@ -764,34 +764,34 @@ public class LocationService : ILocationService
                 throw CustomExceptionFactory.CreateNotFoundError("location");
             }
 
-            // lấy hotel suggestion  
-            var existingHotels = _unitOfWork.LocationHotelSuggestionRepository
+            // lấy craftVillage suggestion  
+            var existingCraftVillages = _unitOfWork.LocationCraftVillageSuggestionRepository
                 .Entities
                 .Where(lh => lh.LocationId == locationId)
                 .ToList();
 
-            var newRecommendations = new List<LocationHotelSuggestion>();
+            var newRecommendations = new List<LocationCraftVillageSuggestion>();
 
-            foreach (var hotelId in hotelIds)
+            foreach (var craftVillageId in craftVillageIds)
             {
-                var existingHotel = existingHotels.FirstOrDefault(lh => lh.HotelId == hotelId);
-                if (existingHotel != null)
+                var existingCraftVillage = existingCraftVillages.FirstOrDefault(lh => lh.CraftVillageId == craftVillageId);
+                if (existingCraftVillage != null)
                 {
-                    if (existingHotel.IsDeleted)
+                    if (existingCraftVillage.IsDeleted)
                     {
-                        existingHotel.IsDeleted = false;
-                        existingHotel.LastUpdatedBy = currentUserId;
-                        existingHotel.LastUpdatedTime = currentTime;
-                        _unitOfWork.LocationHotelSuggestionRepository.Update(existingHotel);
+                        existingCraftVillage.IsDeleted = false;
+                        existingCraftVillage.LastUpdatedBy = currentUserId;
+                        existingCraftVillage.LastUpdatedTime = currentTime;
+                        _unitOfWork.LocationCraftVillageSuggestionRepository.Update(existingCraftVillage);
                     }
                 }
                 else
                 {
-                    newRecommendations.Add(new LocationHotelSuggestion
+                    newRecommendations.Add(new LocationCraftVillageSuggestion
                     {
                         Id = Guid.NewGuid(),
                         LocationId = locationId,
-                        HotelId = hotelId,
+                        CraftVillageId = craftVillageId,
                         CreatedBy = currentUserId,
                         CreatedTime = currentTime,
                         IsDeleted = false
@@ -801,7 +801,7 @@ public class LocationService : ILocationService
 
             if (newRecommendations.Count != 0)
             {
-                await _unitOfWork.LocationHotelSuggestionRepository.AddRangeAsync(newRecommendations, cancellationToken);
+                await _unitOfWork.LocationCraftVillageSuggestionRepository.AddRangeAsync(newRecommendations, cancellationToken);
             }
 
             await _unitOfWork.SaveAsync();
@@ -821,7 +821,7 @@ public class LocationService : ILocationService
         }
     }
 
-    public async Task<bool> UpdateRecommendedHotelsAsync(Guid locationId, List<Guid> hotelIds, CancellationToken cancellationToken)
+    public async Task<bool> UpdateRecommendedCraftVillagesAsync(Guid locationId, List<Guid> craftVillageIds, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
@@ -835,16 +835,16 @@ public class LocationService : ILocationService
                 throw CustomExceptionFactory.CreateNotFoundError("location");
             }
 
-            var existingLinks = _unitOfWork.LocationHotelSuggestionRepository.Entities
+            var existingLinks = _unitOfWork.LocationCraftVillageSuggestionRepository.Entities
                 .Where(lh => lh.LocationId == locationId)
                 .ToList();
 
-            var hotelsToUpdate = new HashSet<Guid>(hotelIds);
-            var updatedRecords = new List<LocationHotelSuggestion>();
+            var craftVillagesToUpdate = new HashSet<Guid>(craftVillageIds);
+            var updatedRecords = new List<LocationCraftVillageSuggestion>();
 
             foreach (var link in existingLinks)
             {
-                if (hotelsToUpdate.Contains(link.HotelId))
+                if (craftVillagesToUpdate.Contains(link.CraftVillageId))
                 {
                     if (link.IsDeleted)
                     {
@@ -853,7 +853,7 @@ public class LocationService : ILocationService
                         link.LastUpdatedTime = currentTime;
                         updatedRecords.Add(link);
                     }
-                    hotelsToUpdate.Remove(link.HotelId);
+                    craftVillagesToUpdate.Remove(link.CraftVillageId);
                 }
                 else
                 {
@@ -864,24 +864,24 @@ public class LocationService : ILocationService
                 }
             }
 
-            if (hotelsToUpdate.Count != 0)
+            if (craftVillagesToUpdate.Count != 0)
             {
-                var newRecommendations = hotelsToUpdate.Select(hotelId => new LocationHotelSuggestion
+                var newRecommendations = craftVillagesToUpdate.Select(craftVillageId => new LocationCraftVillageSuggestion
                 {
                     Id = Guid.NewGuid(),
                     LocationId = locationId,
-                    HotelId = hotelId,
+                    CraftVillageId = craftVillageId,
                     CreatedBy = currentUserId,
                     CreatedTime = currentTime,
                     IsDeleted = false
                 }).ToList();
 
-                await _unitOfWork.LocationHotelSuggestionRepository.AddRangeAsync(newRecommendations, cancellationToken);
+                await _unitOfWork.LocationCraftVillageSuggestionRepository.AddRangeAsync(newRecommendations, cancellationToken);
             }
 
             if (updatedRecords.Any())
             {
-                _unitOfWork.LocationHotelSuggestionRepository.UpdateRange(updatedRecords);
+                _unitOfWork.LocationCraftVillageSuggestionRepository.UpdateRange(updatedRecords);
             }
 
             await _unitOfWork.SaveAsync();
@@ -901,7 +901,7 @@ public class LocationService : ILocationService
         }
     }
 
-    public async Task<LocationRestaurantSuggestionDataResponse> GetRecommendedRestaurantsAsync(Guid locationId, CancellationToken cancellationToken)
+    public async Task<LocationCuisineSuggestionDataResponse> GetRecommendedCuisinesAsync(Guid locationId, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
@@ -912,24 +912,24 @@ public class LocationService : ILocationService
                 throw CustomExceptionFactory.CreateNotFoundError("location");
             }
 
-            var restaurantsData = await _unitOfWork.LocationRestaurantSuggestionRepository.Entities
+            var cuisinesData = await _unitOfWork.LocationCuisineSuggestionRepository.Entities
                 .Where(h => h.LocationId == locationId && !h.IsDeleted)
                 .Select(h => new
                 {
-                    h.RestaurantId,
-                    h.Restaurant.Name,
-                    h.Restaurant.Description,
-                    h.Restaurant.Address
+                    h.CuisineId,
+                    h.Cuisine.Name,
+                    h.Cuisine.Description,
+                    h.Cuisine.Address
                 })
                 .ToListAsync(cancellationToken);
 
-            var restaurantIds = restaurantsData.Select(r => r.RestaurantId).ToList();
+            var cuisineIds = cuisinesData.Select(r => r.CuisineId).ToList();
 
-            var restaurantMedias = await _unitOfWork.RestaurantMediaRepository.ActiveEntities
-                .Where(m => restaurantIds.Contains(m.RestaurantId))
+            var cuisineMedias = await _unitOfWork.CuisineMediaRepository.ActiveEntities
+                .Where(m => cuisineIds.Contains(m.CuisineId))
                 .Select(m => new
                 {
-                    m.RestaurantId,
+                    m.CuisineId,
                     Media = new MediaResponse
                     {
                         MediaUrl = m.MediaUrl,
@@ -941,24 +941,24 @@ public class LocationService : ILocationService
                 })
                 .ToListAsync(cancellationToken);
 
-            var mediaLookup = restaurantMedias.ToLookup(m => m.RestaurantId, m => m.Media);
+            var mediaLookup = cuisineMedias.ToLookup(m => m.CuisineId, m => m.Media);
 
-            var restaurants = restaurantsData.Select(data => new RestaurantResponse
+            var cuisines = cuisinesData.Select(data => new CuisineResponse
             {
-                Id = data.RestaurantId,
+                Id = data.CuisineId,
                 Name = data.Name,
                 Description = data.Description ?? string.Empty,
                 Address = data.Address ?? string.Empty,
-                Medias = mediaLookup[data.RestaurantId].ToList()
+                Medias = mediaLookup[data.CuisineId].ToList()
             }).ToList();
 
             await transaction.CommitAsync(cancellationToken);
 
-            return new LocationRestaurantSuggestionDataResponse
+            return new LocationCuisineSuggestionDataResponse
             {
                 LocationId = existingLocation.Id,
                 LocationName = existingLocation.Name,
-                RecommendedRestaurants = restaurants
+                RecommendedCuisines = cuisines
             };
         }
         catch (CustomException)
@@ -973,7 +973,7 @@ public class LocationService : ILocationService
         }
     }
 
-    public async Task<bool> AddRecommendedRestaurantsAsync(Guid locationId, List<Guid> restaurantIds, CancellationToken cancellationToken)
+    public async Task<bool> AddRecommendedCuisinesAsync(Guid locationId, List<Guid> cuisineIds, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
@@ -987,32 +987,32 @@ public class LocationService : ILocationService
                 throw CustomExceptionFactory.CreateNotFoundError("location");
             }
 
-            var existingRestaurants = _unitOfWork.LocationRestaurantSuggestionRepository.Entities
+            var existingCuisines = _unitOfWork.LocationCuisineSuggestionRepository.Entities
                 .Where(lh => lh.LocationId == locationId)
                 .ToList();
 
-            var newRecommendations = new List<LocationRestaurantSuggestion>();
+            var newRecommendations = new List<LocationCuisineSuggestion>();
 
-            foreach (var restaurantId in restaurantIds)
+            foreach (var cuisineId in cuisineIds)
             {
-                var existingRestaurant = existingRestaurants.FirstOrDefault(lh => lh.RestaurantId == restaurantId);
-                if (existingRestaurant != null)
+                var existingCuisine = existingCuisines.FirstOrDefault(lh => lh.CuisineId == cuisineId);
+                if (existingCuisine != null)
                 {
-                    if (existingRestaurant.IsDeleted)
+                    if (existingCuisine.IsDeleted)
                     {
-                        existingRestaurant.IsDeleted = false;
-                        existingRestaurant.LastUpdatedBy = currentUserId;
-                        existingRestaurant.LastUpdatedTime = currentTime;
-                        _unitOfWork.LocationRestaurantSuggestionRepository.Update(existingRestaurant);
+                        existingCuisine.IsDeleted = false;
+                        existingCuisine.LastUpdatedBy = currentUserId;
+                        existingCuisine.LastUpdatedTime = currentTime;
+                        _unitOfWork.LocationCuisineSuggestionRepository.Update(existingCuisine);
                     }
                 }
                 else
                 {
-                    newRecommendations.Add(new LocationRestaurantSuggestion
+                    newRecommendations.Add(new LocationCuisineSuggestion
                     {
                         Id = Guid.NewGuid(),
                         LocationId = locationId,
-                        RestaurantId = restaurantId,
+                        CuisineId = cuisineId,
                         CreatedBy = currentUserId,
                         CreatedTime = currentTime,
                         IsDeleted = false
@@ -1022,7 +1022,7 @@ public class LocationService : ILocationService
 
             if (newRecommendations.Any())
             {
-                await _unitOfWork.LocationRestaurantSuggestionRepository.AddRangeAsync(newRecommendations, cancellationToken);
+                await _unitOfWork.LocationCuisineSuggestionRepository.AddRangeAsync(newRecommendations, cancellationToken);
             }
 
             await _unitOfWork.SaveAsync();
@@ -1042,7 +1042,7 @@ public class LocationService : ILocationService
         }
     }
 
-    public async Task<bool> UpdateRecommendedRestaurantsAsync(Guid locationId, List<Guid> restaurantIds, CancellationToken cancellationToken)
+    public async Task<bool> UpdateRecommendedCuisinesAsync(Guid locationId, List<Guid> cuisineIds, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
@@ -1056,16 +1056,16 @@ public class LocationService : ILocationService
                 throw CustomExceptionFactory.CreateNotFoundError("location");
             }
 
-            var existingLinks = _unitOfWork.LocationRestaurantSuggestionRepository.Entities
+            var existingLinks = _unitOfWork.LocationCuisineSuggestionRepository.Entities
                 .Where(lh => lh.LocationId == locationId)
                 .ToList();
 
-            var restaurantsToUpdate = new HashSet<Guid>(restaurantIds);
-            var updatedRecords = new List<LocationRestaurantSuggestion>();
+            var cuisinesToUpdate = new HashSet<Guid>(cuisineIds);
+            var updatedRecords = new List<LocationCuisineSuggestion>();
 
             foreach (var link in existingLinks)
             {
-                if (restaurantsToUpdate.Contains(link.RestaurantId))
+                if (cuisinesToUpdate.Contains(link.CuisineId))
                 {
                     if (link.IsDeleted)
                     {
@@ -1074,7 +1074,7 @@ public class LocationService : ILocationService
                         link.LastUpdatedTime = currentTime;
                         updatedRecords.Add(link);
                     }
-                    restaurantsToUpdate.Remove(link.RestaurantId);
+                    cuisinesToUpdate.Remove(link.CuisineId);
                 }
                 else
                 {
@@ -1085,24 +1085,24 @@ public class LocationService : ILocationService
                 }
             }
 
-            if (restaurantsToUpdate.Count != 0)
+            if (cuisinesToUpdate.Count != 0)
             {
-                var newRecommendations = restaurantsToUpdate.Select(restaurantId => new LocationRestaurantSuggestion
+                var newRecommendations = cuisinesToUpdate.Select(cuisineId => new LocationCuisineSuggestion
                 {
                     Id = Guid.NewGuid(),
                     LocationId = locationId,
-                    RestaurantId = restaurantId,
+                    CuisineId = cuisineId,
                     CreatedBy = currentUserId,
                     CreatedTime = currentTime,
                     IsDeleted = false
                 }).ToList();
 
-                await _unitOfWork.LocationRestaurantSuggestionRepository.AddRangeAsync(newRecommendations, cancellationToken);
+                await _unitOfWork.LocationCuisineSuggestionRepository.AddRangeAsync(newRecommendations, cancellationToken);
             }
 
             if (updatedRecords.Any())
             {
-                _unitOfWork.LocationRestaurantSuggestionRepository.UpdateRange(updatedRecords);
+                _unitOfWork.LocationCuisineSuggestionRepository.UpdateRange(updatedRecords);
             }
 
             await _unitOfWork.SaveAsync();
@@ -1866,14 +1866,14 @@ public class LocationService : ILocationService
         }).ToList();
     }
 
-    private async Task<List<MediaResponse>> GetMediaByHotelIdAsync(Guid hotelId, CancellationToken cancellationToken)
+    private async Task<List<MediaResponse>> GetMediaByCraftVillageIdAsync(Guid craftVillageId, CancellationToken cancellationToken)
     {
-        var hotelMedias = await _unitOfWork.HotelMediaRepository
+        var craftVillageMedias = await _unitOfWork.CraftVillageMediaRepository
             .ActiveEntities
-            .Where(em => em.HotelId == hotelId)
+            .Where(em => em.CraftVillageId == craftVillageId)
             .ToListAsync(cancellationToken);
 
-        return hotelMedias.Select(x => new MediaResponse
+        return craftVillageMedias.Select(x => new MediaResponse
         {
             MediaUrl = x.MediaUrl,
             FileName = x.FileName ?? string.Empty,
@@ -1884,14 +1884,14 @@ public class LocationService : ILocationService
         }).ToList();
     }
 
-    private async Task<List<MediaResponse>> GetMediaByRestaurantIdAsync(Guid restaurantId, CancellationToken cancellationToken)
+    private async Task<List<MediaResponse>> GetMediaByCuisineIdAsync(Guid cuisineId, CancellationToken cancellationToken)
     {
-        var restaurantMedias = await _unitOfWork.RestaurantMediaRepository
+        var cuisineMedias = await _unitOfWork.CuisineMediaRepository
             .ActiveEntities
-            .Where(em => em.RestaurantId == restaurantId)
+            .Where(em => em.CuisineId == cuisineId)
             .ToListAsync(cancellationToken);
 
-        return restaurantMedias.Select(em => new MediaResponse
+        return cuisineMedias.Select(em => new MediaResponse
         {
             MediaUrl = em.MediaUrl,
             FileName = em.FileName ?? string.Empty,

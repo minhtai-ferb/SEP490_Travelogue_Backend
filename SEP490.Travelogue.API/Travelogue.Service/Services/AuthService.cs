@@ -1,14 +1,9 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 using AutoMapper;
-using Azure;
-using Azure.Core;
 using FirebaseAdmin.Auth;
-using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Travelogue.Repository.Bases.Exceptions;
@@ -20,7 +15,6 @@ using Travelogue.Service.BusinessModels.UserModels.Responses;
 using Travelogue.Service.Commons.Const;
 using Travelogue.Service.Commons.Implementations;
 using Travelogue.Service.Commons.Interfaces;
-using static Google.Apis.Requests.BatchRequest;
 
 namespace Travelogue.Service.Services;
 public interface IAuthService
@@ -574,7 +568,6 @@ public class AuthService : IAuthService
             await _unitOfWork.UserRepository.UpdateAsync(user);
             await _unitOfWork.SaveAsync();
 
-
             return new LoginResponse
             {
                 VerificationToken = accessToken,
@@ -772,7 +765,6 @@ public class AuthService : IAuthService
             if (user == null)
                 throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "Người dùng không tồn tại");
 
-
             if (user.VerificationToken != token || user.ResetTokenExpires < DateTimeOffset.UtcNow)
                 throw new CustomException(StatusCodes.Status401Unauthorized, ResponseCodeConstants.UNAUTHORIZED, "Refresh token không hợp lệ hoặc đã hết hạn");
 
@@ -813,7 +805,6 @@ public class AuthService : IAuthService
                 response.Message = "Token hết hạn";
                 return response;
             }
-
 
             response.Data = true;
             response.Message = "Token còn hạn";
@@ -1037,7 +1028,6 @@ public class AuthService : IAuthService
             user.ResetTokenExpires = _timeService.SystemTimeNow.AddDays(_exRefreshToken);
             await _unitOfWork.UserRepository.UpdateAsync(user);
             await _unitOfWork.SaveAsync();
-
 
             return new LoginResponse
             {

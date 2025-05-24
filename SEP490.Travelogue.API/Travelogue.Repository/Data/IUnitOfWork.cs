@@ -14,16 +14,19 @@ public interface IUnitOfWork : IDisposable
     ILocationRepository LocationRepository { get; }
     IFavoriteLocationRepository FavoriteLocationRepository { get; }
     ILocationHotelSuggestionRepository LocationHotelSuggestionRepository { get; }
-    ILocationRestaurantSuggestionRepository LocationRestaurantSuggestionRepository { get; }
+    ILocationCraftVillageSuggestionRepository LocationCraftVillageSuggestionRepository { get; }
+    ILocationCuisineSuggestionRepository LocationCuisineSuggestionRepository { get; }
     ITypeLocationRepository TypeLocationRepository { get; }
     IExperienceRepository ExperienceRepository { get; }
     IEventRepository EventRepository { get; }
     ITypeEventRepository TypeEventRepository { get; }
     ITypeExperienceRepository TypeExperienceRepository { get; }
+    ICraftVillageRepository CraftVillageRepository { get; }
+    ICraftVillageMediaRepository CraftVillageMediaRepository { get; }
     IHotelRepository HotelRepository { get; }
     IHotelMediaRepository HotelMediaRepository { get; }
-    IRestaurantRepository RestaurantRepository { get; }
-    IRestaurantMediaRepository RestaurantMediaRepository { get; }
+    ICuisineRepository CuisineRepository { get; }
+    ICuisineMediaRepository CuisineMediaRepository { get; }
     IMediaRepository MediaRepository { get; }
     IDistrictRepository DistrictRepository { get; }
     IDistrictMediaRepository DistrictMediaRepository { get; }

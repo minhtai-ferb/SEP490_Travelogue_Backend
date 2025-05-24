@@ -2,6 +2,7 @@
 
 public interface IBaseEntity
 {
+    Guid Id { get; set; }
     DateTimeOffset CreatedTime { get; set; }
     DateTimeOffset LastUpdatedTime { get; set; }
     DateTimeOffset? DeletedTime { get; set; }

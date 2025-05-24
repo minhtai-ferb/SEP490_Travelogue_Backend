@@ -105,60 +105,60 @@ public class LocationController : ControllerBase
         ));
     }
 
-    [HttpGet("{locationId}/recommended-hotels")]
-    public async Task<IActionResult> GetRecommendedHotels(Guid locationId, CancellationToken cancellationToken)
+    [HttpGet("{locationId}/recommended-craftVillages")]
+    public async Task<IActionResult> GetRecommendedCraftVillages(Guid locationId, CancellationToken cancellationToken)
     {
-        var result = await _locationService.GetRecommendedHotelsAsync(locationId, cancellationToken);
+        var result = await _locationService.GetRecommendedCraftVillagesAsync(locationId, cancellationToken);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "location")
         ));
     }
 
-    [HttpPost("{locationId}/recommended-hotels")]
-    public async Task<IActionResult> AddRecommendedHotels(Guid locationId, [FromBody] List<Guid> hotelIds, CancellationToken cancellationToken)
+    [HttpPost("{locationId}/recommended-craftVillages")]
+    public async Task<IActionResult> AddRecommendedCraftVillages(Guid locationId, [FromBody] List<Guid> craftVillageIds, CancellationToken cancellationToken)
     {
-        var success = await _locationService.AddRecommendedHotelsAsync(locationId, hotelIds, cancellationToken);
+        var success = await _locationService.AddRecommendedCraftVillagesAsync(locationId, craftVillageIds, cancellationToken);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: success,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "location")
         ));
     }
 
-    [HttpPut("{locationId}/recommended-hotels")]
-    public async Task<IActionResult> UpdateRecommendedHotels(Guid locationId, [FromBody] List<Guid> hotelIds, CancellationToken cancellationToken)
+    [HttpPut("{locationId}/recommended-craftVillages")]
+    public async Task<IActionResult> UpdateRecommendedCraftVillages(Guid locationId, [FromBody] List<Guid> craftVillageIds, CancellationToken cancellationToken)
     {
-        var success = await _locationService.UpdateRecommendedHotelsAsync(locationId, hotelIds, cancellationToken);
+        var success = await _locationService.UpdateRecommendedCraftVillagesAsync(locationId, craftVillageIds, cancellationToken);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: success,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
         ));
     }
 
-    [HttpGet("{locationId}/recommended-restaurants")]
-    public async Task<IActionResult> GetRecommendedRestaurants(Guid locationId, CancellationToken cancellationToken)
+    [HttpGet("{locationId}/recommended-cuisines")]
+    public async Task<IActionResult> GetRecommendedCuisines(Guid locationId, CancellationToken cancellationToken)
     {
-        var result = await _locationService.GetRecommendedRestaurantsAsync(locationId, cancellationToken);
+        var result = await _locationService.GetRecommendedCuisinesAsync(locationId, cancellationToken);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "location")
         ));
     }
 
-    [HttpPost("{locationId}/recommended-restaurants")]
-    public async Task<IActionResult> AddRecommendedRestaurants(Guid locationId, [FromBody] List<Guid> restaurantIds, CancellationToken cancellationToken)
+    [HttpPost("{locationId}/recommended-cuisines")]
+    public async Task<IActionResult> AddRecommendedCuisines(Guid locationId, [FromBody] List<Guid> cuisineIds, CancellationToken cancellationToken)
     {
-        var success = await _locationService.AddRecommendedRestaurantsAsync(locationId, restaurantIds, cancellationToken);
+        var success = await _locationService.AddRecommendedCuisinesAsync(locationId, cuisineIds, cancellationToken);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: success,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "location")
         ));
     }
 
-    [HttpPut("{locationId}/recommended-restaurants")]
-    public async Task<IActionResult> UpdateRecommendedRestaurants(Guid locationId, [FromBody] List<Guid> restaurantIds, CancellationToken cancellationToken)
+    [HttpPut("{locationId}/recommended-cuisines")]
+    public async Task<IActionResult> UpdateRecommendedCuisines(Guid locationId, [FromBody] List<Guid> cuisineIds, CancellationToken cancellationToken)
     {
-        var success = await _locationService.UpdateRecommendedRestaurantsAsync(locationId, restaurantIds, cancellationToken);
+        var success = await _locationService.UpdateRecommendedCuisinesAsync(locationId, cuisineIds, cancellationToken);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: success,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")

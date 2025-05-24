@@ -81,6 +81,17 @@ public sealed class User : BaseEntity
 
     // Navigation properties
 
+    public ICollection<TripPlan> TripPlans { get; set; } = new List<TripPlan>();
+    public ICollection<Order> Orders { get; set; } = new List<Order>();
+    public ICollection<Report> Reports { get; set; } = new List<Report>();
+    public ICollection<Review> Reviews { get; set; } = new List<Review>();
+    public ICollection<TourGroupMember> TourGroupMembers { get; set; } = new List<TourGroupMember>();
+    public ICollection<TourGuide> TourGuides { get; set; } = new List<TourGuide>();
+    public ICollection<Message> SentMessages { get; set; } = new List<Message>();
+    public ICollection<Message> ReceivedMessages { get; set; } = new List<Message>();
+    public ICollection<UserInterest> UserInterests { get; set; } = new List<UserInterest>();
+    public ICollection<UserAnnouncement> UserAnnouncements { get; set; } = new List<UserAnnouncement>();
+
     // Base Entity
     //public DateTimeOffset CreatedTime { get; set; }
     //public DateTimeOffset LastUpdatedTime { get; set; }
