@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Travelogue.Service.BusinessModels.NewsModels;
+
 public class NewsCreateWithMediaFileModel
 {
     [Required, StringLength(100)]

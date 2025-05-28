@@ -4,4 +4,3 @@ public interface IHasSoftDelete
 {
     bool IsDeleted { set; get; }
 }
-

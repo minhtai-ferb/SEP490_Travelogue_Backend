@@ -46,6 +46,30 @@ public class UnitOfWork : IUnitOfWork
     private IExperienceMediaRepository _experienceMediaRepository = null!;
     private ILocationMediaRepository _locationMediaRepository = null!;
     private INewsCategoryRepository _newsCategoryRepository = null!;
+    private ITripPlanRepository _tripPlanRepository = null!;
+    private ITripPlanLocationRepository _tripPlanLocationRepository = null!;
+    private ITripPlanCraftVillageRepository _tripPlanCraftVillageRepository = null!;
+    private ITripPlanCuisineRepository _tripPlanCuisineRepository = null!;
+
+    public ITripPlanCraftVillageRepository TripPlanCraftVillageRepository
+    {
+        get { return _tripPlanCraftVillageRepository ??= new TripPlanCraftVillageRepository(_dbContext); }
+    }
+
+    public ITripPlanCuisineRepository TripPlanCuisineRepository
+    {
+        get { return _tripPlanCuisineRepository ??= new TripPlanCuisineRepository(_dbContext); }
+    }
+
+    public ITripPlanLocationRepository TripPlanLocationRepository
+    {
+        get { return _tripPlanLocationRepository ??= new TripPlanLocationRepository(_dbContext); }
+    }
+
+    public ITripPlanRepository TripPlanRepository
+    {
+        get { return _tripPlanRepository ??= new TripPlanRepository(_dbContext); }
+    }
 
     public INewsCategoryRepository NewsCategoryRepository
     {

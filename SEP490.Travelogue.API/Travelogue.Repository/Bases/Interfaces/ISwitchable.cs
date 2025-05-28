@@ -4,4 +4,3 @@ public interface ISwitchable
 {
     bool IsActive { set; get; }
 }
-

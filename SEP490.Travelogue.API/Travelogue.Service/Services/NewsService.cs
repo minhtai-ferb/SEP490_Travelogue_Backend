@@ -50,7 +50,7 @@ public class NewsService : INewsService
         _mapper = mapper;
         _userContextService = userContextService;
         _timeService = timeService;
-        this._cloudinaryService = cloudinaryService;
+        _cloudinaryService = cloudinaryService;
     }
 
     public async Task<NewsDataModel> AddNewsAsync(NewsCreateModel newsCreateModel, CancellationToken cancellationToken)

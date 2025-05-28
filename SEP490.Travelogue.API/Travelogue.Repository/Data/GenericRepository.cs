@@ -104,6 +104,14 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class, IBase
         _dbSet.Remove(entity);
     }
 
+    public void RemoveRange(IEnumerable<T> entities)
+    {
+        if (entities == null)
+            throw new ArgumentNullException(nameof(entities));
+
+        _dbSet.RemoveRange(entities);
+    }
+
     public async Task<T?> GetWithIncludesAsync(
         Expression<Func<T, bool>> predicate,
         CancellationToken cancellationToken = default,

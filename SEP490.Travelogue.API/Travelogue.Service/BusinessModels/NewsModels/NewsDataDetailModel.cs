@@ -1,6 +1,7 @@
 ﻿using Travelogue.Service.BusinessModels.MediaModel;
 
 namespace Travelogue.Service.BusinessModels.NewsModels;
+
 public class NewsDataDetailModel : BaseDataModel
 {
     public Guid Id { get; set; }

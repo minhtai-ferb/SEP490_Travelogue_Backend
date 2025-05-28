@@ -36,6 +36,10 @@ public interface IUnitOfWork : IDisposable
     INewsRepository NewsRepository { get; }
     INewsMediaRepository NewsMediaRepository { get; }
     INewsCategoryRepository NewsCategoryRepository { get; }
+    ITripPlanRepository TripPlanRepository { get; }
+    ITripPlanLocationRepository TripPlanLocationRepository { get; }
+    ITripPlanCraftVillageRepository TripPlanCraftVillageRepository { get; }
+    ITripPlanCuisineRepository TripPlanCuisineRepository { get; }
 
     IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity;
     void Save();

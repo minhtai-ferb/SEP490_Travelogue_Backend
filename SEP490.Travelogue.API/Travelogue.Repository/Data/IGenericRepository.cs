@@ -85,6 +85,8 @@ public interface IGenericRepository<TEntity> where TEntity : class
     /// <exception cref="ArgumentNullException">Thrown when entity is null.</exception>
     void Remove(TEntity entity);
 
+    void RemoveRange(IEnumerable<TEntity> entities);
+
     /// <summary>
     /// Updates an existing entity in the database.
     /// </summary>
