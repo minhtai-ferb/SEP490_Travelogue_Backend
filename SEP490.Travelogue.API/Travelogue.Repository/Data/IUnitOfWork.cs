@@ -37,6 +37,7 @@ public interface IUnitOfWork : IDisposable
     INewsMediaRepository NewsMediaRepository { get; }
     INewsCategoryRepository NewsCategoryRepository { get; }
     ITripPlanRepository TripPlanRepository { get; }
+    ITripPlanVersionRepository TripPlanVersionRepository { get; }
     ITripPlanLocationRepository TripPlanLocationRepository { get; }
     ITripPlanCraftVillageRepository TripPlanCraftVillageRepository { get; }
     ITripPlanCuisineRepository TripPlanCuisineRepository { get; }

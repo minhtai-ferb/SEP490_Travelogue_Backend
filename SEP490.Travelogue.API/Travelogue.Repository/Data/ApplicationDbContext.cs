@@ -58,6 +58,7 @@ public class ApplicationDbContext : DbContext
 
     // Trip Plan Management
     public DbSet<TripPlan> TripPlans { get; set; }
+    public DbSet<TripPlanVersion> TripPlanVersions { get; set; }
     public DbSet<TripPlanLocation> TripPlanLocations { get; set; }
 
     // Event Management

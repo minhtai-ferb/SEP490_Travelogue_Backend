@@ -6,7 +6,7 @@ namespace Travelogue.Repository.Entities;
 public sealed class TripPlanLocation : BaseEntity
 {
     [Required]
-    public Guid TripPlanId { get; set; }
+    public Guid TripPlanVersionId { get; set; }
 
     [Required]
     public Guid LocationId { get; set; }
@@ -19,6 +19,6 @@ public sealed class TripPlanLocation : BaseEntity
     public string? Notes { get; set; }
     public int Order { get; set; } = 0;
 
-    public TripPlan? TripPlan { get; set; }
+    public TripPlanVersion? TripPlanVersion { get; set; }
     public Location? Location { get; set; }
 }

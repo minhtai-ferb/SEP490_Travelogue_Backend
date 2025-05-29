@@ -6,7 +6,7 @@ namespace Travelogue.Repository.Entities;
 public sealed class TripPlanCraftVillage : BaseEntity
 {
     [Required]
-    public Guid TripPlanId { get; set; }
+    public Guid TripPlanVersionId { get; set; }
 
     [Required]
     public Guid CraftVillageId { get; set; }
@@ -20,6 +20,6 @@ public sealed class TripPlanCraftVillage : BaseEntity
     public string? Notes { get; set; }
     public int Order { get; set; } = 0;
 
-    public TripPlan? TripPlan { get; set; }
+    public TripPlanVersion? TripPlanVersion { get; set; }
     public CraftVillage? CraftVillage { get; set; }
 }
