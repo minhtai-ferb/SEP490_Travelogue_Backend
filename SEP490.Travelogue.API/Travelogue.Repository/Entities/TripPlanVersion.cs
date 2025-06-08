@@ -1,4 +1,3 @@
-using System;
 using Travelogue.Repository.Bases.BaseEntitys;
 
 namespace Travelogue.Repository.Entities;
@@ -9,7 +8,7 @@ public class TripPlanVersion : BaseEntity
     public TripPlan? TripPlan { get; set; }
 
     public DateTimeOffset VersionDate { get; set; } = DateTime.UtcNow;
-    public string VersionDescription { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
 
     public int VersionNumber { get; set; } = 1;
     public string? Notes { get; set; } = null;

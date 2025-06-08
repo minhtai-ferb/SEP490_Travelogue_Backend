@@ -154,7 +154,7 @@ public class LocationService : ILocationService
 
             if (isInUsing)
             {
-                throw CustomExceptionFactory.CreateBadRequest(ResponseMessages.BE_USED);
+                throw CustomExceptionFactory.CreateBadRequestError(ResponseMessages.BE_USED);
             }
 
             existingLocation.LastUpdatedBy = currentUserId;
@@ -1191,7 +1191,7 @@ public class LocationService : ILocationService
                 }
                 else
                 {
-                    throw CustomExceptionFactory.CreateBadRequest("Location is already in favorites.");
+                    throw CustomExceptionFactory.CreateBadRequestError("Location is already in favorites.");
                 }
             }
 
@@ -1283,7 +1283,7 @@ public class LocationService : ILocationService
 
             if (favoriteLocation.IsDeleted)
             {
-                throw CustomExceptionFactory.CreateBadRequest("Location đã bị xóa");
+                throw CustomExceptionFactory.CreateBadRequestError("Location đã bị xóa");
             }
 
             favoriteLocation.IsDeleted = true;

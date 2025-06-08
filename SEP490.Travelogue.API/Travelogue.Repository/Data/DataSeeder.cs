@@ -5,6 +5,7 @@ using Travelogue.Repository.Const;
 using Travelogue.Repository.Entities;
 
 namespace Travelogue.Repository.Data;
+
 public static class DataSeeder
 {
     public static async Task SeedDataAsync(IServiceProvider serviceProvider)
@@ -67,7 +68,6 @@ public static class DataSeeder
                 {
                     Id = Guid.NewGuid(),
                     Email = userEmail,
-                    UserName = userEmail,
                     FullName = "Administrator",
                     IsEmailVerified = true,
                     EmailConfirmed = true,

@@ -5,47 +5,38 @@ using Travelogue.Repository.Entities;
 
 namespace Travelogue.Repository.Repositories;
 
-public interface ITripPlanRepository : IGenericRepository<TripPlan>
+public interface ITourGuideRepository : IGenericRepository<TourGuide>
 {
-    Task<PagedResult<TripPlan>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default);
-    Task<PagedResult<TripPlan>> GetPageWithSearchAsync(
+    Task<TourGuide?> GetByUserIdAsync(Guid userId);
+    Task<PagedResult<TourGuide>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default);
+    // Task<PagedResult<TourGuide>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default);
+    Task<PagedResult<TourGuide>> GetPageWithSearchAsync(
         string? title,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken = default);
-
-    Task<TripPlan?> GetWithIncludeAsync(Guid tripPlanId, Func<IQueryable<TripPlan>, IQueryable<TripPlan>> include);
 }
 
-public sealed class TripPlanRepository : GenericRepository<TripPlan>, ITripPlanRepository
+public sealed class TourGuideRepository : GenericRepository<TourGuide>, ITourGuideRepository
 {
     private readonly ApplicationDbContext _context;
 
-    public TripPlanRepository(ApplicationDbContext dbContext) : base(dbContext)
+    public TourGuideRepository(ApplicationDbContext dbContext) : base(dbContext)
     {
         _context = dbContext;
     }
 
-    public async Task<TripPlan?> GetWithIncludeAsync(Guid tripPlanId, Func<IQueryable<TripPlan>, IQueryable<TripPlan>> include)
+    public Task<TourGuide?> GetByUserIdAsync(Guid userId)
     {
-        if (tripPlanId == Guid.Empty)
+        if (userId == Guid.Empty)
         {
-            throw new ArgumentException("Trip plan ID cannot be empty.", nameof(tripPlanId));
+            throw new ArgumentException("User ID cannot be empty.", nameof(userId));
         }
 
-        return await include(ActiveEntities)
-            .FirstOrDefaultAsync(tp => tp.Id == tripPlanId);
+        return ActiveEntities.FirstOrDefaultAsync(tg => tg.UserId == userId);
     }
 
-    // public async Task<TripPlan?> GetWithIncludeAsync(Guid tripPlanId, Func<IQueryable<TripPlan>, IQueryable<TripPlan>> include)
-    // {
-    //     IQueryable<TripPlan> query = _dbSet;
-    //     query = include(query);
-    //     return await query.FirstOrDefaultAsync(p => p.Id == tripPlanId);
-    // }
-
-
-    public async Task<PagedResult<TripPlan>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default)
+    public async Task<PagedResult<TourGuide>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default)
     {
         if (pageNumber < 1 || pageSize < 1)
         {
@@ -54,12 +45,12 @@ public sealed class TripPlanRepository : GenericRepository<TripPlan>, ITripPlanR
 
         var totalItems = await ActiveEntities.CountAsync(cancellationToken);
         var items = await ActiveEntities
-            .Where(a => a.Name.Contains(name))
+            //.Where(a => a.Name.Contains(name))
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        return new PagedResult<TripPlan>
+        return new PagedResult<TourGuide>
         {
             Items = items,
             TotalCount = totalItems,
@@ -68,7 +59,7 @@ public sealed class TripPlanRepository : GenericRepository<TripPlan>, ITripPlanR
         };
     }
 
-    public async Task<PagedResult<TripPlan>> GetPageWithSearchAsync(
+    public async Task<PagedResult<TourGuide>> GetPageWithSearchAsync(
         string? title,
         int pageNumber,
         int pageSize,
@@ -81,10 +72,10 @@ public sealed class TripPlanRepository : GenericRepository<TripPlan>, ITripPlanR
 
         var query = ActiveEntities.AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(title))
-        {
-            query = query.Where(a => a.Name.Contains(title));
-        }
+        // if (!string.IsNullOrWhiteSpace(title))
+        // {
+        //     query = query.Where(a => a.Name.Contains(title));
+        // }
 
         var totalItems = await query.CountAsync(cancellationToken);
 
@@ -93,7 +84,7 @@ public sealed class TripPlanRepository : GenericRepository<TripPlan>, ITripPlanR
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        return new PagedResult<TripPlan>
+        return new PagedResult<TourGuide>
         {
             Items = items,
             TotalCount = totalItems,

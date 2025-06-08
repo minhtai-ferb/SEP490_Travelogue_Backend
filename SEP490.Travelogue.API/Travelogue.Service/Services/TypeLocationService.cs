@@ -59,7 +59,7 @@ public class TypeLocationService : ITypeLocationService
             {
                 if (!matchedCategory.IsDeleted)
                 {
-                    throw CustomExceptionFactory.CreateBadRequest("Danh mục đã tồn tại trong hệ thống.");
+                    throw CustomExceptionFactory.CreateBadRequestError("Danh mục đã tồn tại trong hệ thống.");
                 }
 
                 matchedCategory.IsDeleted = false;
@@ -115,7 +115,7 @@ public class TypeLocationService : ITypeLocationService
 
             if (isInUsing)
             {
-                throw CustomExceptionFactory.CreateBadRequest(ResponseMessages.BE_USED);
+                throw CustomExceptionFactory.CreateBadRequestError(ResponseMessages.BE_USED);
             }
 
             existingTypeLocation.LastUpdatedBy = currentUserId;
@@ -228,7 +228,7 @@ public class TypeLocationService : ITypeLocationService
 
             if (duplicateExists)
             {
-                throw CustomExceptionFactory.CreateBadRequest("Tên danh mục đã tồn tại trong hệ thống.");
+                throw CustomExceptionFactory.CreateBadRequestError("Tên danh mục đã tồn tại trong hệ thống.");
             }
 
             _mapper.Map(typeLocationUpdateModel, existingTypeLocation);

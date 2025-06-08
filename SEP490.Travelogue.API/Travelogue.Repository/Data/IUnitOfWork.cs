@@ -41,6 +41,10 @@ public interface IUnitOfWork : IDisposable
     ITripPlanLocationRepository TripPlanLocationRepository { get; }
     ITripPlanCraftVillageRepository TripPlanCraftVillageRepository { get; }
     ITripPlanCuisineRepository TripPlanCuisineRepository { get; }
+    ITourGuideRepository TourGuideRepository { get; }
+    ITourRepository TourRepository { get; }
+    IOrderRepository OrderRepository { get; }
+    ITourGuideBookingRequestRepository TourGuideBookingRequestRepository { get; }
 
     IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity;
     void Save();

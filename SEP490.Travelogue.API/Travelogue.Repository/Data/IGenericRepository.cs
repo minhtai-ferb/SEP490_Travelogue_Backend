@@ -121,6 +121,8 @@ public interface IGenericRepository<TEntity> where TEntity : class
         CancellationToken cancellationToken = default,
         params Func<IQueryable<TEntity>, IQueryable<TEntity>>[] includeProperties);
 
+    Task<TEntity?> GetWithIncludeAsync(Guid id, Func<IQueryable<TEntity>, IQueryable<TEntity>> include);
+
     //Task<TEntity?> GetByIdAsync(object id);
     //Task<IEnumerable<TEntity>> GetPageAsync(int pageNumber, int pageSize);
     //Task<IQueryable<TEntity>> GetAllIQueryableAsync();

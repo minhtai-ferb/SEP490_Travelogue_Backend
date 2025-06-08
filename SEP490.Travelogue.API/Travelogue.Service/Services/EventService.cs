@@ -74,7 +74,7 @@ public class EventService : IEventService
                 var existingHighlightedEvent = await _unitOfWork.EventRepository.GetHighlightedEvent(cancellationToken);
                 if (existingHighlightedEvent.Count >= LimitNumber.HIGHLIGHTED_EVENT_LIMIT)
                 {
-                    throw CustomExceptionFactory.CreateBadRequest(ResponseMessages.HIGHLIGHTED_EVENT_LIMIT);
+                    throw CustomExceptionFactory.CreateBadRequestError(ResponseMessages.HIGHLIGHTED_EVENT_LIMIT);
                 }
             }
 
@@ -129,7 +129,7 @@ public class EventService : IEventService
                 await _unitOfWork.NewsRepository.ActiveEntities.FirstOrDefaultAsync(e => e.EventId == id, cancellationToken) != null;
             if (isInUsing)
             {
-                throw CustomExceptionFactory.CreateBadRequest(ResponseMessages.BE_USED);
+                throw CustomExceptionFactory.CreateBadRequestError(ResponseMessages.BE_USED);
             }
 
             // Xóa tất cả media liên quan đến sự kiện
@@ -304,7 +304,7 @@ public class EventService : IEventService
                 var existingHighlightedEvent = await _unitOfWork.EventRepository.GetHighlightedEvent(cancellationToken);
                 if (existingHighlightedEvent.Count >= LimitNumber.HIGHLIGHTED_EVENT_LIMIT)
                 {
-                    throw CustomExceptionFactory.CreateBadRequest(ResponseMessages.HIGHLIGHTED_EVENT_LIMIT);
+                    throw CustomExceptionFactory.CreateBadRequestError(ResponseMessages.HIGHLIGHTED_EVENT_LIMIT);
                 }
             }
 

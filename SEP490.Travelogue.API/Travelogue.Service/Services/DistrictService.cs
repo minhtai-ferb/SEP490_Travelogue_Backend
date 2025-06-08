@@ -139,7 +139,7 @@ public class DistrictService : IDistrictService
                 }
                 else
                 {
-                    throw CustomExceptionFactory.CreateBadRequest($"{ResponseMessages.EXISTED.Replace("{0}", "đơn vị hành chính")}");
+                    throw CustomExceptionFactory.CreateBadRequestError($"{ResponseMessages.EXISTED.Replace("{0}", "đơn vị hành chính")}");
                 }
             }
 

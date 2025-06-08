@@ -10,6 +10,7 @@ public sealed class TourGuide : BaseEntity
 
     [Range(0, double.MaxValue)]
     public decimal Price { get; set; }
+    public string? Introduction { get; set; }
 
     [Required]
     public Guid UserId { get; set; }

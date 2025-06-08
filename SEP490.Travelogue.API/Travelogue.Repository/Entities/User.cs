@@ -11,7 +11,6 @@ public sealed class User : BaseEntity
 {
     [Required, EmailAddress]
     public required string Email { get; set; }
-    public required string UserName { get; set; }
     public bool? EmailConfirmed { get; set; }
     public byte[]? PasswordHash { get; set; }
     public byte[]? PasswordSalt { get; set; }

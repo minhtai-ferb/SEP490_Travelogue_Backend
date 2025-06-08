@@ -51,6 +51,31 @@ public class UnitOfWork : IUnitOfWork
     private ITripPlanLocationRepository _tripPlanLocationRepository = null!;
     private ITripPlanCraftVillageRepository _tripPlanCraftVillageRepository = null!;
     private ITripPlanCuisineRepository _tripPlanCuisineRepository = null!;
+    private ITourGuideRepository _tourGuideRepository = null!;
+    private ITourRepository _tourRepository = null!;
+
+    private IOrderRepository _orderRepository = null!;
+    private ITourGuideBookingRequestRepository _tourGuideBookingRequestRepository = null!;
+
+    public ITourGuideBookingRequestRepository TourGuideBookingRequestRepository
+    {
+        get { return _tourGuideBookingRequestRepository ??= new TourGuideBookingRequestRepository(_dbContext); }
+    }
+
+    public IOrderRepository OrderRepository
+    {
+        get { return _orderRepository ??= new OrderRepository(_dbContext); }
+    }
+
+    public ITourRepository TourRepository
+    {
+        get { return _tourRepository ??= new TourRepository(_dbContext); }
+    }
+
+    public ITourGuideRepository TourGuideRepository
+    {
+        get { return _tourGuideRepository ??= new TourGuideRepository(_dbContext); }
+    }
 
     public ITripPlanVersionRepository TripPlanVersionRepository
     {

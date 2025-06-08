@@ -130,6 +130,13 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class, IBase
         return await query.FirstOrDefaultAsync(predicate, cancellationToken);
     }
 
+    public async Task<T?> GetWithIncludeAsync(Guid id, Func<IQueryable<T>, IQueryable<T>> include)
+    {
+        IQueryable<T> query = _dbSet;
+        query = include(query);
+        return await query.FirstOrDefaultAsync(e => e.Id == id);
+    }
+
     public async Task<PagedResult<T>> GetPageAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default)
     {
         if (pageNumber < 1 || pageSize < 1)

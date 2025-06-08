@@ -2,6 +2,7 @@
 using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Repository.Entities;
+
 public class Announcement
 {
     public Guid Id { get; set; }
@@ -15,7 +16,7 @@ public class Announcement
     public Guid? TourGuideId { get; set; }
     public TourGuide? TourGuide { get; set; }
 
-    public ICollection<UserAnnouncement> UserAnnouncements { get; set; }
+    public ICollection<UserAnnouncement> UserAnnouncements { get; set; } = new List<UserAnnouncement>();
 }
 
 

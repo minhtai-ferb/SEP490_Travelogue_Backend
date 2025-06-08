@@ -60,6 +60,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<TripPlan> TripPlans { get; set; }
     public DbSet<TripPlanVersion> TripPlanVersions { get; set; }
     public DbSet<TripPlanLocation> TripPlanLocations { get; set; }
+    public DbSet<TripPlanShare> TripPlanShares { get; set; }
+    public DbSet<TourGuideBookingRequest> TourGuideBookingRequests { get; set; }
 
     // Event Management
     public DbSet<Event> Events { get; set; }
