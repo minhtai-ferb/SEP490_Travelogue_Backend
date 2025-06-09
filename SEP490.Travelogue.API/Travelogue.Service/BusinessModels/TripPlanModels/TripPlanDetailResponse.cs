@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace Travelogue.Service.BusinessModels.TripPlanModels;
+﻿namespace Travelogue.Service.BusinessModels.TripPlanModels;
 
 public class TripPlanDetailResponse
 {

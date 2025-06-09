@@ -60,7 +60,6 @@ public interface ITripPlanService
     Task<object> CreateVersionFromTripPlanAsync(Guid tripPlanId, string guideNote);
 }
 
-
 public class TripPlanService : ITripPlanService
 {
     private readonly IUnitOfWork _unitOfWork;
@@ -279,7 +278,6 @@ public class TripPlanService : ITripPlanService
         return activities.OrderBy(x => x.StartTime).ToList();
     }
 
-
     private async Task<string> GetLocationImageUrl(Guid locationId)
     {
         // Note: Nếu có isThumbnail thì lấy ảnh thumbnail, nếu không thì lấy ảnh đầu tiên
@@ -489,7 +487,6 @@ public class TripPlanService : ITripPlanService
             _unitOfWork.TripPlanLocationRepository.RemoveRange(locationsToRemove);
         }
 
-
         foreach (var locationModel in locationModels)
         {
             if (locationModel.Id.HasValue)
@@ -611,7 +608,6 @@ public class TripPlanService : ITripPlanService
     }
 
     #region Helper Methods
-
 
     public class TripPlanItemSchedule
     {
@@ -847,7 +843,6 @@ public class TripPlanService : ITripPlanService
                     EndTime = craftVillage.EndTime,
                     Notes = craftVillage.Notes
                 }).ToList();
-
 
             await _unitOfWork.TripPlanVersionRepository.AddAsync(newVersion);
             await _unitOfWork.SaveAsync();

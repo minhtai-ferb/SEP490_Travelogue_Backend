@@ -1,6 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Travelogue.Repository.Bases;
-using Travelogue.Repository.Data;
+﻿using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 
 namespace Travelogue.Repository.Repositories;

@@ -1,6 +1,7 @@
-﻿using Travelogue.Repository.Bases.BaseEntitys;
+﻿using Travelogue.Repository.Bases.BaseEntities;
 
 namespace Travelogue.Repository.Entities;
+
 public sealed class RoleDistrict : BaseEntity
 {
     public Guid RoleId { get; set; }

@@ -44,7 +44,6 @@ public sealed class TripPlanRepository : GenericRepository<TripPlan>, ITripPlanR
     //     return await query.FirstOrDefaultAsync(p => p.Id == tripPlanId);
     // }
 
-
     public async Task<PagedResult<TripPlan>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default)
     {
         if (pageNumber < 1 || pageSize < 1)

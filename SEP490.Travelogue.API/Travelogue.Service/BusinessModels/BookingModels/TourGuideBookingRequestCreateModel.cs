@@ -1,5 +1,3 @@
-using System;
-
 namespace Travelogue.Service.BusinessModels.BookingModels;
 
 public class TourGuideBookingRequestCreateModel

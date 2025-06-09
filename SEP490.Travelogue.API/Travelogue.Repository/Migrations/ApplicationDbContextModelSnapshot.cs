@@ -1887,7 +1887,7 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("char(36)")
                         .HasColumnName("id");
 
-                    b.Property<DateTime?>("CancelledAt")
+                    b.Property<DateTimeOffset?>("CancelledAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("cancelled_at");
 
@@ -1927,15 +1927,15 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_updated_time");
 
-                    b.Property<DateTime>("OrderDate")
+                    b.Property<DateTimeOffset>("OrderDate")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("order_date");
 
-                    b.Property<DateTime?>("ScheduledEndDate")
+                    b.Property<DateTimeOffset?>("ScheduledEndDate")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("scheduled_end_date");
 
-                    b.Property<DateTime?>("ScheduledStartDate")
+                    b.Property<DateTimeOffset?>("ScheduledStartDate")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("scheduled_start_date");
 
@@ -2828,7 +2828,7 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("deleted_time");
 
-                    b.Property<DateTime>("EndDate")
+                    b.Property<DateTimeOffset>("EndDate")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("end_date");
 
@@ -2848,17 +2848,21 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_updated_time");
 
-                    b.Property<DateTime>("RequestedAt")
+                    b.Property<DateTimeOffset>("RequestedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("requested_at");
 
-                    b.Property<DateTime>("StartDate")
+                    b.Property<DateTimeOffset>("StartDate")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("start_date");
 
                     b.Property<int>("Status")
                         .HasColumnType("int")
                         .HasColumnName("status");
+
+                    b.Property<Guid?>("SuggestedTripPlanVersionId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("suggested_trip_plan_version_id");
 
                     b.Property<Guid>("TourGuideId")
                         .HasColumnType("char(36)")
@@ -2876,15 +2880,18 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("char(36)")
                         .HasColumnName("user_id");
 
-                    b.Property<DateTime?>("UserRespondedAt")
+                    b.Property<DateTimeOffset?>("UserRespondedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("user_responded_at");
 
                     b.Property<string>("UserResponseMessage")
-                        .HasColumnType("longtext")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
                         .HasColumnName("user_response_message");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SuggestedTripPlanVersionId");
 
                     b.HasIndex("TourGuideId");
 
@@ -4103,11 +4110,6 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("int")
                         .HasColumnName("sex");
 
-                    b.Property<string>("UserName")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("user_name");
-
                     b.Property<string>("VerificationToken")
                         .HasColumnType("longtext")
                         .HasColumnName("verification_token");
@@ -4997,6 +4999,10 @@ namespace Travelogue.Repository.Migrations
 
             modelBuilder.Entity("Travelogue.Repository.Entities.TourGuideBookingRequest", b =>
                 {
+                    b.HasOne("Travelogue.Repository.Entities.TripPlanVersion", "SuggestedTripPlanVersion")
+                        .WithMany()
+                        .HasForeignKey("SuggestedTripPlanVersionId");
+
                     b.HasOne("Travelogue.Repository.Entities.TourGuide", "TourGuide")
                         .WithMany()
                         .HasForeignKey("TourGuideId")
@@ -5020,6 +5026,8 @@ namespace Travelogue.Repository.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("SuggestedTripPlanVersion");
 
                     b.Navigation("TourGuide");
 

@@ -1,6 +1,7 @@
-﻿using Travelogue.Repository.Bases.BaseEntitys;
+﻿using Travelogue.Repository.Bases.BaseEntities;
 
 namespace Travelogue.Repository.Entities;
+
 public class PasswordResetToken : BaseEntity
 {
     public string? Email { get; set; }

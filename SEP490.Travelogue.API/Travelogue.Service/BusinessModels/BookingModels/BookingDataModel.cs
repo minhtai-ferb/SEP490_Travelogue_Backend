@@ -1,4 +1,3 @@
-using System;
 using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Service.BusinessModels.BookingModels;

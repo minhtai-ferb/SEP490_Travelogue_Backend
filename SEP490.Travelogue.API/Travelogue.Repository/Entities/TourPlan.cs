@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Travelogue.Repository.Bases.BaseEntitys;
+using Travelogue.Repository.Bases.BaseEntities;
 
 namespace Travelogue.Repository.Entities;
 
@@ -25,5 +25,5 @@ public sealed class TourPlan : BaseEntity
     public ICollection<TourPlanCraftVillage>? TourPlanCraftVillages { get; set; }
     public ICollection<TourPlanCuisine>? TourPlanCuisines { get; set; }
     public ICollection<TourPlanLocation>? TourPlanLocations { get; set; }
-  
+
 }

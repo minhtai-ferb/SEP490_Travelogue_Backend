@@ -219,7 +219,6 @@ public class BookingService : IBookingService
         }
     }
 
-
     public async Task<object> RequestNewVersion(Guid bookingRequestId, Guid versionId, string? guideNote)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();

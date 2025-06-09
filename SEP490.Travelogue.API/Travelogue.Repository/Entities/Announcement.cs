@@ -1,7 +1,4 @@
-﻿using Travelogue.Repository.Bases.BaseEntitys;
-using Travelogue.Repository.Entities.Enums;
-
-namespace Travelogue.Repository.Entities;
+﻿namespace Travelogue.Repository.Entities;
 
 public class Announcement
 {
@@ -18,5 +15,3 @@ public class Announcement
 
     public ICollection<UserAnnouncement> UserAnnouncements { get; set; } = new List<UserAnnouncement>();
 }
-
-
