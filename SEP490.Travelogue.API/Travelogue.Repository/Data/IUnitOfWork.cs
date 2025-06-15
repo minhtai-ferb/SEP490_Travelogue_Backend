@@ -4,7 +4,7 @@ using Travelogue.Repository.Repositories;
 
 namespace Travelogue.Repository.Data;
 
-public interface IUnitOfWork : IDisposable
+public interface IUnitOfWork //: IDisposable
 {
     IUserRepository UserRepository { get; }
     IRoleRepository RoleRepository { get; }
@@ -45,6 +45,7 @@ public interface IUnitOfWork : IDisposable
     ITourRepository TourRepository { get; }
     IOrderRepository OrderRepository { get; }
     ITourGuideBookingRequestRepository TourGuideBookingRequestRepository { get; }
+    ITripPlanExchangeSessionRepository TripPlanExchangeSessionRepository { get; }
 
     IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity;
     void Save();
@@ -52,7 +53,7 @@ public interface IUnitOfWork : IDisposable
     void BeginTransaction();
     Task<IDbContextTransaction> BeginTransactionAsync();
     Task RollBackAsync();
-    ValueTask DisposeAsync();
+    //ValueTask DisposeAsync();
     void CommitTransaction();
     void RollBack();
 }

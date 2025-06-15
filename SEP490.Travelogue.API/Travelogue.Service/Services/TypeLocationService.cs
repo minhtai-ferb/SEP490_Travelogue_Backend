@@ -93,7 +93,7 @@ public class TypeLocationService : ITypeLocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -138,7 +138,7 @@ public class TypeLocationService : ITypeLocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -164,7 +164,7 @@ public class TypeLocationService : ITypeLocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -202,7 +202,7 @@ public class TypeLocationService : ITypeLocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -250,7 +250,7 @@ public class TypeLocationService : ITypeLocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -280,7 +280,7 @@ public class TypeLocationService : ITypeLocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 }

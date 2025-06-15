@@ -7,10 +7,10 @@ namespace Travelogue.Repository.Data;
 
 public class GenericRepository<T> : IGenericRepository<T> where T : class, IBaseEntity
 {
-    private readonly DbContext _context;
+    private readonly ApplicationDbContext _context;
     private readonly DbSet<T> _dbSet;
 
-    public GenericRepository(DbContext dbContext)
+    public GenericRepository(ApplicationDbContext dbContext)
     {
         _context = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _dbSet = _context.Set<T>();
@@ -43,7 +43,9 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class, IBase
 
     public async Task<T?> GetByIdAsync(object id, CancellationToken cancellationToken = default)
     {
-        return await _dbSet.FindAsync(new object[] { id }, cancellationToken);
+        return await _dbSet
+     .AsNoTracking()
+     .FirstOrDefaultAsync(e => e.Id == (Guid)id, cancellationToken);
     }
 
     public async Task<IEnumerable<T>> AddRangeAsync(IEnumerable<T> entities)
@@ -54,7 +56,7 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class, IBase
         }
 
         await _dbSet.AddRangeAsync(entities);
-        await _context.SaveChangesAsync();
+        // await _context.SaveChangesAsync();
 
         return await ActiveEntities.ToListAsync();
     }
@@ -67,20 +69,36 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class, IBase
         }
 
         await _dbSet.AddRangeAsync(entities, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
+        // await _context.SaveChangesAsync(cancellationToken);
 
         return await ActiveEntities.ToListAsync(cancellationToken);
     }
 
     public async Task<T> AddAsync(T entity)
     {
-        if (entity == null)
-            throw new ArgumentNullException(nameof(entity));
+        try
+        {
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
 
-        await _dbSet.AddAsync(entity);
-        await _context.SaveChangesAsync();
+            await _dbSet.AddAsync(entity);
+            // await _context.SaveChangesAsync();
 
-        return entity;
+            return entity;
+        }
+        catch (DbUpdateException ex)
+        {
+            Console.WriteLine($"-----------------Error creating exchange session: {ex.Message}");
+
+            throw new Exception("An error occurred while adding the entity.", ex);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"-----------------Error creating exchange session: {ex.Message}");
+
+            throw new Exception("An unexpected error occurred while adding the entity.", ex);
+        }
+
     }
 
     public void Update(T entity)

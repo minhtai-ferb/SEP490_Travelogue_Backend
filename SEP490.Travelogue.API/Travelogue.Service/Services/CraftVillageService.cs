@@ -76,7 +76,7 @@ public class CraftVillageService : ICraftVillageService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -130,7 +130,7 @@ public class CraftVillageService : ICraftVillageService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -163,7 +163,7 @@ public class CraftVillageService : ICraftVillageService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -192,7 +192,7 @@ public class CraftVillageService : ICraftVillageService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -227,7 +227,7 @@ public class CraftVillageService : ICraftVillageService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -262,7 +262,7 @@ public class CraftVillageService : ICraftVillageService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -297,7 +297,7 @@ public class CraftVillageService : ICraftVillageService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -818,7 +818,7 @@ public class CraftVillageService : ICraftVillageService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //       //  _unitOfWork.Dispose();
     //    }
     //}
 }

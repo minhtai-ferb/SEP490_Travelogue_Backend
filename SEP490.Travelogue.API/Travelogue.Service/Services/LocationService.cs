@@ -110,7 +110,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -213,7 +213,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -244,7 +244,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -275,7 +275,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -316,7 +316,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -672,7 +672,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -1155,7 +1155,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -2037,7 +2037,7 @@ public class LocationService : ILocationService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //       //  _unitOfWork.Dispose();
     //    }
     //}
 
@@ -2085,7 +2085,7 @@ public class LocationService : ILocationService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //       //  _unitOfWork.Dispose();
     //    }
     //}
 
@@ -2115,7 +2115,7 @@ public class LocationService : ILocationService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //       //  _unitOfWork.Dispose();
     //    }
     //}
 
@@ -2145,7 +2145,7 @@ public class LocationService : ILocationService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //       //  _unitOfWork.Dispose();
     //    }
     //}
 

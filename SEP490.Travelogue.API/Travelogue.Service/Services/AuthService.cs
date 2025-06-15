@@ -414,7 +414,7 @@ public class AuthService : IAuthService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -448,7 +448,7 @@ public class AuthService : IAuthService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -505,7 +505,7 @@ public class AuthService : IAuthService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -589,7 +589,7 @@ public class AuthService : IAuthService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -677,7 +677,7 @@ public class AuthService : IAuthService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 

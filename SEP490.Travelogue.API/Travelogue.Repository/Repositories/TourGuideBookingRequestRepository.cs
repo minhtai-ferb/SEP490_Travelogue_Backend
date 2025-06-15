@@ -5,18 +5,18 @@ using Travelogue.Repository.Entities;
 
 namespace Travelogue.Repository.Repositories;
 
-public interface ITourGuideBookingRequestRepository : IGenericRepository<TourGuideBookingRequest>
+public interface ITourGuideBookingRequestRepository : IGenericRepository<TripPlanExchange>
 {
-    Task<PagedResult<TourGuideBookingRequest>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default);
+    Task<PagedResult<TripPlanExchange>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default);
     // Task<PagedResult<TourGuideBookingRequest>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default);
-    Task<PagedResult<TourGuideBookingRequest>> GetPageWithSearchAsync(
+    Task<PagedResult<TripPlanExchange>> GetPageWithSearchAsync(
         string? title,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken = default);
 }
 
-public sealed class TourGuideBookingRequestRepository : GenericRepository<TourGuideBookingRequest>, ITourGuideBookingRequestRepository
+public sealed class TourGuideBookingRequestRepository : GenericRepository<TripPlanExchange>, ITourGuideBookingRequestRepository
 {
     private readonly ApplicationDbContext _context;
 
@@ -25,7 +25,7 @@ public sealed class TourGuideBookingRequestRepository : GenericRepository<TourGu
         _context = dbContext;
     }
 
-    public async Task<PagedResult<TourGuideBookingRequest>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default)
+    public async Task<PagedResult<TripPlanExchange>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default)
     {
         if (pageNumber < 1 || pageSize < 1)
         {
@@ -39,7 +39,7 @@ public sealed class TourGuideBookingRequestRepository : GenericRepository<TourGu
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        return new PagedResult<TourGuideBookingRequest>
+        return new PagedResult<TripPlanExchange>
         {
             Items = items,
             TotalCount = totalItems,
@@ -48,7 +48,7 @@ public sealed class TourGuideBookingRequestRepository : GenericRepository<TourGu
         };
     }
 
-    public async Task<PagedResult<TourGuideBookingRequest>> GetPageWithSearchAsync(
+    public async Task<PagedResult<TripPlanExchange>> GetPageWithSearchAsync(
         string? title,
         int pageNumber,
         int pageSize,
@@ -73,7 +73,7 @@ public sealed class TourGuideBookingRequestRepository : GenericRepository<TourGu
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        return new PagedResult<TourGuideBookingRequest>
+        return new PagedResult<TripPlanExchange>
         {
             Items = items,
             TotalCount = totalItems,

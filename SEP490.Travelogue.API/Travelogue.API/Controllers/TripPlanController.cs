@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using Travelogue.Repository.Bases.Responses;
+using Travelogue.Service.BusinessModels.ExchangeSessionModels;
 using Travelogue.Service.BusinessModels.TripPlanModels;
 using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
@@ -11,10 +13,12 @@ namespace Travelogue.API.Controllers;
 public class TripPlansController : ControllerBase
 {
     private readonly ITripPlanService _tripPlanService;
+    private readonly IExchangeSessionService _exchangeSessionService;
 
-    public TripPlansController(ITripPlanService tripPlanService)
+    public TripPlansController(ITripPlanService tripPlanService, IExchangeSessionService exchangeSessionService)
     {
         _tripPlanService = tripPlanService;
+        _exchangeSessionService = exchangeSessionService;
     }
 
     /// <summary>
@@ -94,5 +98,36 @@ public class TripPlansController : ControllerBase
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "trip plan version")
         ));
+    }
+
+    [HttpPost("{tripPlanId}/exchanges/sessions")]
+    public async Task<IActionResult> CreateExchangeSession(Guid tripPlanId, [FromBody] CreateExchangeSessionRequest request)
+    {
+        if (tripPlanId == Guid.Empty)
+        {
+            return BadRequest("Trip plan ID cannot be empty.");
+        }
+
+        if (request == null)
+        {
+            return BadRequest("Request body cannot be null.");
+        }
+
+        await _tripPlanService.CreateExchangeSessionAsync(tripPlanId, request, new CancellationToken());
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: true,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "request exchange session")
+        ));
+        // if (result.IsSuccess)
+        // {
+        //     return Ok(ResponseModel<object>.OkResponseModel(
+        //         data: result.Data,
+        //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "exchange session")
+        //     ));
+        // }
+
+        // return BadRequest(ResponseModel<object>.ErrorResponseModel(
+        //     message: result.ErrorMessage
+        // ));
     }
 }

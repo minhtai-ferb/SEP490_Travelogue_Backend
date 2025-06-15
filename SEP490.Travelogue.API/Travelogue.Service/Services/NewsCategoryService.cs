@@ -94,7 +94,7 @@ public class NewsCategoryService : INewsCategoryService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -139,7 +139,7 @@ public class NewsCategoryService : INewsCategoryService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -165,7 +165,7 @@ public class NewsCategoryService : INewsCategoryService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -191,7 +191,7 @@ public class NewsCategoryService : INewsCategoryService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -217,7 +217,7 @@ public class NewsCategoryService : INewsCategoryService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -247,7 +247,7 @@ public class NewsCategoryService : INewsCategoryService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -277,7 +277,7 @@ public class NewsCategoryService : INewsCategoryService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -325,7 +325,7 @@ public class NewsCategoryService : INewsCategoryService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 

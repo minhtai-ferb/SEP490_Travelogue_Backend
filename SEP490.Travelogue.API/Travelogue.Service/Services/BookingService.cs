@@ -99,10 +99,10 @@ public class BookingService : IBookingService
             {
                 throw CustomExceptionFactory.CreateBadRequestError("Trip plan version does not belong to the specified trip plan.");
             }
-            var tourGuideBookingRequest = _mapper.Map<TourGuideBookingRequest>(requestCreateModel);
+            var tourGuideBookingRequest = _mapper.Map<TripPlanExchange>(requestCreateModel);
 
             tourGuideBookingRequest.UserId = Guid.Parse(currentUserId);
-            tourGuideBookingRequest.Status = BookingRequestStatus.Pending;
+            tourGuideBookingRequest.Status = ExchangeSessionStatus.Pending;
             tourGuideBookingRequest.RequestedAt = currentTime;
 
             tourGuideBookingRequest.CreatedBy = currentUserId;
@@ -142,7 +142,7 @@ public class BookingService : IBookingService
             var tourGuideBookingRequest = await _unitOfWork.TourGuideBookingRequestRepository.ActiveEntities
                 .FirstOrDefaultAsync(r => r.Id == id, cancellationToken) ?? throw CustomExceptionFactory.CreateNotFoundError("tour guide booking request");
 
-            tourGuideBookingRequest.Status = BookingRequestStatus.Cancelled;
+            tourGuideBookingRequest.Status = ExchangeSessionStatus.Cancelled;
 
             tourGuideBookingRequest.CreatedBy = currentUserId;
             tourGuideBookingRequest.LastUpdatedBy = currentUserId;
@@ -298,7 +298,7 @@ public class BookingService : IBookingService
                 throw CustomExceptionFactory.CreateBadRequestError("You are not the user who sent this booking request.");
             }
 
-            bookingRequest.Status = BookingRequestStatus.AcceptedByUser;
+            bookingRequest.Status = ExchangeSessionStatus.AcceptedByUser;
 
             var newBooking = _mapper.Map<Order>(bookingRequest);
             newBooking.VersionId = bookingRequest.SuggestedTripPlanVersionId ?? bookingRequest.TripPlanVersionId;

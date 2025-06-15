@@ -5,7 +5,7 @@ using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Repository.Entities;
 
-public class TourGuideBookingRequest : BaseEntity
+public class TripPlanExchange : BaseEntity
 {
     [Required]
     public Guid UserId { get; set; }
@@ -21,6 +21,9 @@ public class TourGuideBookingRequest : BaseEntity
     [Required]
     public Guid TourGuideId { get; set; }
 
+    public Guid SessionId { get; set; }
+    public TripPlanExchangeSession Session { get; set; } = null!;
+
     [Required]
     public DateTimeOffset StartDate { get; set; }
 
@@ -28,7 +31,7 @@ public class TourGuideBookingRequest : BaseEntity
     public DateTimeOffset EndDate { get; set; }
 
     [Required]
-    public BookingRequestStatus Status { get; set; }
+    public ExchangeSessionStatus Status { get; set; }
 
     [Required]
     [DataType(DataType.DateTime)]

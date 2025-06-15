@@ -72,7 +72,7 @@ public class CuisineService : ICuisineService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -126,7 +126,7 @@ public class CuisineService : ICuisineService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -159,7 +159,7 @@ public class CuisineService : ICuisineService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -188,7 +188,7 @@ public class CuisineService : ICuisineService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -223,7 +223,7 @@ public class CuisineService : ICuisineService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -263,7 +263,7 @@ public class CuisineService : ICuisineService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -298,7 +298,7 @@ public class CuisineService : ICuisineService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -724,7 +724,7 @@ public class CuisineService : ICuisineService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //       //  _unitOfWork.Dispose();
     //    }
     //}
 }

@@ -12,7 +12,7 @@ public class TourGuideBookingRequestDataModel
     public DateTimeOffset StartDate { get; set; }
     public DateTimeOffset EndDate { get; set; }
 
-    public BookingRequestStatus Status { get; set; }
+    public ExchangeSessionStatus Status { get; set; }
 
     public DateTimeOffset RequestedAt { get; set; }
     public DateTimeOffset? UserRespondedAt { get; set; }

@@ -78,7 +78,7 @@ public class DistrictService : IDistrictService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -308,7 +308,7 @@ public class DistrictService : IDistrictService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -353,7 +353,7 @@ public class DistrictService : IDistrictService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -379,7 +379,7 @@ public class DistrictService : IDistrictService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -429,7 +429,7 @@ public class DistrictService : IDistrictService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -967,7 +967,7 @@ public class DistrictService : IDistrictService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //        ////  _unitOfWork.Dispose();
     //    }
     //}
 
@@ -997,7 +997,7 @@ public class DistrictService : IDistrictService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //        ////  _unitOfWork.Dispose();
     //    }
     //}
 }

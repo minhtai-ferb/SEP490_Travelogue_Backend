@@ -226,7 +226,7 @@ public class EventService : IEventService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -271,7 +271,7 @@ public class EventService : IEventService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -397,7 +397,7 @@ public class EventService : IEventService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -480,7 +480,7 @@ public class EventService : IEventService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -579,7 +579,7 @@ public class EventService : IEventService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -611,7 +611,7 @@ public class EventService : IEventService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -1309,7 +1309,7 @@ public class EventService : IEventService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //        ////  _unitOfWork.Dispose();
     //    }
     //}
 
@@ -1339,7 +1339,7 @@ public class EventService : IEventService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //        ////  _unitOfWork.Dispose();
     //    }
     //}
 
@@ -1369,7 +1369,7 @@ public class EventService : IEventService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //        ////  _unitOfWork.Dispose();
     //    }
     //}
 }

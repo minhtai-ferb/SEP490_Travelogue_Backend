@@ -160,7 +160,7 @@ public class TourGuideService : ITourGuideService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 

@@ -8,7 +8,7 @@ public class OrderMappingProfile : Profile
 {
     public OrderMappingProfile()
     {
-        CreateMap<TourGuideBookingRequest, Order>().ReverseMap();
+        CreateMap<TripPlanExchange, Order>().ReverseMap();
         // CreateMap<OrderUpdateModel, Order>()
         //     .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
         CreateMap<OrderDataModel, Order>().ReverseMap();

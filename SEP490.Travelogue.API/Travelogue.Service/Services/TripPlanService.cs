@@ -6,6 +6,7 @@ using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.ExchangeSessionModels;
 using Travelogue.Service.BusinessModels.TripPlanModels;
 using Travelogue.Service.Commons.Interfaces;
 
@@ -58,6 +59,8 @@ public interface ITripPlanService
     /// <param name="tripPlanId">ID của kế hoạch chuyến đi gốc.</param>
     /// <param name="guideNote">Ghi chú từ hướng dẫn viên.</param>
     Task<object> CreateVersionFromTripPlanAsync(Guid tripPlanId, string guideNote);
+
+    Task CreateExchangeSessionAsync(Guid tripPlanId, CreateExchangeSessionRequest request, CancellationToken cancellationToken);
 }
 
 public class TripPlanService : ITripPlanService
@@ -73,6 +76,68 @@ public class TripPlanService : ITripPlanService
         _mapper = mapper;
         _userContextService = userContextService;
         _timeService = timeService;
+    }
+
+    public async Task CreateExchangeSessionAsync(Guid tripPlanId, CreateExchangeSessionRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentTime = _timeService.SystemTimeNow;
+
+            var tourGuide = await _unitOfWork.TourGuideRepository.GetByIdAsync(request.TourGuideId, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Tour guide");
+
+            var tripPlan = await _unitOfWork.TripPlanRepository.GetByIdAsync(tripPlanId, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Trip plan");
+
+            var tripPlanVersion = await _unitOfWork.TripPlanVersionRepository.GetByIdAsync(request.TripPlanVersionId, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Trip plan version");
+
+
+            var newSession = new TripPlanExchangeSession
+            {
+                // TourGuideId = tourGuide.Id,
+                TourGuideId = request.TourGuideId,
+                // TripPlanId = tripPlan.Id,
+                TripPlanId = tripPlanId,
+                CreatedByUserId = Guid.Parse(currentUserId),
+                FinalStatus = ExchangeSessionStatus.Pending,
+                CreatedBy = currentUserId,
+                CreatedAt = currentTime,
+                LastUpdatedBy = currentUserId,
+                LastUpdatedTime = currentTime
+            };
+
+            newSession.Exchanges.Add(new TripPlanExchange
+            {
+                UserId = Guid.Parse(currentUserId),
+                TripPlanId = tripPlan.Id,
+                TripPlanVersionId = tripPlanVersion.Id,
+                TourGuideId = tourGuide.Id,
+                SessionId = newSession.Id,
+                StartDate = tripPlan.StartDate,
+                EndDate = tripPlan.EndDate,
+                Status = ExchangeSessionStatus.Pending,
+                RequestedAt = currentTime,
+                CreatedBy = currentUserId,
+                CreatedTime = currentTime,
+                LastUpdatedBy = currentUserId,
+                LastUpdatedTime = currentTime
+            });
+
+            await _unitOfWork.TripPlanExchangeSessionRepository.AddAsync(newSession);
+            await _unitOfWork.SaveAsync();
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"-----------------Error creating exchange session: {ex.Message}");
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
     }
 
     public async Task DeleteTripPlanAsync(Guid id, CancellationToken cancellationToken)
@@ -101,7 +166,7 @@ public class TripPlanService : ITripPlanService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -140,7 +205,7 @@ public class TripPlanService : ITripPlanService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -181,7 +246,7 @@ public class TripPlanService : ITripPlanService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -414,7 +479,7 @@ public class TripPlanService : ITripPlanService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -603,7 +668,7 @@ public class TripPlanService : ITripPlanService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
