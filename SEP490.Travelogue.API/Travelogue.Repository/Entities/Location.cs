@@ -25,6 +25,9 @@ public sealed class Location : BaseEntity
     public Guid? DistrictId { get; set; }
 
     // Navigation Properties
+    public CraftVillage? CraftVillage { get; set; }
+    public Cuisine? Cuisine { get; set; }
+    public Hotel? Hotel { get; set; }
     public District? District { get; set; }
     public TypeLocation? TypeLocation { get; set; }
     public ICollection<Experience>? Experiences { get; set; }

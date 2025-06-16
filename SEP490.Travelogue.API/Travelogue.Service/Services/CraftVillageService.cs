@@ -76,7 +76,7 @@ public class CraftVillageService : ICraftVillageService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -130,7 +130,7 @@ public class CraftVillageService : ICraftVillageService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -163,7 +163,7 @@ public class CraftVillageService : ICraftVillageService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -192,7 +192,7 @@ public class CraftVillageService : ICraftVillageService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -227,7 +227,7 @@ public class CraftVillageService : ICraftVillageService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -262,7 +262,7 @@ public class CraftVillageService : ICraftVillageService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -297,7 +297,7 @@ public class CraftVillageService : ICraftVillageService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -354,7 +354,7 @@ public class CraftVillageService : ICraftVillageService
             return new CraftVillageMediaResponse
             {
                 CraftVillageId = existingCraftVillage.Id,
-                CraftVillageName = existingCraftVillage.Name,
+                CraftVillageName = existingCraftVillage.Location?.Name,
                 Media = mediaResponses
             };
         }
@@ -402,7 +402,7 @@ public class CraftVillageService : ICraftVillageService
                 return new CraftVillageMediaResponse
                 {
                     CraftVillageId = existingCraftVillage.Id,
-                    CraftVillageName = existingCraftVillage.Name,
+                    CraftVillageName = existingCraftVillage.Location?.Name,
                     Media = new List<MediaResponse>()
                 };
             }
@@ -428,7 +428,7 @@ public class CraftVillageService : ICraftVillageService
                 return new CraftVillageMediaResponse
                 {
                     CraftVillageId = existingCraftVillage.Id,
-                    CraftVillageName = existingCraftVillage.Name,
+                    CraftVillageName = existingCraftVillage.Location?.Name,
                     Media = new List<MediaResponse>()
                 };
             }
@@ -503,7 +503,7 @@ public class CraftVillageService : ICraftVillageService
             return new CraftVillageMediaResponse
             {
                 CraftVillageId = existingCraftVillage.Id,
-                CraftVillageName = existingCraftVillage.Name,
+                CraftVillageName = existingCraftVillage.Location?.Name,
                 Media = mediaResponses
             };
         }
@@ -607,7 +607,7 @@ public class CraftVillageService : ICraftVillageService
             return new CraftVillageMediaResponse
             {
                 CraftVillageId = newCraftVillage.Id,
-                CraftVillageName = newCraftVillage.Name,
+                CraftVillageName = newCraftVillage.Location?.Name,
                 Media = mediaResponses
             };
         }

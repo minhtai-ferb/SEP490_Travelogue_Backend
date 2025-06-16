@@ -1,10 +1,11 @@
 ﻿using Travelogue.Service.BusinessModels.MediaModel;
 
 namespace Travelogue.Service.BusinessModels.NewsModels;
+
 public class NewsDataModel : BaseDataModel
 {
     public Guid Id { get; set; }
-    public string Title { get; set; }
+    public required string Title { get; set; }
     public string? Description { get; set; }
     public string? Content { get; set; }
 

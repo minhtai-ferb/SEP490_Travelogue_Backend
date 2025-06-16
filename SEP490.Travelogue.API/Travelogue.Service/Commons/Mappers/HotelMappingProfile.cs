@@ -3,6 +3,7 @@ using Travelogue.Repository.Entities;
 using Travelogue.Service.BusinessModels.HotelModels;
 
 namespace Travelogue.Service.Commons.Mappers;
+
 public class HotelMappingProfile : Profile
 {
     public HotelMappingProfile()

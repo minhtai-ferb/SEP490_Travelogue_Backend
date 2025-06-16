@@ -119,6 +119,10 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("double")
                         .HasColumnName("latitude");
 
+                    b.Property<Guid?>("LocationId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("location_id");
+
                     b.Property<double>("Longitude")
                         .HasColumnType("double")
                         .HasColumnName("longitude");
@@ -141,6 +145,9 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnName("website");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LocationId")
+                        .IsUnique();
 
                     b.ToTable("craft_villages");
                 });
@@ -336,6 +343,10 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("double")
                         .HasColumnName("latitude");
 
+                    b.Property<Guid?>("LocationId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("location_id");
+
                     b.Property<double>("Longitude")
                         .HasColumnType("double")
                         .HasColumnName("longitude");
@@ -354,6 +365,9 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnName("website");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LocationId")
+                        .IsUnique();
 
                     b.ToTable("cuisines");
                 });
@@ -1068,6 +1082,10 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("double")
                         .HasColumnName("latitude");
 
+                    b.Property<Guid?>("LocationId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("location_id");
+
                     b.Property<double>("Longitude")
                         .HasColumnType("double")
                         .HasColumnName("longitude");
@@ -1090,6 +1108,9 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnName("website");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LocationId")
+                        .IsUnique();
 
                     b.ToTable("hotels");
                 });
@@ -3027,134 +3048,6 @@ namespace Travelogue.Repository.Migrations
                     b.ToTable("tour_plans");
                 });
 
-            modelBuilder.Entity("Travelogue.Repository.Entities.TourPlanCraftVillage", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<Guid>("CraftVillageId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("craft_village_id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<DateTime>("EndTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("end_time");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<DateTime>("StartTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("start_time");
-
-                    b.Property<Guid>("TourPlanId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("tour_plan_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CraftVillageId");
-
-                    b.HasIndex("TourPlanId");
-
-                    b.ToTable("tour_plan_craft_villages");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TourPlanCuisine", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<Guid>("CuisineId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("cuisine_id");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<DateTime>("EndTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("end_time");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<DateTime>("StartTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("start_time");
-
-                    b.Property<Guid>("TourPlanId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("tour_plan_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CuisineId");
-
-                    b.HasIndex("TourPlanId");
-
-                    b.ToTable("tour_plan_cuisines");
-                });
-
             modelBuilder.Entity("Travelogue.Repository.Entities.TourPlanLocation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3407,150 +3300,6 @@ namespace Travelogue.Repository.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("trip_plans");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanCraftVillage", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<Guid>("CraftVillageId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("craft_village_id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<DateTime?>("EndTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("end_time");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("longtext")
-                        .HasColumnName("notes");
-
-                    b.Property<int>("Order")
-                        .HasColumnType("int")
-                        .HasColumnName("order");
-
-                    b.Property<DateTime?>("StartTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("start_time");
-
-                    b.Property<Guid>("TripPlanVersionId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("trip_plan_version_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CraftVillageId");
-
-                    b.HasIndex("TripPlanVersionId");
-
-                    b.ToTable("trip_plan_craft_villages");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanCuisine", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<Guid>("CuisineId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("cuisine_id");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<DateTime?>("EndTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("end_time");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("longtext")
-                        .HasColumnName("notes");
-
-                    b.Property<int>("Order")
-                        .HasColumnType("int")
-                        .HasColumnName("order");
-
-                    b.Property<DateTime?>("StartTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("start_time");
-
-                    b.Property<Guid>("TripPlanVersionId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("trip_plan_version_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CuisineId");
-
-                    b.HasIndex("TripPlanVersionId");
-
-                    b.ToTable("trip_plan_cuisines");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanExchange", b =>
@@ -4549,6 +4298,15 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("TourGuide");
                 });
 
+            modelBuilder.Entity("Travelogue.Repository.Entities.CraftVillage", b =>
+                {
+                    b.HasOne("Travelogue.Repository.Entities.Location", "Location")
+                        .WithOne("CraftVillage")
+                        .HasForeignKey("Travelogue.Repository.Entities.CraftVillage", "LocationId");
+
+                    b.Navigation("Location");
+                });
+
             modelBuilder.Entity("Travelogue.Repository.Entities.CraftVillageInterest", b =>
                 {
                     b.HasOne("Travelogue.Repository.Entities.CraftVillage", "CraftVillage")
@@ -4577,6 +4335,15 @@ namespace Travelogue.Repository.Migrations
                         .IsRequired();
 
                     b.Navigation("CraftVillage");
+                });
+
+            modelBuilder.Entity("Travelogue.Repository.Entities.Cuisine", b =>
+                {
+                    b.HasOne("Travelogue.Repository.Entities.Location", "Location")
+                        .WithOne("Cuisine")
+                        .HasForeignKey("Travelogue.Repository.Entities.Cuisine", "LocationId");
+
+                    b.Navigation("Location");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.CuisineInterest", b =>
@@ -4712,6 +4479,15 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("Location");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Travelogue.Repository.Entities.Hotel", b =>
+                {
+                    b.HasOne("Travelogue.Repository.Entities.Location", "Location")
+                        .WithOne("Hotel")
+                        .HasForeignKey("Travelogue.Repository.Entities.Hotel", "LocationId");
+
+                    b.Navigation("Location");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.HotelMedia", b =>
@@ -5136,44 +4912,6 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Travelogue.Repository.Entities.TourPlanCraftVillage", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.CraftVillage", "CraftVillage")
-                        .WithMany()
-                        .HasForeignKey("CraftVillageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Travelogue.Repository.Entities.TourPlan", "TourPlan")
-                        .WithMany("TourPlanCraftVillages")
-                        .HasForeignKey("TourPlanId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CraftVillage");
-
-                    b.Navigation("TourPlan");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TourPlanCuisine", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.Cuisine", "Cuisine")
-                        .WithMany()
-                        .HasForeignKey("CuisineId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Travelogue.Repository.Entities.TourPlan", "TourPlan")
-                        .WithMany("TourPlanCuisines")
-                        .HasForeignKey("TourPlanId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Cuisine");
-
-                    b.Navigation("TourPlan");
-                });
-
             modelBuilder.Entity("Travelogue.Repository.Entities.TourPlanLocation", b =>
                 {
                     b.HasOne("Travelogue.Repository.Entities.Location", "Location")
@@ -5213,44 +4951,6 @@ namespace Travelogue.Repository.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanCraftVillage", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.CraftVillage", "CraftVillage")
-                        .WithMany("TripPlanCraftVillages")
-                        .HasForeignKey("CraftVillageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Travelogue.Repository.Entities.TripPlanVersion", "TripPlanVersion")
-                        .WithMany("TripPlanCraftVillages")
-                        .HasForeignKey("TripPlanVersionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CraftVillage");
-
-                    b.Navigation("TripPlanVersion");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanCuisine", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.Cuisine", "Cuisine")
-                        .WithMany("TripPlanCuisines")
-                        .HasForeignKey("CuisineId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Travelogue.Repository.Entities.TripPlanVersion", "TripPlanVersion")
-                        .WithMany("TripPlanCuisines")
-                        .HasForeignKey("TripPlanVersionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Cuisine");
-
-                    b.Navigation("TripPlanVersion");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanExchange", b =>
@@ -5481,15 +5181,11 @@ namespace Travelogue.Repository.Migrations
             modelBuilder.Entity("Travelogue.Repository.Entities.CraftVillage", b =>
                 {
                     b.Navigation("LocationCraftVillageSuggestions");
-
-                    b.Navigation("TripPlanCraftVillages");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.Cuisine", b =>
                 {
                     b.Navigation("LocationCuisineSuggestions");
-
-                    b.Navigation("TripPlanCuisines");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.District", b =>
@@ -5537,9 +5233,15 @@ namespace Travelogue.Repository.Migrations
                 {
                     b.Navigation("Activities");
 
+                    b.Navigation("CraftVillage");
+
+                    b.Navigation("Cuisine");
+
                     b.Navigation("Experiences");
 
                     b.Navigation("FavoriteLocations");
+
+                    b.Navigation("Hotel");
 
                     b.Navigation("LocationCraftVillageSuggestions");
 
@@ -5594,10 +5296,6 @@ namespace Travelogue.Repository.Migrations
 
             modelBuilder.Entity("Travelogue.Repository.Entities.TourPlan", b =>
                 {
-                    b.Navigation("TourPlanCraftVillages");
-
-                    b.Navigation("TourPlanCuisines");
-
                     b.Navigation("TourPlanLocations");
                 });
 
@@ -5622,10 +5320,6 @@ namespace Travelogue.Repository.Migrations
 
             modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanVersion", b =>
                 {
-                    b.Navigation("TripPlanCraftVillages");
-
-                    b.Navigation("TripPlanCuisines");
-
                     b.Navigation("TripPlanLocations");
                 });
 

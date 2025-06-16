@@ -110,7 +110,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -213,7 +213,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -244,7 +244,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -275,7 +275,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -316,7 +316,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -672,7 +672,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -689,13 +689,13 @@ public class LocationService : ILocationService
 
             var craftVillagesData = await _unitOfWork.LocationCraftVillageSuggestionRepository
                 .ActiveEntities
-                .Where(h => h.LocationId == locationId && !h.IsDeleted)
-                .Select(h => new
+                .Where(cv => cv.LocationId == locationId && !cv.IsDeleted)
+                .Select(cv => new
                 {
-                    h.CraftVillageId,
-                    h.CraftVillage.Name,
-                    h.CraftVillage.Description,
-                    h.CraftVillage.Address
+                    cv.CraftVillageId,
+                    Name = cv.CraftVillage != null && cv.CraftVillage.Location != null ? cv.CraftVillage.Location.Name ?? string.Empty : string.Empty,
+                    Description = cv.CraftVillage != null && cv.CraftVillage.Location != null ? cv.CraftVillage.Location.Description ?? string.Empty : string.Empty,
+                    Address = cv.CraftVillage != null && cv.CraftVillage.Location != null ? cv.CraftVillage.Location.Address ?? string.Empty : string.Empty
                 })
                 .ToListAsync(cancellationToken);
 
@@ -1155,7 +1155,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 

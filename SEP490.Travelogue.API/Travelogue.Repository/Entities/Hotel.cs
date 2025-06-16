@@ -20,9 +20,9 @@ public sealed class Hotel : BaseEntity
 
     [Range(-180, 180)]
     public double Longitude { get; set; }
-    //public Guid? LocationId { get; set; }
+    public Guid? LocationId { get; set; }
 
     // Navigation Properties
-    //public Location? Location { get; set; }
+    public Location? Location { get; set; }
     public ICollection<LocationHotelSuggestion> LocationHotelSuggestions { get; set; } = new List<LocationHotelSuggestion>();
 }

@@ -20,10 +20,10 @@ public sealed class Cuisine : BaseEntity
     [Range(-180, 180)]
     public double Longitude { get; set; }
 
-    //public Guid? LocationId { get; set; }
+    public Guid? LocationId { get; set; }
 
     // Navigation Properties
-    //public Location? Location { get; set; } = null!;
+    public Location? Location { get; set; } = null!;
     public ICollection<LocationCuisineSuggestion> LocationCuisineSuggestions { get; set; } = new List<LocationCuisineSuggestion>();
-    public ICollection<TripPlanCuisine> TripPlanCuisines { get; set; } = new List<TripPlanCuisine>();
+    // public ICollection<TripPlanCuisine> TripPlanCuisines { get; set; } = new List<TripPlanCuisine>();
 }

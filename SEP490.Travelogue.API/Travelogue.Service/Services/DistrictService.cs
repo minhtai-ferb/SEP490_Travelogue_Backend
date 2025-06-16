@@ -27,7 +27,7 @@ public interface IDistrictService
     //Task<string> GetDistrictRoleNameAsync(DistrictCreateModel districtCreateModel, CancellationToken cancellationToken);
     Task<bool> AddDistrictWithRoleAsync(DistrictCreateModel districtCreateModel, CancellationToken cancellationToken);
     Task<DistrictMediaResponse> AddDistrictWithMediaAsync(DistrictCreateWithMediaFileModel districtCreateModel, CancellationToken cancellationToken);
-    //Task<DistrictMediaResponse> UploadMediaAsync(Guid id, IFormFile imageUploadl, CancellationToken cancellationToken);
+    //Task<DistrictMediaResponse> UploadMediaAsync(Guid id, IFormFile imageUpload, CancellationToken cancellationToken);
     Task<DistrictMediaResponse> UpdateDistrictAsync(Guid id, DistrictUpdateWithMediaFileModel districtUpdateModel, CancellationToken cancellationToken);
     Task<DistrictMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
 }
@@ -41,7 +41,9 @@ public class DistrictService : IDistrictService
     private readonly IMediaCloudService _mediaCloudService;
     private readonly ICloudinaryService _cloudinaryService;
 
-    public DistrictService(IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService, IMediaCloudService mediaCloudService, ICloudinaryService cloudinaryService)
+    public DistrictService(
+        IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService,
+        IMediaCloudService mediaCloudService, ICloudinaryService cloudinaryService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;

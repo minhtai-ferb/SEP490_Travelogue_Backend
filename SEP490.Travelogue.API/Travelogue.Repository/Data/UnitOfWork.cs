@@ -43,8 +43,6 @@ public class UnitOfWork : IUnitOfWork
     public ITripPlanRepository TripPlanRepository { get; }
     public ITripPlanVersionRepository TripPlanVersionRepository { get; }
     public ITripPlanLocationRepository TripPlanLocationRepository { get; }
-    public ITripPlanCraftVillageRepository TripPlanCraftVillageRepository { get; }
-    public ITripPlanCuisineRepository TripPlanCuisineRepository { get; }
     public ITourGuideRepository TourGuideRepository { get; }
     public ITourRepository TourRepository { get; }
     public IOrderRepository OrderRepository { get; }
@@ -87,8 +85,6 @@ public class UnitOfWork : IUnitOfWork
         TripPlanRepository = new TripPlanRepository(_dbContext);
         TripPlanVersionRepository = new TripPlanVersionRepository(_dbContext);
         TripPlanLocationRepository = new TripPlanLocationRepository(_dbContext);
-        TripPlanCraftVillageRepository = new TripPlanCraftVillageRepository(_dbContext);
-        TripPlanCuisineRepository = new TripPlanCuisineRepository(_dbContext);
         TourGuideRepository = new TourGuideRepository(_dbContext);
         TourRepository = new TourRepository(_dbContext);
         OrderRepository = new OrderRepository(_dbContext);

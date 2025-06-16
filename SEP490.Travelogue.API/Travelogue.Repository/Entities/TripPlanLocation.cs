@@ -10,6 +10,7 @@ public sealed class TripPlanLocation : BaseEntity
 
     [Required]
     public Guid LocationId { get; set; }
+
     [DataType(DataType.DateTime)]
     public DateTime? StartTime { get; set; }
 

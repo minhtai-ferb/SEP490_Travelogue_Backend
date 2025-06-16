@@ -22,8 +22,5 @@ public sealed class TourPlan : BaseEntity
 
     public User? User { get; set; }
     public Tour? Tour { get; set; }
-    public ICollection<TourPlanCraftVillage>? TourPlanCraftVillages { get; set; }
-    public ICollection<TourPlanCuisine>? TourPlanCuisines { get; set; }
     public ICollection<TourPlanLocation>? TourPlanLocations { get; set; }
-
 }

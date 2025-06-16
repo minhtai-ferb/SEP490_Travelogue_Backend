@@ -11,4 +11,3 @@ public class TripPlanShare : BaseEntity
     public TripPlan TripPlan { get; set; } = null!;
     public User User { get; set; } = null!;
 }
-

@@ -4,8 +4,6 @@ namespace Travelogue.Repository.Entities;
 
 public sealed class CraftVillageMedia : BaseEntity
 {
-    //public string Url { get; set; } = string.Empty;
-    //public string FileKey { get; set; } = string.Empty;
     public string MediaUrl { get; set; } = string.Empty;
     public string? FileName { get; set; }
     public string FileType { get; set; }
@@ -15,6 +13,4 @@ public sealed class CraftVillageMedia : BaseEntity
 
     // Navigation Properties
     public CraftVillage CraftVillage { get; set; } = null!;
-    //public Guid EntityId { get; set; }
-    //public EntityType EntityType { get; set; }
 }

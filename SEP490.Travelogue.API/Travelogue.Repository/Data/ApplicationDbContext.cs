@@ -30,15 +30,11 @@ public class ApplicationDbContext : DbContext
     public DbSet<CraftVillage> CraftVillages { get; set; }
     public DbSet<CraftVillageMedia> CraftVillageMedia { get; set; }
     public DbSet<CraftVillageInterest> CraftVillageInterests { get; set; }
-    public DbSet<TourPlanCraftVillage> TourPlanCraftVillages { get; set; }
-    public DbSet<TripPlanCraftVillage> TripPlanCraftVillages { get; set; }
 
     // Cuisine Management
     public DbSet<Cuisine> Cuisines { get; set; }
     public DbSet<CuisineMedia> CuisineMedias { get; set; }
     public DbSet<CuisineInterest> CuisineInterests { get; set; }
-    public DbSet<TourPlanCuisine> TourPlanCuisines { get; set; }
-    public DbSet<TripPlanCuisine> TripPlanCuisines { get; set; }
 
     // Hotel Management
     public DbSet<Hotel> Hotels { get; set; }

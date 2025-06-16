@@ -8,7 +8,7 @@ namespace Travelogue.Repository.Repositories;
 
 public interface ICraftVillageRepository : IGenericRepository<CraftVillage>
 {
-    Task<CraftVillage?> GetByNameAsync(string title, CancellationToken cancellationToken);
+    Task<List<CraftVillage?>> GetByNameAsync(string title, CancellationToken cancellationToken);
     Task<PagedResult<CraftVillage>> GetPageWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
 }
 public sealed class CraftVillageRepository : GenericRepository<CraftVillage>, ICraftVillageRepository
@@ -20,12 +20,21 @@ public sealed class CraftVillageRepository : GenericRepository<CraftVillage>, IC
         _context = dbContext;
     }
 
-    public Task<CraftVillage?> GetByNameAsync(string title, CancellationToken cancellationToken)
+    public async Task<List<CraftVillage?>> GetByNameAsync(string name, CancellationToken cancellationToken)
     {
         try
         {
-            var events = _context.CraftVillages.FirstOrDefaultAsync(a => a.Name.Contains(title), cancellationToken);
-            return events;
+            var query = ActiveEntities.AsQueryable();
+
+            if (!string.IsNullOrEmpty(name))
+            {
+                query = query
+                    .Include(cv => cv.Location)
+                    .Where(cv => cv.Location.Name.Contains(name));
+            }
+
+            var result = await query.ToListAsync(cancellationToken);
+            return result;
         }
         catch (CustomException)
         {
@@ -48,7 +57,9 @@ public sealed class CraftVillageRepository : GenericRepository<CraftVillage>, IC
 
         if (!string.IsNullOrEmpty(name))
         {
-            query = query.Where(a => a.Name.Contains(name));
+            query = query
+                .Include(cv => cv.Location)
+                .Where(cv => cv.Location.Name.Contains(name));
         }
 
         var totalItems = await query.CountAsync(cancellationToken);

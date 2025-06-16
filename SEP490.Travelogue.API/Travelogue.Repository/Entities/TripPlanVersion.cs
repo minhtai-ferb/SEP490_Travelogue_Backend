@@ -14,7 +14,7 @@ public class TripPlanVersion : BaseEntity
     public string? Notes { get; set; } = null;
     public string Status { get; set; } = "Draft";
 
-    public ICollection<TripPlanCraftVillage>? TripPlanCraftVillages { get; set; }
-    public ICollection<TripPlanCuisine>? TripPlanCuisines { get; set; }
+    // public ICollection<TripPlanCraftVillage>? TripPlanCraftVillages { get; set; }
+    // public ICollection<TripPlanCuisine>? TripPlanCuisines { get; set; }
     public ICollection<TripPlanLocation>? TripPlanLocations { get; set; }
 }
