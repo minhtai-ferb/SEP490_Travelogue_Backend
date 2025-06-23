@@ -59,7 +59,7 @@ public class TypeLocationService : ITypeLocationService
             {
                 if (!matchedCategory.IsDeleted)
                 {
-                    throw CustomExceptionFactory.CreateBadRequest("Danh mục đã tồn tại trong hệ thống.");
+                    throw CustomExceptionFactory.CreateBadRequestError("Danh mục đã tồn tại trong hệ thống.");
                 }
 
                 matchedCategory.IsDeleted = false;
@@ -93,7 +93,7 @@ public class TypeLocationService : ITypeLocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -111,12 +111,12 @@ public class TypeLocationService : ITypeLocationService
                 throw CustomExceptionFactory.CreateNotFoundError("type location");
             }
 
-            var isInUsing = await _unitOfWork.LocationRepository.ActiveEntities.FirstOrDefaultAsync(e => e.TypeLocationId == id, cancellationToken) != null;
+            // var isInUsing = await _unitOfWork.LocationRepository.ActiveEntities.FirstOrDefaultAsync(e => e.TypeLocationId == id, cancellationToken) != null;
 
-            if (isInUsing)
-            {
-                throw CustomExceptionFactory.CreateBadRequest(ResponseMessages.BE_USED);
-            }
+            // if (isInUsing)
+            // {
+            //     throw CustomExceptionFactory.CreateBadRequestError(ResponseMessages.BE_USED);
+            // }
 
             existingTypeLocation.LastUpdatedBy = currentUserId;
             existingTypeLocation.DeletedBy = currentUserId;
@@ -138,7 +138,7 @@ public class TypeLocationService : ITypeLocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -164,7 +164,7 @@ public class TypeLocationService : ITypeLocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -202,7 +202,7 @@ public class TypeLocationService : ITypeLocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -228,7 +228,7 @@ public class TypeLocationService : ITypeLocationService
 
             if (duplicateExists)
             {
-                throw CustomExceptionFactory.CreateBadRequest("Tên danh mục đã tồn tại trong hệ thống.");
+                throw CustomExceptionFactory.CreateBadRequestError("Tên danh mục đã tồn tại trong hệ thống.");
             }
 
             _mapper.Map(typeLocationUpdateModel, existingTypeLocation);
@@ -250,7 +250,7 @@ public class TypeLocationService : ITypeLocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -280,7 +280,7 @@ public class TypeLocationService : ITypeLocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 }

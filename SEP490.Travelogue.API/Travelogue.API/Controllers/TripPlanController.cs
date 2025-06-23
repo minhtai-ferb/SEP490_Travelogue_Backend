@@ -1,0 +1,147 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using Travelogue.Repository.Bases.Responses;
+using Travelogue.Service.BusinessModels.ExchangeSessionModels;
+using Travelogue.Service.BusinessModels.TripPlanModels;
+using Travelogue.Service.Commons.BaseResponses;
+using Travelogue.Service.Services;
+
+namespace Travelogue.API.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class TripPlansController : ControllerBase
+{
+    private readonly ITripPlanService _tripPlanService;
+    private readonly IExchangeSessionService _exchangeSessionService;
+
+    public TripPlansController(ITripPlanService tripPlanService, IExchangeSessionService exchangeSessionService)
+    {
+        _tripPlanService = tripPlanService;
+        _exchangeSessionService = exchangeSessionService;
+    }
+
+    /// <summary>
+    /// Tạo mới tripPlan
+    /// </summary>
+    /// <param name="model"></param>
+    /// <returns></returns>
+    [HttpPost]
+    public async Task<IActionResult> CreateTripPlan([FromBody] TripPlanCreateModel model)
+    {
+        var result = await _tripPlanService.AddTripPlanAsync(model, new CancellationToken());
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "trip plan")
+        ));
+    }
+
+    /// <summary>
+    /// Cập nhật tripPlan
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="model"></param>
+    /// <returns></returns>
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateTripPlan(Guid id, [FromBody] TripPlanUpdateModel model)
+    {
+        await _tripPlanService.UpdateTripPlanAsync(id, model, new CancellationToken());
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: true,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "news")
+        ));
+    }
+
+    /// <summary>
+    /// Lấy chi tiết trip plan theo ID
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetTripPlanDetail(Guid id)
+    {
+        var result = await _tripPlanService.GetTripPlanByIdAsync(id, new CancellationToken());
+        return Ok(ResponseModel<TripPlanDetailResponse>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "trip plan")
+        ));
+    }
+
+    /// <summary>
+    /// Lấy danh sách trip plan với phân trang và tìm kiếm theo tiêu đề
+    /// </summary>
+    /// <param name="title"></param>
+    /// <param name="pageNumber"></param>
+    /// <param name="pageSize"></param>
+    /// <returns></returns>
+    [HttpGet]
+    public async Task<IActionResult> GetTripPlan(string? title, int pageNumber = 1, int pageSize = 10)
+    {
+        var result = await _tripPlanService.GetPagedTripPlanWithSearchAsync(title, pageNumber, pageSize, new CancellationToken());
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "trip plan")
+        ));
+    }
+
+    /// <summary>
+    /// Người dùng gửi request --> tạo phiên bản mới từ phiên bản gốc --> gán vào trip plan version trong request để biết được version nào là phiên bản mà họ gửi cho tour guide
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    [HttpPost("version/{id}")]
+    public async Task<IActionResult> CloneTripPlanVersion(Guid id)
+    {
+        // var result = await _tripPlanService.CreateVersionFromTripPlanAsync(id, string.Empty);
+        var result = await _tripPlanService.CreateVersionFromTripPlanAsync(id, string.Empty);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "trip plan version")
+        ));
+    }
+
+    // [HttpPost("{tripPlanId}/exchanges/sessions")]
+    // public async Task<IActionResult> CreateExchangeSession(Guid tripPlanId, [FromBody] CreateExchangeSessionRequest request)
+    // {
+    //     if (tripPlanId == Guid.Empty)
+    //     {
+    //         return BadRequest("Trip plan ID cannot be empty.");
+    //     }
+
+    //     if (request == null)
+    //     {
+    //         return BadRequest("Request body cannot be null.");
+    //     }
+
+    //     await _tripPlanService.CreateExchangeSessionAsync(tripPlanId, request, new CancellationToken());
+    //     return Ok(ResponseModel<object>.OkResponseModel(
+    //         data: true,
+    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "request exchange session")
+    //     ));
+    // }
+
+    /// <summary>
+    /// Tạo phiên trao đổi mới (tự động tạo trip plan version mới)
+    /// </summary>
+    /// <param name="tripPlanId"></param>
+    /// <param name="request"></param>
+    /// <returns></returns>
+    [HttpPost("{tripPlanId}/exchanges/sessions")]
+    public async Task<IActionResult> CreateExchangeSessionWithoutTripPlanVersion(Guid tripPlanId, [FromBody] CreateExchangeSessionRequest request)
+    {
+        if (tripPlanId == Guid.Empty)
+        {
+            return BadRequest("Trip plan ID cannot be empty.");
+        }
+
+        if (request == null)
+        {
+            return BadRequest("Request body cannot be null.");
+        }
+
+        var result = await _tripPlanService.CreateExchangeSessionWithNewVersionAsync(tripPlanId, request, new CancellationToken());
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "request exchange session")
+        ));
+    }
+}

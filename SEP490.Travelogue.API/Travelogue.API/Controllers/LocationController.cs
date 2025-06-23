@@ -7,6 +7,7 @@ using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 
 namespace Travelogue.API.Controllers;
+
 [Route("api/[controller]")]
 [ApiController]
 public class LocationController : ControllerBase
@@ -73,7 +74,7 @@ public class LocationController : ControllerBase
     public async Task<IActionResult> GetLocationById(Guid id)
     {
         var location = await _locationService.GetLocationByIdAsync(id, new CancellationToken());
-        return Ok(ResponseModel<LocationDataModel>.OkResponseModel(
+        return Ok(ResponseModel<LocationDataDetailModel>.OkResponseModel(
             data: location,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "location")
         ));

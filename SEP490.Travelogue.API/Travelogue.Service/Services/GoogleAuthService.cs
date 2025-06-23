@@ -84,7 +84,6 @@ public class GoogleAuthService : IGoogleAuthService
                 VerificationToken = tokens,
                 RefreshTokens = refreshTokens,
                 UserId = user.Id,
-                Username = user.UserName!,
                 FullName = user.FullName,
                 Email = user.Email!,
                 IsEmailVerified = user.IsEmailVerified ?? false,
@@ -181,7 +180,6 @@ public class GoogleAuthService : IGoogleAuthService
             {
                 FullName = userName,
                 Email = userEmail,
-                UserName = userEmail,
                 GoogleId = userGoogleId,
                 CreatedTime = _timeService.SystemTimeNow,
                 LastUpdatedTime = _timeService.SystemTimeNow,

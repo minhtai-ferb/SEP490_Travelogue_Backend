@@ -1,9 +1,10 @@
 ﻿using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
-using Travelogue.Repository.Bases.BaseEntitys;
+using Travelogue.Repository.Bases.BaseEntities;
 
 namespace Travelogue.Repository.Entities;
+
 public sealed class Role : BaseEntity
 {
     public string Name { get; private set; } = string.Empty;

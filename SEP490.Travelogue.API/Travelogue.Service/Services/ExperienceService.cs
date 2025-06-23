@@ -89,7 +89,7 @@ public class ExperienceService : IExperienceService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -137,7 +137,7 @@ public class ExperienceService : IExperienceService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -189,7 +189,7 @@ public class ExperienceService : IExperienceService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -228,7 +228,7 @@ public class ExperienceService : IExperienceService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -277,7 +277,7 @@ public class ExperienceService : IExperienceService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -318,7 +318,7 @@ public class ExperienceService : IExperienceService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -949,7 +949,7 @@ public class ExperienceService : IExperienceService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //       //  _unitOfWork.Dispose();
     //    }
     //}
 
@@ -979,7 +979,7 @@ public class ExperienceService : IExperienceService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //       //  _unitOfWork.Dispose();
     //    }
     //}
 
@@ -1009,7 +1009,7 @@ public class ExperienceService : IExperienceService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //       //  _unitOfWork.Dispose();
     //    }
     //}
 }

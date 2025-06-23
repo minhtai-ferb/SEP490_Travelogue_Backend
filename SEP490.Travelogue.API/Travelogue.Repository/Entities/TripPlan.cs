@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Travelogue.Repository.Bases.BaseEntitys;
+using Travelogue.Repository.Bases.BaseEntities;
 
 namespace Travelogue.Repository.Entities;
 
@@ -20,8 +20,10 @@ public sealed class TripPlan : BaseEntity
     [Required]
     public Guid UserId { get; set; }
 
+    public Guid? UserTripPlanVersionId { get; set; }
+
     public User? User { get; set; }
-    public ICollection<TripPlanCraftVillage>? TripPlanCraftVillages { get; set; }
-    public ICollection<TripPlanCuisine>? TripPlanCuisines { get; set; }
-    public ICollection<TripPlanLocation>? TripPlanLocations { get; set; }
+    public ICollection<TripPlanVersion> TripPlanVersions { get; set; } = new List<TripPlanVersion>();
+    public ICollection<TripPlanShare> Shares { get; set; } = new List<TripPlanShare>();
+    public ICollection<Order> Orders { get; set; } = new List<Order>();
 }

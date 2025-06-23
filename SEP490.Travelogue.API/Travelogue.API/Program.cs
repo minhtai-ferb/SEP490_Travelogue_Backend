@@ -1,6 +1,8 @@
+using System.Configuration;
 using FirebaseAdmin;
 using FirebaseAdmin.Auth;
 using Google.Apis.Auth.OAuth2;
+using Microsoft.EntityFrameworkCore;
 using Travelogue.API;
 using Travelogue.API.Middlewares;
 using Travelogue.Repository;
@@ -18,6 +20,8 @@ builder.Services.AddSwaggerGen();
 
 #region Custom application service configuration
 
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
 builder.Services.ConfigureRepositoryLayerService(builder.Configuration);
 builder.Services.ConfigureServiceLayerService(builder.Configuration);
 builder.Services.ConfigureApiLayerServices(builder.Configuration);
@@ -26,6 +30,12 @@ builder.Services.Configure<RouteOptions>(options =>
 {
     options.LowercaseUrls = true;
 });
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseMySql(
+            builder.Configuration.GetConnectionString("DefaultConnectionMySQL"),
+            ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnectionMySQL"))
+        )
+    );
 
 //builder.Services.AddDbContext<ApplicationDbContext>(options =>
 //   options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -46,11 +56,15 @@ builder.Services.AddSingleton(FirebaseAuth.DefaultInstance);
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    var serviceProvider = scope.ServiceProvider;
-    await DataSeeder.SeedDataAsync(serviceProvider);
-}
+// using (var scope = app.Services.CreateScope())
+// {
+//     var serviceProvider = scope.ServiceProvider;
+//     await DataSeeder.SeedDataAsync(serviceProvider);
+// }
+
+await using var scope = app.Services.CreateAsyncScope();
+var serviceProvider = scope.ServiceProvider;
+await DataSeeder.SeedDataAsync(serviceProvider);
 
 app.UseCors(x => x.AllowAnyMethod().AllowAnyHeader().SetIsOriginAllowed(origin => true).AllowCredentials());
 app.UseSwagger();

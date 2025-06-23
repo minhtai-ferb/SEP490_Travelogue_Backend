@@ -2,6 +2,7 @@
 using Travelogue.Repository.Bases.Responses;
 
 namespace Travelogue.Repository.Bases.Exceptions;
+
 public static class CustomExceptionFactory
 {
     public static CustomException CreateInternalServerError()
@@ -26,7 +27,7 @@ public static class CustomExceptionFactory
                                    ResponseMessages.NOT_FOUND.Replace("{0}", $"{objectName}"));
     }
 
-    public static CustomException CreateBadRequest(string message)
+    public static CustomException CreateBadRequestError(string message)
     {
         return new CustomException(StatusCodes.Status400BadRequest,
                                    ResponseCodeConstants.BAD_REQUEST,

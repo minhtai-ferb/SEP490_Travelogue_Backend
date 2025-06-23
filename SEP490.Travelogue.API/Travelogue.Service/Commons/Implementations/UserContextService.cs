@@ -55,6 +55,31 @@ public class UserContextService : IUserContextService
             ?? httpContext.User.FindFirstValue("sub");
     }
 
+    public Task<List<string>> GetCurrentUserRolesAsync()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
+        {
+            throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "Http context is null. Please Login.");
+        }
+
+        var user = httpContext.User;
+        if (user == null || user?.Identity == null || !user.Identity.IsAuthenticated)
+        {
+            throw new CustomException(StatusCodes.Status401Unauthorized, ResponseCodeConstants.UNAUTHORIZED, ResponseMessages.LOGIN_REQUIRED);
+        }
+
+        // Lấy tất cả các claims có type là Role
+        var roles = user.Claims
+            .Where(c => c.Type == ClaimTypes.Role || c.Type == "role") // hỗ trợ cả 2 dạng thường gặp
+            .Select(c => c.Value)
+            .Distinct()
+            .ToList();
+
+        return Task.FromResult(roles);
+    }
+
+
     public string GetUserToken()
     {
         var httpContext = _httpContextAccessor.HttpContext;

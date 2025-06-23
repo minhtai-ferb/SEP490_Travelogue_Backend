@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Travelogue.Repository.Bases.BaseEntitys;
+using Travelogue.Repository.Bases.BaseEntities;
 
 namespace Travelogue.Repository.Entities;
 
@@ -9,5 +9,5 @@ public sealed class TypeLocation : BaseEntity
     public required string Name { get; set; }
 
     // Navigation Properties
-    public ICollection<Location>? Locations { get; set; }
+    public ICollection<LocationCategory> LocationCategories { get; set; }
 }

@@ -1,4 +1,5 @@
 ﻿namespace Travelogue.Repository.Bases;
+
 public class PagedResult<T>
 {
     public List<T> Items { get; set; } = new List<T>();

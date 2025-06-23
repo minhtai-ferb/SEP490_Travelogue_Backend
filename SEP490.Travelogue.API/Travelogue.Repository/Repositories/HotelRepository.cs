@@ -8,8 +8,9 @@ namespace Travelogue.Repository.Repositories;
 
 public interface IHotelRepository : IGenericRepository<Hotel>
 {
-    Task<Hotel?> GetByNameAsync(string title, CancellationToken cancellationToken);
+    Task<List<Hotel?>> GetByNameAsync(string title, CancellationToken cancellationToken);
     Task<PagedResult<Hotel>> GetPageWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+    Task<Hotel?> GetByLocationId(Guid locationId, CancellationToken cancellationToken);
 }
 public sealed class HotelRepository : GenericRepository<Hotel>, IHotelRepository
 {
@@ -20,12 +21,32 @@ public sealed class HotelRepository : GenericRepository<Hotel>, IHotelRepository
         _context = dbContext;
     }
 
-    public Task<Hotel?> GetByNameAsync(string title, CancellationToken cancellationToken)
+    public async Task<List<Hotel?>> GetByNameAsync(string title, CancellationToken cancellationToken)
     {
         try
         {
-            var events = _context.Hotels.FirstOrDefaultAsync(a => a.Name.Contains(title), cancellationToken);
+            var events = await _context.Hotels.Include(h => h.Location)
+                .Where(a => a.Location.Name.Contains(title))
+                .ToListAsync(cancellationToken);
             return events;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError();
+        }
+    }
+
+    public async Task<Hotel?> GetByLocationId(Guid locationId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var hotel = await _context.Hotels.Include(h => h.Location)
+                .FirstOrDefaultAsync(a => a.LocationId == locationId, cancellationToken);
+            return hotel;
         }
         catch (CustomException)
         {
@@ -48,7 +69,7 @@ public sealed class HotelRepository : GenericRepository<Hotel>, IHotelRepository
 
         if (!string.IsNullOrEmpty(name))
         {
-            query = query.Where(a => a.Name.Contains(name));
+            query = query.Include(q => q.Location).Where(a => a.Location.Name.Contains(name));
         }
 
         var totalItems = await query.CountAsync(cancellationToken);

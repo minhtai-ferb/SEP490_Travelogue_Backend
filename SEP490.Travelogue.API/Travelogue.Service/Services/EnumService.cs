@@ -3,6 +3,7 @@ using System.Reflection;
 using Travelogue.Service.BusinessModels;
 
 namespace Travelogue.Service.Services;
+
 public interface IEnumService
 {
     List<EnumResponse> GetEnumValues<T>() where T : Enum;

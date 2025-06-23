@@ -8,6 +8,9 @@ using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.CraftVillageModels;
+using Travelogue.Service.BusinessModels.CuisineModels;
+using Travelogue.Service.BusinessModels.HotelModels;
 using Travelogue.Service.BusinessModels.LocationModels;
 using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.Commons.Implementations;
@@ -17,7 +20,7 @@ namespace Travelogue.Service.Services;
 
 public interface ILocationService
 {
-    Task<LocationDataModel?> GetLocationByIdAsync(Guid id, CancellationToken cancellationToken);
+    Task<LocationDataDetailModel?> GetLocationByIdAsync(Guid id, CancellationToken cancellationToken);
     Task<List<LocationDataModel>> GetAllLocationsAsync(CancellationToken cancellationToken);
     Task<LocationDataModel> AddLocationAsync(LocationCreateModel locationCreateModel, CancellationToken cancellationToken);
     Task UpdateLocationAsync(Guid id, LocationUpdateModel locationUpdateModel, CancellationToken cancellationToken);
@@ -110,7 +113,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -154,7 +157,7 @@ public class LocationService : ILocationService
 
             if (isInUsing)
             {
-                throw CustomExceptionFactory.CreateBadRequest(ResponseMessages.BE_USED);
+                throw CustomExceptionFactory.CreateBadRequestError(ResponseMessages.BE_USED);
             }
 
             existingLocation.LastUpdatedBy = currentUserId;
@@ -213,24 +216,37 @@ public class LocationService : ILocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
-    public async Task<LocationDataModel?> GetLocationByIdAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<LocationDataDetailModel?> GetLocationByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         try
         {
-            var existingLocation = await _unitOfWork.LocationRepository.GetByIdAsync(id, cancellationToken);
+            var existingLocation = await _unitOfWork.LocationRepository.GetWithIncludeAsync(id, include => include
+                .Include(l => l.LocationCategories)
+                    .ThenInclude(l => l.Category));
             if (existingLocation == null || existingLocation.IsDeleted)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("location");
             }
 
-            var locationDataModel = _mapper.Map<LocationDataModel>(existingLocation);
+            var hotel = await _unitOfWork.HotelRepository.GetByLocationId(existingLocation.Id, cancellationToken);
+            var cuisine = await _unitOfWork.CuisineRepository.GetByIdAsync(existingLocation.Id, cancellationToken);
+            var craftVillage = await _unitOfWork.CraftVillageRepository.GetByIdAsync(existingLocation.Id, cancellationToken);
+            var historicalLocation = await _unitOfWork.HistoricalLocationRepository.GetByIdAsync(existingLocation.Id, cancellationToken);
+
+            var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
+
+            locationDataModel.Hotel = hotel != null ? _mapper.Map<HotelDataModel>(hotel) : null;
+            locationDataModel.Cuisine = cuisine != null ? _mapper.Map<CuisineDataModel>(cuisine) : null;
+            locationDataModel.CraftVillage = craftVillage != null ? _mapper.Map<CraftVillageDataModel>(craftVillage) : null;
+            locationDataModel.HistoricalLocation = historicalLocation != null ? _mapper.Map<HistoricalLocation>(historicalLocation) : null;
+
             locationDataModel.Medias = await GetMediaWithoutVideoByIdAsync(id, cancellationToken);
             locationDataModel.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationDataModel.DistrictId);
-            locationDataModel.TypeLocationName = await _unitOfWork.TypeLocationRepository.GetTypeLocationNameById(locationDataModel.TypeLocationId);
+            locationDataModel.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationDataModel.Id, cancellationToken);
 
             return locationDataModel;
         }
@@ -244,7 +260,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -275,7 +291,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -316,7 +332,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -672,7 +688,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -689,13 +705,13 @@ public class LocationService : ILocationService
 
             var craftVillagesData = await _unitOfWork.LocationCraftVillageSuggestionRepository
                 .ActiveEntities
-                .Where(h => h.LocationId == locationId && !h.IsDeleted)
-                .Select(h => new
+                .Where(cv => cv.LocationId == locationId && !cv.IsDeleted)
+                .Select(cv => new
                 {
-                    h.CraftVillageId,
-                    h.CraftVillage.Name,
-                    h.CraftVillage.Description,
-                    h.CraftVillage.Address
+                    cv.CraftVillageId,
+                    Name = cv.CraftVillage != null && cv.CraftVillage.Location != null ? cv.CraftVillage.Location.Name ?? string.Empty : string.Empty,
+                    Description = cv.CraftVillage != null && cv.CraftVillage.Location != null ? cv.CraftVillage.Location.Description ?? string.Empty : string.Empty,
+                    Address = cv.CraftVillage != null && cv.CraftVillage.Location != null ? cv.CraftVillage.Location.Address ?? string.Empty : string.Empty
                 })
                 .ToListAsync(cancellationToken);
 
@@ -914,12 +930,13 @@ public class LocationService : ILocationService
 
             var cuisinesData = await _unitOfWork.LocationCuisineSuggestionRepository.Entities
                 .Where(h => h.LocationId == locationId && !h.IsDeleted)
+                .Include(h => h.Location)
                 .Select(h => new
                 {
                     h.CuisineId,
-                    h.Cuisine.Name,
-                    h.Cuisine.Description,
-                    h.Cuisine.Address
+                    h.Cuisine.Location.Name,
+                    h.Cuisine.Location.Description,
+                    h.Cuisine.Location.Address
                 })
                 .ToListAsync(cancellationToken);
 
@@ -1155,7 +1172,7 @@ public class LocationService : ILocationService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -1191,7 +1208,7 @@ public class LocationService : ILocationService
                 }
                 else
                 {
-                    throw CustomExceptionFactory.CreateBadRequest("Location is already in favorites.");
+                    throw CustomExceptionFactory.CreateBadRequestError("Location is already in favorites.");
                 }
             }
 
@@ -1283,7 +1300,7 @@ public class LocationService : ILocationService
 
             if (favoriteLocation.IsDeleted)
             {
-                throw CustomExceptionFactory.CreateBadRequest("Location đã bị xóa");
+                throw CustomExceptionFactory.CreateBadRequestError("Location đã bị xóa");
             }
 
             favoriteLocation.IsDeleted = true;
@@ -2037,7 +2054,7 @@ public class LocationService : ILocationService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //       //  _unitOfWork.Dispose();
     //    }
     //}
 
@@ -2085,7 +2102,7 @@ public class LocationService : ILocationService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //       //  _unitOfWork.Dispose();
     //    }
     //}
 
@@ -2115,7 +2132,7 @@ public class LocationService : ILocationService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //       //  _unitOfWork.Dispose();
     //    }
     //}
 
@@ -2145,7 +2162,7 @@ public class LocationService : ILocationService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //       //  _unitOfWork.Dispose();
     //    }
     //}
 

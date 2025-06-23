@@ -6,93 +6,12 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Travelogue.Repository.Migrations
 {
     /// <inheritdoc />
-    public partial class InitDb : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterDatabase()
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "craft_villages",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    name = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    description = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    content = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    address = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    price_per_night = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
-                    phone_number = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    email = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    website = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    latitude = table.Column<double>(type: "double", nullable: false),
-                    longitude = table.Column<double>(type: "double", nullable: false),
-                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    created_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_craft_villages", x => x.id);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "cuisines",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    name = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    description = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    content = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    address = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    cuisine_type = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    phone_number = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    email = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    website = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    latitude = table.Column<double>(type: "double", nullable: false),
-                    longitude = table.Column<double>(type: "double", nullable: false),
-                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    created_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_cuisines", x => x.id);
-                })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
@@ -122,46 +41,6 @@ namespace Travelogue.Repository.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_districts", x => x.id);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "hotels",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    name = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    description = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    content = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    address = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    price_per_night = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
-                    phone_number = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    email = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    website = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    latitude = table.Column<double>(type: "double", nullable: false),
-                    longitude = table.Column<double>(type: "double", nullable: false),
-                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    created_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_hotels", x => x.id);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -411,8 +290,6 @@ namespace Travelogue.Repository.Migrations
                     id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     email = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    user_name = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
                     email_confirmed = table.Column<bool>(type: "tinyint(1)", nullable: true),
                     password_hash = table.Column<byte[]>(type: "longblob", nullable: true),
                     password_salt = table.Column<byte[]>(type: "longblob", nullable: true),
@@ -457,82 +334,6 @@ namespace Travelogue.Repository.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "craft_village_media",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    media_url = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    file_name = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    file_type = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    size_in_bytes = table.Column<float>(type: "float", nullable: false),
-                    is_thumbnail = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    craft_village_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    created_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_craft_village_media", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_craft_village_media_craft_villages_craft_village_id",
-                        column: x => x.craft_village_id,
-                        principalTable: "craft_villages",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "cuisine_medias",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    media_url = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    file_name = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    file_type = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    size_in_bytes = table.Column<float>(type: "float", nullable: false),
-                    is_thumbnail = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    cuisine_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    created_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_cuisine_medias", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_cuisine_medias_cuisines_cuisine_id",
-                        column: x => x.cuisine_id,
-                        principalTable: "cuisines",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
                 name: "district_medias",
                 columns: table => new
                 {
@@ -564,118 +365,6 @@ namespace Travelogue.Repository.Migrations
                         name: "FK_district_medias_districts_district_id",
                         column: x => x.district_id,
                         principalTable: "districts",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "hotel_medias",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    media_url = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    file_name = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    file_type = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    size_in_bytes = table.Column<float>(type: "float", nullable: false),
-                    is_thumbnail = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    hotel_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    created_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_hotel_medias", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_hotel_medias_hotels_hotel_id",
-                        column: x => x.hotel_id,
-                        principalTable: "hotels",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "craft_village_interests",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    craft_village_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    interest_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    created_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_craft_village_interests", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_craft_village_interests_craft_villages_craft_village_id",
-                        column: x => x.craft_village_id,
-                        principalTable: "craft_villages",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_craft_village_interests_interests_interest_id",
-                        column: x => x.interest_id,
-                        principalTable: "interests",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "cuisine_interests",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    cuisine_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    interest_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    created_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_cuisine_interests", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_cuisine_interests_cuisines_cuisine_id",
-                        column: x => x.cuisine_id,
-                        principalTable: "cuisines",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_cuisine_interests_interests_interest_id",
-                        column: x => x.interest_id,
-                        principalTable: "interests",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 })
@@ -766,6 +455,8 @@ namespace Travelogue.Repository.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     content = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    address = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     latitude = table.Column<double>(type: "double", nullable: false),
                     longitude = table.Column<double>(type: "double", nullable: false),
                     heritage_rank = table.Column<int>(type: "int", nullable: false),
@@ -846,6 +537,8 @@ namespace Travelogue.Repository.Migrations
                     id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     rating = table.Column<int>(type: "int", nullable: false),
                     price = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
+                    introduction = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     user_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
@@ -883,6 +576,7 @@ namespace Travelogue.Repository.Migrations
                     start_date = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                     end_date = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                     user_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    trip_plan_version_id = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
@@ -974,50 +668,6 @@ namespace Travelogue.Repository.Migrations
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_user_roles_users_user_id",
-                        column: x => x.user_id,
-                        principalTable: "users",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "withdrawal_requests",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    craft_village_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    user_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    request_time = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    status = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    processed_by = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
-                    processed_at = table.Column<DateTime>(type: "datetime(6)", nullable: true),
-                    end_date = table.Column<DateTime>(type: "datetime(6)", nullable: true),
-                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    created_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_withdrawal_requests", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_withdrawal_requests_craft_villages_craft_village_id",
-                        column: x => x.craft_village_id,
-                        principalTable: "craft_villages",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_withdrawal_requests_users_user_id",
                         column: x => x.user_id,
                         principalTable: "users",
                         principalColumn: "id",
@@ -1180,6 +830,99 @@ namespace Travelogue.Repository.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "craft_villages",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    name = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    description = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    content = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    address = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    price_per_night = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
+                    phone_number = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    email = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    website = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    latitude = table.Column<double>(type: "double", nullable: false),
+                    longitude = table.Column<double>(type: "double", nullable: false),
+                    location_id = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    created_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_craft_villages", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_craft_villages_locations_location_id",
+                        column: x => x.location_id,
+                        principalTable: "locations",
+                        principalColumn: "id");
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "cuisines",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    name = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    description = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    content = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    address = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    cuisine_type = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    phone_number = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    email = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    website = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    latitude = table.Column<double>(type: "double", nullable: false),
+                    longitude = table.Column<double>(type: "double", nullable: false),
+                    location_id = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    created_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_cuisines", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_cuisines_locations_location_id",
+                        column: x => x.location_id,
+                        principalTable: "locations",
+                        principalColumn: "id");
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "events",
                 columns: table => new
                 {
@@ -1278,14 +1021,28 @@ namespace Travelogue.Repository.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "location_craft_village_suggestions",
+                name: "hotels",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    location_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    craft_village_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    note = table.Column<string>(type: "longtext", nullable: true)
+                    name = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    description = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    content = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    address = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    price_per_night = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
+                    phone_number = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    email = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    website = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    latitude = table.Column<double>(type: "double", nullable: false),
+                    longitude = table.Column<double>(type: "double", nullable: false),
+                    location_id = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
@@ -1300,97 +1057,12 @@ namespace Travelogue.Repository.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_location_craft_village_suggestions", x => x.id);
+                    table.PrimaryKey("PK_hotels", x => x.id);
                     table.ForeignKey(
-                        name: "FK_location_craft_village_suggestions_craft_villages_craft_vill~",
-                        column: x => x.craft_village_id,
-                        principalTable: "craft_villages",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_location_craft_village_suggestions_locations_location_id",
+                        name: "FK_hotels_locations_location_id",
                         column: x => x.location_id,
                         principalTable: "locations",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "location_cuisine_suggestions",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    location_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    cuisine_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    note = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    created_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_location_cuisine_suggestions", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_location_cuisine_suggestions_cuisines_cuisine_id",
-                        column: x => x.cuisine_id,
-                        principalTable: "cuisines",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_location_cuisine_suggestions_locations_location_id",
-                        column: x => x.location_id,
-                        principalTable: "locations",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "location_hotel_suggestions",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    location_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    hotel_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    note = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    created_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_location_hotel_suggestions", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_location_hotel_suggestions_hotels_hotel_id",
-                        column: x => x.hotel_id,
-                        principalTable: "hotels",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_location_hotel_suggestions_locations_location_id",
-                        column: x => x.location_id,
-                        principalTable: "locations",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "id");
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -1549,54 +1221,6 @@ namespace Travelogue.Repository.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "orders",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    user_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    tour_id = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
-                    tour_guide_id = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
-                    order_date = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    scheduled_date = table.Column<DateTime>(type: "datetime(6)", nullable: true),
-                    status = table.Column<int>(type: "int", nullable: false),
-                    cancelled_at = table.Column<DateTime>(type: "datetime(6)", nullable: true),
-                    is_open_to_join = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    total_paid = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    created_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_orders", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_orders_tour_guides_tour_guide_id",
-                        column: x => x.tour_guide_id,
-                        principalTable: "tour_guides",
-                        principalColumn: "id");
-                    table.ForeignKey(
-                        name: "FK_orders_tours_tour_id",
-                        column: x => x.tour_id,
-                        principalTable: "tours",
-                        principalColumn: "id");
-                    table.ForeignKey(
-                        name: "FK_orders_users_user_id",
-                        column: x => x.user_id,
-                        principalTable: "users",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
                 name: "tour_guide_availabilities",
                 columns: table => new
                 {
@@ -1631,14 +1255,16 @@ namespace Travelogue.Repository.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "trip_plan_craft_villages",
+                name: "trip_plan_exchange_sessions",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     trip_plan_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    craft_village_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    start_time = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    end_time = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    tour_guide_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    created_by_user_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    created_at = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    final_status = table.Column<int>(type: "int", nullable: false),
+                    closed_at = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
                     created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
@@ -1653,31 +1279,36 @@ namespace Travelogue.Repository.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_trip_plan_craft_villages", x => x.id);
+                    table.PrimaryKey("PK_trip_plan_exchange_sessions", x => x.id);
                     table.ForeignKey(
-                        name: "FK_trip_plan_craft_villages_craft_villages_craft_village_id",
-                        column: x => x.craft_village_id,
-                        principalTable: "craft_villages",
+                        name: "FK_trip_plan_exchange_sessions_tour_guides_tour_guide_id",
+                        column: x => x.tour_guide_id,
+                        principalTable: "tour_guides",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_trip_plan_craft_villages_trip_plans_trip_plan_id",
+                        name: "FK_trip_plan_exchange_sessions_trip_plans_trip_plan_id",
                         column: x => x.trip_plan_id,
                         principalTable: "trip_plans",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_trip_plan_exchange_sessions_users_created_by_user_id",
+                        column: x => x.created_by_user_id,
+                        principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "trip_plan_cuisines",
+                name: "trip_plan_shares",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     trip_plan_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    cuisine_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    start_time = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    end_time = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    user_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    permission = table.Column<int>(type: "int", nullable: false),
                     created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
@@ -1692,31 +1323,36 @@ namespace Travelogue.Repository.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_trip_plan_cuisines", x => x.id);
+                    table.PrimaryKey("PK_trip_plan_shares", x => x.id);
                     table.ForeignKey(
-                        name: "FK_trip_plan_cuisines_cuisines_cuisine_id",
-                        column: x => x.cuisine_id,
-                        principalTable: "cuisines",
+                        name: "FK_trip_plan_shares_trip_plans_trip_plan_id",
+                        column: x => x.trip_plan_id,
+                        principalTable: "trip_plans",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_trip_plan_cuisines_trip_plans_trip_plan_id",
-                        column: x => x.trip_plan_id,
-                        principalTable: "trip_plans",
+                        name: "FK_trip_plan_shares_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "trip_plan_locations",
+                name: "trip_plan_versions",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     trip_plan_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    location_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    start_time = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    end_time = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    version_date = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    description = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    version_number = table.Column<int>(type: "int", nullable: false),
+                    notes = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    status = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
@@ -1731,15 +1367,9 @@ namespace Travelogue.Repository.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_trip_plan_locations", x => x.id);
+                    table.PrimaryKey("PK_trip_plan_versions", x => x.id);
                     table.ForeignKey(
-                        name: "FK_trip_plan_locations_locations_location_id",
-                        column: x => x.location_id,
-                        principalTable: "locations",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_trip_plan_locations_trip_plans_trip_plan_id",
+                        name: "FK_trip_plan_versions_trip_plans_trip_plan_id",
                         column: x => x.trip_plan_id,
                         principalTable: "trip_plans",
                         principalColumn: "id",
@@ -1781,6 +1411,278 @@ namespace Travelogue.Repository.Migrations
                         name: "FK_reports_users_user_id",
                         column: x => x.user_id,
                         principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "craft_village_interests",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    craft_village_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    interest_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    created_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_craft_village_interests", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_craft_village_interests_craft_villages_craft_village_id",
+                        column: x => x.craft_village_id,
+                        principalTable: "craft_villages",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_craft_village_interests_interests_interest_id",
+                        column: x => x.interest_id,
+                        principalTable: "interests",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "craft_village_media",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    media_url = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    file_name = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    file_type = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    size_in_bytes = table.Column<float>(type: "float", nullable: false),
+                    is_thumbnail = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    craft_village_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    created_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_craft_village_media", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_craft_village_media_craft_villages_craft_village_id",
+                        column: x => x.craft_village_id,
+                        principalTable: "craft_villages",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "location_craft_village_suggestions",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    location_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    craft_village_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    note = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    created_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_location_craft_village_suggestions", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_location_craft_village_suggestions_craft_villages_craft_vill~",
+                        column: x => x.craft_village_id,
+                        principalTable: "craft_villages",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_location_craft_village_suggestions_locations_location_id",
+                        column: x => x.location_id,
+                        principalTable: "locations",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "withdrawal_requests",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    craft_village_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    user_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    request_time = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    status = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    processed_by = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    processed_at = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                    end_date = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    created_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_withdrawal_requests", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_withdrawal_requests_craft_villages_craft_village_id",
+                        column: x => x.craft_village_id,
+                        principalTable: "craft_villages",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_withdrawal_requests_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "cuisine_interests",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    cuisine_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    interest_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    created_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_cuisine_interests", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_cuisine_interests_cuisines_cuisine_id",
+                        column: x => x.cuisine_id,
+                        principalTable: "cuisines",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_cuisine_interests_interests_interest_id",
+                        column: x => x.interest_id,
+                        principalTable: "interests",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "cuisine_medias",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    media_url = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    file_name = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    file_type = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    size_in_bytes = table.Column<float>(type: "float", nullable: false),
+                    is_thumbnail = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    cuisine_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    created_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_cuisine_medias", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_cuisine_medias_cuisines_cuisine_id",
+                        column: x => x.cuisine_id,
+                        principalTable: "cuisines",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "location_cuisine_suggestions",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    location_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    cuisine_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    note = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    created_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_location_cuisine_suggestions", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_location_cuisine_suggestions_cuisines_cuisine_id",
+                        column: x => x.cuisine_id,
+                        principalTable: "cuisines",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_location_cuisine_suggestions_locations_location_id",
+                        column: x => x.location_id,
+                        principalTable: "locations",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 })
@@ -1928,14 +1830,19 @@ namespace Travelogue.Repository.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "tour_plan_craft_villages",
+                name: "hotel_medias",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    tour_plan_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    craft_village_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    start_time = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    end_time = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    media_url = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    file_name = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    file_type = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    size_in_bytes = table.Column<float>(type: "float", nullable: false),
+                    is_thumbnail = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    hotel_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
@@ -1950,31 +1857,25 @@ namespace Travelogue.Repository.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_tour_plan_craft_villages", x => x.id);
+                    table.PrimaryKey("PK_hotel_medias", x => x.id);
                     table.ForeignKey(
-                        name: "FK_tour_plan_craft_villages_craft_villages_craft_village_id",
-                        column: x => x.craft_village_id,
-                        principalTable: "craft_villages",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_tour_plan_craft_villages_tour_plans_tour_plan_id",
-                        column: x => x.tour_plan_id,
-                        principalTable: "tour_plans",
+                        name: "FK_hotel_medias_hotels_hotel_id",
+                        column: x => x.hotel_id,
+                        principalTable: "hotels",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "tour_plan_cuisines",
+                name: "location_hotel_suggestions",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    tour_plan_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    cuisine_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    start_time = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    end_time = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    location_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    hotel_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    note = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
@@ -1989,17 +1890,17 @@ namespace Travelogue.Repository.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_tour_plan_cuisines", x => x.id);
+                    table.PrimaryKey("PK_location_hotel_suggestions", x => x.id);
                     table.ForeignKey(
-                        name: "FK_tour_plan_cuisines_cuisines_cuisine_id",
-                        column: x => x.cuisine_id,
-                        principalTable: "cuisines",
+                        name: "FK_location_hotel_suggestions_hotels_hotel_id",
+                        column: x => x.hotel_id,
+                        principalTable: "hotels",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_tour_plan_cuisines_tour_plans_tour_plan_id",
-                        column: x => x.tour_plan_id,
-                        principalTable: "tour_plans",
+                        name: "FK_location_hotel_suggestions_locations_location_id",
+                        column: x => x.location_id,
+                        principalTable: "locations",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 })
@@ -2077,6 +1978,257 @@ namespace Travelogue.Repository.Migrations
                         name: "FK_user_announcements_users_user_id",
                         column: x => x.user_id,
                         principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "orders",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    user_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    tour_id = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    tour_guide_id = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    version_id = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    order_date = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    scheduled_start_date = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    scheduled_end_date = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    status = table.Column<int>(type: "int", nullable: false),
+                    cancelled_at = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    is_open_to_join = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    total_paid = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    trip_plan_id = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    trip_plan_version_id = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    created_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_orders", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_orders_tour_guides_tour_guide_id",
+                        column: x => x.tour_guide_id,
+                        principalTable: "tour_guides",
+                        principalColumn: "id");
+                    table.ForeignKey(
+                        name: "FK_orders_tours_tour_id",
+                        column: x => x.tour_id,
+                        principalTable: "tours",
+                        principalColumn: "id");
+                    table.ForeignKey(
+                        name: "FK_orders_trip_plan_versions_trip_plan_version_id",
+                        column: x => x.trip_plan_version_id,
+                        principalTable: "trip_plan_versions",
+                        principalColumn: "id");
+                    table.ForeignKey(
+                        name: "FK_orders_trip_plans_trip_plan_id",
+                        column: x => x.trip_plan_id,
+                        principalTable: "trip_plans",
+                        principalColumn: "id");
+                    table.ForeignKey(
+                        name: "FK_orders_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "trip_plan_exchanges",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    user_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    trip_plan_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    trip_plan_version_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    suggested_trip_plan_version_id = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    tour_guide_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    session_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    start_date = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    end_date = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    status = table.Column<int>(type: "int", nullable: false),
+                    requested_at = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    user_responded_at = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    user_response_message = table.Column<string>(type: "varchar(1000)", maxLength: 1000, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    created_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_trip_plan_exchanges", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_trip_plan_exchanges_tour_guides_tour_guide_id",
+                        column: x => x.tour_guide_id,
+                        principalTable: "tour_guides",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_trip_plan_exchanges_trip_plan_exchange_sessions_session_id",
+                        column: x => x.session_id,
+                        principalTable: "trip_plan_exchange_sessions",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_trip_plan_exchanges_trip_plan_versions_suggested_trip_plan_v~",
+                        column: x => x.suggested_trip_plan_version_id,
+                        principalTable: "trip_plan_versions",
+                        principalColumn: "id");
+                    table.ForeignKey(
+                        name: "FK_trip_plan_exchanges_trip_plan_versions_trip_plan_version_id",
+                        column: x => x.trip_plan_version_id,
+                        principalTable: "trip_plan_versions",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_trip_plan_exchanges_trip_plans_trip_plan_id",
+                        column: x => x.trip_plan_id,
+                        principalTable: "trip_plans",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_trip_plan_exchanges_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "trip_plan_locations",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    trip_plan_version_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    location_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    start_time = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                    end_time = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                    notes = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    order = table.Column<int>(type: "int", nullable: false),
+                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    created_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_trip_plan_locations", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_trip_plan_locations_locations_location_id",
+                        column: x => x.location_id,
+                        principalTable: "locations",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_trip_plan_locations_trip_plan_versions_trip_plan_version_id",
+                        column: x => x.trip_plan_version_id,
+                        principalTable: "trip_plan_versions",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "experience_medias",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    media_url = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    file_name = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    file_type = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    size_in_bytes = table.Column<float>(type: "float", nullable: false),
+                    is_thumbnail = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    experience_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    created_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_experience_medias", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_experience_medias_experiences_experience_id",
+                        column: x => x.experience_id,
+                        principalTable: "experiences",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "news_medias",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    media_url = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    file_name = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    file_type = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    size_in_bytes = table.Column<float>(type: "float", nullable: false),
+                    is_thumbnail = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    news_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    created_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_news_medias", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_news_medias_news_news_id",
+                        column: x => x.news_id,
+                        principalTable: "news",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 })
@@ -2288,82 +2440,6 @@ namespace Travelogue.Repository.Migrations
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
-            migrationBuilder.CreateTable(
-                name: "experience_medias",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    media_url = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    file_name = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    file_type = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    size_in_bytes = table.Column<float>(type: "float", nullable: false),
-                    is_thumbnail = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    experience_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    created_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_experience_medias", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_experience_medias_experiences_experience_id",
-                        column: x => x.experience_id,
-                        principalTable: "experiences",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "news_medias",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    media_url = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    file_name = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    file_type = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    size_in_bytes = table.Column<float>(type: "float", nullable: false),
-                    is_thumbnail = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    news_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    created_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_news_medias", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_news_medias_news_news_id",
-                        column: x => x.news_id,
-                        principalTable: "news",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
             migrationBuilder.CreateIndex(
                 name: "IX_announcements_tour_guide_id",
                 table: "announcements",
@@ -2390,6 +2466,12 @@ namespace Travelogue.Repository.Migrations
                 column: "craft_village_id");
 
             migrationBuilder.CreateIndex(
+                name: "IX_craft_villages_location_id",
+                table: "craft_villages",
+                column: "location_id",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_cuisine_interests_cuisine_id",
                 table: "cuisine_interests",
                 column: "cuisine_id");
@@ -2403,6 +2485,12 @@ namespace Travelogue.Repository.Migrations
                 name: "IX_cuisine_medias_cuisine_id",
                 table: "cuisine_medias",
                 column: "cuisine_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_cuisines_location_id",
+                table: "cuisines",
+                column: "location_id",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_district_medias_district_id",
@@ -2468,6 +2556,12 @@ namespace Travelogue.Repository.Migrations
                 name: "IX_hotel_medias_hotel_id",
                 table: "hotel_medias",
                 column: "hotel_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_hotels_location_id",
+                table: "hotels",
+                column: "location_id",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_location_craft_village_suggestions_craft_village_id",
@@ -2575,6 +2669,16 @@ namespace Travelogue.Repository.Migrations
                 column: "tour_id");
 
             migrationBuilder.CreateIndex(
+                name: "IX_orders_trip_plan_id",
+                table: "orders",
+                column: "trip_plan_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_orders_trip_plan_version_id",
+                table: "orders",
+                column: "trip_plan_version_id");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_orders_user_id",
                 table: "orders",
                 column: "user_id");
@@ -2670,26 +2774,6 @@ namespace Travelogue.Repository.Migrations
                 column: "to_order_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_tour_plan_craft_villages_craft_village_id",
-                table: "tour_plan_craft_villages",
-                column: "craft_village_id");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_tour_plan_craft_villages_tour_plan_id",
-                table: "tour_plan_craft_villages",
-                column: "tour_plan_id");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_tour_plan_cuisines_cuisine_id",
-                table: "tour_plan_cuisines",
-                column: "cuisine_id");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_tour_plan_cuisines_tour_plan_id",
-                table: "tour_plan_cuisines",
-                column: "tour_plan_id");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_tour_plan_locations_location_id",
                 table: "tour_plan_locations",
                 column: "location_id");
@@ -2725,24 +2809,49 @@ namespace Travelogue.Repository.Migrations
                 column: "order_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_trip_plan_craft_villages_craft_village_id",
-                table: "trip_plan_craft_villages",
-                column: "craft_village_id");
+                name: "IX_trip_plan_exchange_sessions_created_by_user_id",
+                table: "trip_plan_exchange_sessions",
+                column: "created_by_user_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_trip_plan_craft_villages_trip_plan_id",
-                table: "trip_plan_craft_villages",
+                name: "IX_trip_plan_exchange_sessions_tour_guide_id",
+                table: "trip_plan_exchange_sessions",
+                column: "tour_guide_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_trip_plan_exchange_sessions_trip_plan_id",
+                table: "trip_plan_exchange_sessions",
                 column: "trip_plan_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_trip_plan_cuisines_cuisine_id",
-                table: "trip_plan_cuisines",
-                column: "cuisine_id");
+                name: "IX_trip_plan_exchanges_session_id",
+                table: "trip_plan_exchanges",
+                column: "session_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_trip_plan_cuisines_trip_plan_id",
-                table: "trip_plan_cuisines",
+                name: "IX_trip_plan_exchanges_suggested_trip_plan_version_id",
+                table: "trip_plan_exchanges",
+                column: "suggested_trip_plan_version_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_trip_plan_exchanges_tour_guide_id",
+                table: "trip_plan_exchanges",
+                column: "tour_guide_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_trip_plan_exchanges_trip_plan_id",
+                table: "trip_plan_exchanges",
                 column: "trip_plan_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_trip_plan_exchanges_trip_plan_version_id",
+                table: "trip_plan_exchanges",
+                column: "trip_plan_version_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_trip_plan_exchanges_user_id",
+                table: "trip_plan_exchanges",
+                column: "user_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_trip_plan_locations_location_id",
@@ -2750,8 +2859,23 @@ namespace Travelogue.Repository.Migrations
                 column: "location_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_trip_plan_locations_trip_plan_id",
+                name: "IX_trip_plan_locations_trip_plan_version_id",
                 table: "trip_plan_locations",
+                column: "trip_plan_version_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_trip_plan_shares_trip_plan_id",
+                table: "trip_plan_shares",
+                column: "trip_plan_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_trip_plan_shares_user_id",
+                table: "trip_plan_shares",
+                column: "user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_trip_plan_versions_trip_plan_id",
+                table: "trip_plan_versions",
                 column: "trip_plan_id");
 
             migrationBuilder.CreateIndex(
@@ -2892,25 +3016,19 @@ namespace Travelogue.Repository.Migrations
                 name: "tour_join_requests");
 
             migrationBuilder.DropTable(
-                name: "tour_plan_craft_villages");
-
-            migrationBuilder.DropTable(
-                name: "tour_plan_cuisines");
-
-            migrationBuilder.DropTable(
                 name: "tour_plan_locations");
 
             migrationBuilder.DropTable(
                 name: "transactions");
 
             migrationBuilder.DropTable(
-                name: "trip_plan_craft_villages");
-
-            migrationBuilder.DropTable(
-                name: "trip_plan_cuisines");
+                name: "trip_plan_exchanges");
 
             migrationBuilder.DropTable(
                 name: "trip_plan_locations");
+
+            migrationBuilder.DropTable(
+                name: "trip_plan_shares");
 
             migrationBuilder.DropTable(
                 name: "user_announcements");
@@ -2926,6 +3044,9 @@ namespace Travelogue.Repository.Migrations
 
             migrationBuilder.DropTable(
                 name: "experiences");
+
+            migrationBuilder.DropTable(
+                name: "cuisines");
 
             migrationBuilder.DropTable(
                 name: "hotels");
@@ -2949,10 +3070,7 @@ namespace Travelogue.Repository.Migrations
                 name: "orders");
 
             migrationBuilder.DropTable(
-                name: "cuisines");
-
-            migrationBuilder.DropTable(
-                name: "trip_plans");
+                name: "trip_plan_exchange_sessions");
 
             migrationBuilder.DropTable(
                 name: "announcements");
@@ -2976,19 +3094,22 @@ namespace Travelogue.Repository.Migrations
                 name: "craft_villages");
 
             migrationBuilder.DropTable(
+                name: "trip_plan_versions");
+
+            migrationBuilder.DropTable(
                 name: "tour_guides");
 
             migrationBuilder.DropTable(
                 name: "tours");
 
             migrationBuilder.DropTable(
-                name: "locations");
-
-            migrationBuilder.DropTable(
                 name: "type_events");
 
             migrationBuilder.DropTable(
-                name: "users");
+                name: "locations");
+
+            migrationBuilder.DropTable(
+                name: "trip_plans");
 
             migrationBuilder.DropTable(
                 name: "tour_types");
@@ -2998,6 +3119,9 @@ namespace Travelogue.Repository.Migrations
 
             migrationBuilder.DropTable(
                 name: "type_location");
+
+            migrationBuilder.DropTable(
+                name: "users");
         }
     }
 }

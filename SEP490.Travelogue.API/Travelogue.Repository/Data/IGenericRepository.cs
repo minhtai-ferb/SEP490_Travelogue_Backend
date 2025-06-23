@@ -85,6 +85,8 @@ public interface IGenericRepository<TEntity> where TEntity : class
     /// <exception cref="ArgumentNullException">Thrown when entity is null.</exception>
     void Remove(TEntity entity);
 
+    void RemoveRange(IEnumerable<TEntity> entities);
+
     /// <summary>
     /// Updates an existing entity in the database.
     /// </summary>
@@ -118,6 +120,8 @@ public interface IGenericRepository<TEntity> where TEntity : class
         Expression<Func<TEntity, bool>> predicate,
         CancellationToken cancellationToken = default,
         params Func<IQueryable<TEntity>, IQueryable<TEntity>>[] includeProperties);
+
+    Task<TEntity?> GetWithIncludeAsync(Guid id, Func<IQueryable<TEntity>, IQueryable<TEntity>> include);
 
     //Task<TEntity?> GetByIdAsync(object id);
     //Task<IEnumerable<TEntity>> GetPageAsync(int pageNumber, int pageSize);

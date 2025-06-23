@@ -27,7 +27,7 @@ public interface IDistrictService
     //Task<string> GetDistrictRoleNameAsync(DistrictCreateModel districtCreateModel, CancellationToken cancellationToken);
     Task<bool> AddDistrictWithRoleAsync(DistrictCreateModel districtCreateModel, CancellationToken cancellationToken);
     Task<DistrictMediaResponse> AddDistrictWithMediaAsync(DistrictCreateWithMediaFileModel districtCreateModel, CancellationToken cancellationToken);
-    //Task<DistrictMediaResponse> UploadMediaAsync(Guid id, IFormFile imageUploadl, CancellationToken cancellationToken);
+    //Task<DistrictMediaResponse> UploadMediaAsync(Guid id, IFormFile imageUpload, CancellationToken cancellationToken);
     Task<DistrictMediaResponse> UpdateDistrictAsync(Guid id, DistrictUpdateWithMediaFileModel districtUpdateModel, CancellationToken cancellationToken);
     Task<DistrictMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
 }
@@ -41,7 +41,9 @@ public class DistrictService : IDistrictService
     private readonly IMediaCloudService _mediaCloudService;
     private readonly ICloudinaryService _cloudinaryService;
 
-    public DistrictService(IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService, IMediaCloudService mediaCloudService, ICloudinaryService cloudinaryService)
+    public DistrictService(
+        IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService,
+        IMediaCloudService mediaCloudService, ICloudinaryService cloudinaryService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -78,7 +80,7 @@ public class DistrictService : IDistrictService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -139,7 +141,7 @@ public class DistrictService : IDistrictService
                 }
                 else
                 {
-                    throw CustomExceptionFactory.CreateBadRequest($"{ResponseMessages.EXISTED.Replace("{0}", "đơn vị hành chính")}");
+                    throw CustomExceptionFactory.CreateBadRequestError($"{ResponseMessages.EXISTED.Replace("{0}", "đơn vị hành chính")}");
                 }
             }
 
@@ -308,7 +310,7 @@ public class DistrictService : IDistrictService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -353,7 +355,7 @@ public class DistrictService : IDistrictService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -379,7 +381,7 @@ public class DistrictService : IDistrictService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -403,7 +405,7 @@ public class DistrictService : IDistrictService
                     item.Medias.Add(new MediaResponse
                     {
                         MediaUrl = media.MediaUrl,
-                        FileName = media.FileName,
+                        FileName = media.FileName ?? string.Empty,
                         FileType = media.FileType,
                         SizeInBytes = media.SizeInBytes,
                         CreatedTime = media.CreatedTime,
@@ -429,7 +431,7 @@ public class DistrictService : IDistrictService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -576,7 +578,7 @@ public class DistrictService : IDistrictService
             // upload ảnh
             var mediaResponses = new List<MediaResponse>();
             var imageUpload = districtUpdateModel.ImageUpload;
-            string newMediaUrl = null;
+            string? newMediaUrl = null;
             if (imageUpload != null)
             {
                 // Xóa ảnh cũ nếu tồn tại
@@ -605,46 +607,6 @@ public class DistrictService : IDistrictService
 
                 await _unitOfWork.DistrictMediaRepository.AddAsync(newDistrictMedia);
             }
-            //if (imageUploads != null && imageUploads.Count != 0)
-            //{
-            //    var oldMediaUrl = _unitOfWork.DistrictMediaRepository.Entities
-            //        .Where(dm => dm.DistrictId == existingDistrict.Id)
-            //        .Select(dm => dm.MediaUrl)
-            //        .FirstOrDefault();
-
-            //    if (oldMediaUrl != null)
-            //    {
-            //        var resultDelete = await _cloudinaryService.DeleteImageAsync(oldMediaUrl);
-            //    }
-            //    var imageUrls = await _cloudinaryService.UploadImagesAsync(imageUploads);
-
-            //    for (int i = 0; i < imageUploads.Count; i++)
-            //    {
-            //        var imageUpload = imageUploads[i];
-
-            //        var newDistrictMedia = new DistrictMedia
-            //        {
-            //            FileName = imageUpload.FileName,
-            //            FileType = imageUpload.ContentType,
-            //            DistrictId = existingDistrict.Id,
-            //            MediaUrl = imageUrls[i],
-            //            SizeInBytes = imageUpload.Length,
-            //            CreatedBy = currentUserId,
-            //            CreatedTime = _timeService.SystemTimeNow,
-            //            LastUpdatedBy = currentUserId,
-            //        };
-
-            //        await _unitOfWork.DistrictMediaRepository.AddAsync(newDistrictMedia);
-
-            //        mediaResponses.Add(new MediaResponse
-            //        {
-            //            MediaUrl = imageUrls[i],
-            //            FileName = imageUpload.FileName,
-            //            FileType = imageUpload.ContentType,
-            //            SizeInBytes = imageUpload.Length
-            //        });
-            //    }
-            //}
 
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);
@@ -967,7 +929,7 @@ public class DistrictService : IDistrictService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //        ////  _unitOfWork.Dispose();
     //    }
     //}
 
@@ -997,7 +959,7 @@ public class DistrictService : IDistrictService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //        ////  _unitOfWork.Dispose();
     //    }
     //}
 }

@@ -8,7 +8,7 @@ namespace Travelogue.Repository.Repositories;
 
 public interface ICuisineRepository : IGenericRepository<Cuisine>
 {
-    Task<Cuisine?> GetByNameAsync(string name, CancellationToken cancellationToken);
+    Task<List<Cuisine?>> GetByNameAsync(string name, CancellationToken cancellationToken);
     Task<PagedResult<Cuisine>> GetPageWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
 }
 public sealed class CuisineRepository : GenericRepository<Cuisine>, ICuisineRepository
@@ -20,11 +20,14 @@ public sealed class CuisineRepository : GenericRepository<Cuisine>, ICuisineRepo
         _context = dbContext;
     }
 
-    public Task<Cuisine?> GetByNameAsync(string name, CancellationToken cancellationToken)
+    public Task<List<Cuisine?>> GetByNameAsync(string name, CancellationToken cancellationToken)
     {
         try
         {
-            var cuisines = _context.Cuisines.FirstOrDefaultAsync(a => a.Name.Contains(name), cancellationToken);
+            var cuisines = _context.Cuisines
+            .Include(c => c.Location)
+            .Where(c => c.Location.Name.ToLower().Contains(name.ToLower()))
+            .ToListAsync(cancellationToken);
             return cuisines;
         }
         catch (CustomException)
@@ -47,7 +50,7 @@ public sealed class CuisineRepository : GenericRepository<Cuisine>, ICuisineRepo
         var query = ActiveEntities.AsQueryable();
         if (!string.IsNullOrEmpty(name))
         {
-            query = query.Where(a => a.Name.Contains(name));
+            query = query.Include(q => q.Location).Where(a => a.Location.Name.ToLower().Contains(name.ToLower()));
         }
 
         var totalItems = await query.CountAsync(cancellationToken);

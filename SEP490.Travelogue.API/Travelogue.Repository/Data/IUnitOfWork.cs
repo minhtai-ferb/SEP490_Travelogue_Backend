@@ -1,10 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore.Storage;
-using Travelogue.Repository.Bases.BaseEntitys;
+using Travelogue.Repository.Bases.BaseEntities;
 using Travelogue.Repository.Repositories;
 
 namespace Travelogue.Repository.Data;
 
-public interface IUnitOfWork : IDisposable
+public interface IUnitOfWork //: IDisposable
 {
     IUserRepository UserRepository { get; }
     IRoleRepository RoleRepository { get; }
@@ -36,6 +36,15 @@ public interface IUnitOfWork : IDisposable
     INewsRepository NewsRepository { get; }
     INewsMediaRepository NewsMediaRepository { get; }
     INewsCategoryRepository NewsCategoryRepository { get; }
+    ITripPlanRepository TripPlanRepository { get; }
+    ITripPlanVersionRepository TripPlanVersionRepository { get; }
+    ITripPlanLocationRepository TripPlanLocationRepository { get; }
+    ITourGuideRepository TourGuideRepository { get; }
+    ITourRepository TourRepository { get; }
+    IOrderRepository OrderRepository { get; }
+    ITripPlanExchangeRepository TripPlanExchangeRepository { get; }
+    ITripPlanExchangeSessionRepository TripPlanExchangeSessionRepository { get; }
+    IHistoricalLocationRepository HistoricalLocationRepository { get; }
 
     IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity;
     void Save();
@@ -43,7 +52,7 @@ public interface IUnitOfWork : IDisposable
     void BeginTransaction();
     Task<IDbContextTransaction> BeginTransactionAsync();
     Task RollBackAsync();
-    ValueTask DisposeAsync();
+    //ValueTask DisposeAsync();
     void CommitTransaction();
     void RollBack();
 }

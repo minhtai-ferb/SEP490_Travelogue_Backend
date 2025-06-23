@@ -134,7 +134,7 @@ public sealed class RoleService : IRoleService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 }
