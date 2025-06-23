@@ -16,5 +16,5 @@ public sealed class TourGuide : BaseEntity
     public Guid UserId { get; set; }
 
     public User? User { get; set; }
-    public ICollection<TourGuideAvailability>? Availabilities { get; set; }
+    public ICollection<TourGuideUnavailability>? Availabilities { get; set; }
 }

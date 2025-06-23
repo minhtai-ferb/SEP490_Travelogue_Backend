@@ -1,4 +1,5 @@
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
@@ -11,6 +12,8 @@ namespace Travelogue.Service.Services;
 public interface IExchangeSessionService
 {
     Task CreateExchangeSessionAsync(CreateExchangeSessionRequest request, CancellationToken cancellationToken);
+    Task<ExchangeSessionDataDetailModel> GetSessionByIdAsync(Guid sessionId, CancellationToken cancellationToken);
+    Task<List<ExchangeSessionDataModel>> GetSessionsByTripPlanAsync(Guid tripPlanId, CancellationToken cancellationToken);
 }
 
 public class ExchangeSessionService : IExchangeSessionService
@@ -74,4 +77,58 @@ public class ExchangeSessionService : IExchangeSessionService
         }
     }
 
+    public async Task<List<ExchangeSessionDataModel>> GetSessionsByTripPlanAsync(Guid tripPlanId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentTime = _timeService.SystemTimeNow;
+
+            var existingExchangeSessions = await _unitOfWork.TripPlanExchangeSessionRepository
+                .ActiveEntities
+                .Where(x => x.TripPlanId == tripPlanId && x.CreatedByUserId == Guid.Parse(currentUserId))
+                .ToListAsync(cancellationToken);
+
+            return _mapper.Map<List<ExchangeSessionDataModel>>(existingExchangeSessions);
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"-----------------Error getting exchange sessions: {ex.Message}");
+            throw CustomExceptionFactory.CreateInternalServerError();
+        }
+    }
+
+    public async Task<ExchangeSessionDataDetailModel> GetSessionByIdAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentTime = _timeService.SystemTimeNow;
+
+            var existingExchangeSession = await _unitOfWork.TripPlanExchangeSessionRepository
+                .ActiveEntities
+                .Include(x => x.Exchanges)                  // lấy tất cả Exchange liên quan
+                .Include(x => x.TourGuide)                  // nếu bạn muốn lấy tên hướng dẫn viên
+                .Include(x => x.TripPlan)                   // nếu muốn lấy tên TripPlan
+                .FirstOrDefaultAsync(x => x.Id == sessionId && x.CreatedByUserId == Guid.Parse(currentUserId), cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Exchange session");
+
+            var response = _mapper.Map<ExchangeSessionDataDetailModel>(existingExchangeSession);
+
+            return response;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"-----------------Error getting exchange session by ID: {ex.Message}");
+            throw CustomExceptionFactory.CreateInternalServerError();
+        }
+    }
 }

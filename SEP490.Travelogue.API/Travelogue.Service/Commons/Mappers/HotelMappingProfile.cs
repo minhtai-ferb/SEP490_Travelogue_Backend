@@ -14,5 +14,6 @@ public class HotelMappingProfile : Profile
         CreateMap<HotelUpdateWithMediaFileModel, Hotel>()
             .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
         CreateMap<HotelDataModel, Hotel>().ReverseMap();
+        CreateMap<HotelDetailDataModel, Hotel>().ReverseMap();
     }
 }

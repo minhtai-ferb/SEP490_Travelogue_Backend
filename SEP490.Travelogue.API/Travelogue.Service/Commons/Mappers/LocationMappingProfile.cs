@@ -1,10 +1,12 @@
 ﻿using AutoMapper;
 using Travelogue.Repository.Entities;
+using Travelogue.Service.BusinessModels.HotelModels;
 using Travelogue.Service.BusinessModels.LocationModels;
 using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.Services;
 
 namespace Travelogue.Service.Commons.Mappers;
+
 public class LocationMappingProfile : Profile
 {
     public LocationMappingProfile()
@@ -14,15 +16,22 @@ public class LocationMappingProfile : Profile
             .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
         CreateMap<LocationUpdateWithMediaFileModel, Location>()
             .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
-        CreateMap<Location, LocationDataModel>()
+        CreateMap<HistoricalLocation, LocationDataModel>()
             .ForMember(dest => dest.HeritageRankName, opt =>
                 opt.MapFrom<HeritageRankDisplayNameResolver>());
+
+        CreateMap<Location, LocationDataModel>().ReverseMap();
+        CreateMap<Location, HotelCreateModel>()
+            .ReverseMap()
+            .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
+
+        CreateMap<Location, LocationDataDetailModel>().ReverseMap();
 
         CreateMap<LocationMedia, MediaResponse>();
     }
 }
 
-public class HeritageRankDisplayNameResolver : IValueResolver<Location, LocationDataModel, string>
+public class HeritageRankDisplayNameResolver : IValueResolver<HistoricalLocation, LocationDataModel, string>
 {
     private readonly IEnumService _enumService;
 
@@ -31,7 +40,7 @@ public class HeritageRankDisplayNameResolver : IValueResolver<Location, Location
         _enumService = enumService;
     }
 
-    public string Resolve(Location source, LocationDataModel destination, string destMember, ResolutionContext context)
+    public string Resolve(HistoricalLocation source, LocationDataModel destination, string destMember, ResolutionContext context)
     {
         return _enumService.GetEnumDisplayName(source.HeritageRank);
     }

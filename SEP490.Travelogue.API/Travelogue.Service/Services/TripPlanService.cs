@@ -3,6 +3,7 @@ using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
+using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
@@ -60,7 +61,10 @@ public interface ITripPlanService
     /// <param name="guideNote">Ghi chú từ hướng dẫn viên.</param>
     Task<object> CreateVersionFromTripPlanAsync(Guid tripPlanId, string guideNote);
 
-    Task CreateExchangeSessionAsync(Guid tripPlanId, CreateExchangeSessionRequest request, CancellationToken cancellationToken);
+    Task<ExchangeSessionDataModel> CreateExchangeSessionAsync(Guid tripPlanId, CreateExchangeSessionRequest request, CancellationToken cancellationToken);
+
+    Task<ExchangeSessionDataModel> CreateExchangeSessionWithNewVersionAsync(
+            Guid tripPlanId, CreateExchangeSessionRequest request, CancellationToken cancellationToken);
 }
 
 public class TripPlanService : ITripPlanService
@@ -78,7 +82,7 @@ public class TripPlanService : ITripPlanService
         _timeService = timeService;
     }
 
-    public async Task CreateExchangeSessionAsync(Guid tripPlanId, CreateExchangeSessionRequest request, CancellationToken cancellationToken)
+    public async Task<ExchangeSessionDataModel> CreateExchangeSessionAsync(Guid tripPlanId, CreateExchangeSessionRequest request, CancellationToken cancellationToken)
     {
         try
         {
@@ -116,8 +120,6 @@ public class TripPlanService : ITripPlanService
                 TripPlanVersionId = tripPlanVersion.Id,
                 TourGuideId = tourGuide.Id,
                 SessionId = newSession.Id,
-                StartDate = tripPlan.StartDate,
-                EndDate = tripPlan.EndDate,
                 Status = ExchangeSessionStatus.Pending,
                 RequestedAt = currentTime,
                 CreatedBy = currentUserId,
@@ -126,8 +128,12 @@ public class TripPlanService : ITripPlanService
                 LastUpdatedTime = currentTime
             });
 
+            var result = _mapper.Map<ExchangeSessionDataModel>(newSession);
+
             await _unitOfWork.TripPlanExchangeSessionRepository.AddAsync(newSession);
             await _unitOfWork.SaveAsync();
+
+            return result;
         }
         catch (CustomException)
         {
@@ -139,6 +145,101 @@ public class TripPlanService : ITripPlanService
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
+
+    public async Task<ExchangeSessionDataModel> CreateExchangeSessionWithNewVersionAsync(
+        Guid tripPlanId, CreateExchangeSessionRequest request, CancellationToken cancellationToken)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentTime = _timeService.SystemTimeNow;
+
+            // Lấy TripPlan và TourGuide
+            var tourGuide = await _unitOfWork.TourGuideRepository.GetByIdAsync(request.TourGuideId, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Tour guide");
+            var tripPlan = await _unitOfWork.TripPlanRepository.GetWithIncludeAsync(
+                tripPlanId,
+                include => include.Include(tp => tp.TripPlanVersions)
+                                  .ThenInclude(v => v.TripPlanLocations)
+            ) ?? throw CustomExceptionFactory.CreateNotFoundError("Trip plan");
+
+            var latestVersion = tripPlan.TripPlanVersions.OrderByDescending(v => v.VersionNumber).FirstOrDefault()
+                ?? throw CustomExceptionFactory.CreateNotFoundError("No versions found for this trip plan");
+
+            // Tạo TripPlanVersion mới
+            var newVersion = new TripPlanVersion
+            {
+                TripPlanId = tripPlanId,
+                Notes = request.GuideNote,
+                CreatedTime = currentTime,
+                VersionDate = currentTime,
+                VersionNumber = latestVersion.VersionNumber + 1,
+                Status = "Draft",
+                TripPlanLocations = (latestVersion.TripPlanLocations ?? new List<TripPlanLocation>())
+                    .Select(loc => new TripPlanLocation
+                    {
+                        LocationId = loc.LocationId,
+                        StartTime = loc.StartTime,
+                        EndTime = loc.EndTime,
+                        Notes = loc.Notes,
+                        Order = loc.Order
+                    }).ToList()
+            };
+
+            await _unitOfWork.TripPlanVersionRepository.AddAsync(newVersion);
+
+            // Tạo Exchange Session
+            var newSession = new TripPlanExchangeSession
+            {
+                TourGuideId = tourGuide.Id,
+                TripPlanId = tripPlan.Id,
+                CreatedByUserId = Guid.Parse(currentUserId),
+                FinalStatus = ExchangeSessionStatus.Pending,
+                CreatedBy = currentUserId,
+                CreatedAt = currentTime,
+                LastUpdatedBy = currentUserId,
+                LastUpdatedTime = currentTime,
+                Exchanges = new List<TripPlanExchange>
+            {
+                new TripPlanExchange
+                {
+                    UserId = Guid.Parse(currentUserId),
+                    TripPlanId = tripPlan.Id,
+                    TripPlanVersionId = newVersion.Id,
+                    TourGuideId = tourGuide.Id,
+                    SessionId = Guid.Empty,
+                    Status = ExchangeSessionStatus.Pending,
+                    RequestedAt = currentTime,
+                    CreatedBy = currentUserId,
+                    CreatedTime = currentTime,
+                    LastUpdatedBy = currentUserId,
+                    LastUpdatedTime = currentTime
+                }
+            }
+            };
+
+            await _unitOfWork.TripPlanExchangeSessionRepository.AddAsync(newSession);
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync();
+
+            var result = _mapper.Map<ExchangeSessionDataModel>(newSession);
+            result.TripPlanVersionId = newVersion.Id;
+
+            return _mapper.Map<ExchangeSessionDataModel>(newSession);
+        }
+        catch (CustomException)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
 
     public async Task DeleteTripPlanAsync(Guid id, CancellationToken cancellationToken)
     {
@@ -184,6 +285,11 @@ public class TripPlanService : ITripPlanService
             var pagedResult = await _unitOfWork.TripPlanRepository.GetPageWithSearchAsync(title, pageNumber, pageSize, cancellationToken);
 
             var newsDataModels = _mapper.Map<List<TripPlanDataModel>>(pagedResult.Items);
+
+            foreach (var tripPlan in newsDataModels)
+            {
+                tripPlan.OwnerName = await _unitOfWork.UserRepository.GetUserNameByIdAsync(tripPlan.UserId) ?? string.Empty;
+            }
 
             var result = new PagedResult<TripPlanDataModel>
             {
@@ -260,12 +366,11 @@ public class TripPlanService : ITripPlanService
                 .ThenInclude(x => x.TripPlanLocations)
             .FirstOrDefaultAsync(x => x.Id == tripPlanId);
 
-        if (tripPlan == null || tripPlan.TripPlanVersionId == null)
+        if (tripPlan == null || tripPlan.UserTripPlanVersionId == null)
             throw CustomExceptionFactory.CreateNotFoundError("Trip plan hoặc version");
 
-        var version = tripPlan.TripPlanVersions.FirstOrDefault(v => v.Id == tripPlan.TripPlanVersionId);
-        if (version == null)
-            throw CustomExceptionFactory.CreateNotFoundError("Trip plan version");
+        var version = tripPlan.TripPlanVersions.FirstOrDefault(v => v.Id == tripPlan.UserTripPlanVersionId)
+            ?? throw CustomExceptionFactory.CreateNotFoundError("Trip plan version");
 
         // Locations
         foreach (var tpl in version.TripPlanLocations ?? new List<TripPlanLocation>())
@@ -290,8 +395,6 @@ public class TripPlanService : ITripPlanService
             });
         }
 
-        // Cuisines
-        // foreach (var tpc in version.TripPlanCuisines ?? new List<TripPlanCuisine>())
         // {
         //     var cuisine = await _unitOfWork.CuisineRepository.GetByIdAsync(tpc.CuisineId, cancellationToken: CancellationToken.None);
         //     if (cuisine == null) continue;
@@ -311,30 +414,6 @@ public class TripPlanService : ITripPlanService
         //         Notes = tpc.Notes,
         //         ImageUrl = string.Empty
         //     });
-        // }
-
-        // CraftVillages
-        // foreach (var tpv in version.TripPlanCraftVillages ?? new List<TripPlanCraftVillage>())
-        // {
-        //     var craftVillage = await _unitOfWork.CraftVillageRepository.GetByIdAsync(tpv.CraftVillageId, cancellationToken: CancellationToken.None);
-        //     if (craftVillage == null) continue;
-
-        //     activities.Add(new TripActivity
-        //     {
-        //         Id = tpv.Id,
-        //         Type = TripActivityTypeEnum.CraftVillage.ToString(),
-        //         Name = craftVillage.Name,
-        //         Description = craftVillage.Description,
-        //         Address = craftVillage.Address,
-        //         StartTime = tpv.StartTime,
-        //         EndTime = tpv.EndTime,
-        //         StartTimeFormatted = tpv.StartTime?.ToString("HH:mm"),
-        //         EndTimeFormatted = tpv.EndTime?.ToString("HH:mm"),
-        //         Duration = $"{(tpv.EndTime - tpv.StartTime)?.TotalMinutes} phút",
-        //         Notes = tpv.Notes,
-        //         ImageUrl = string.Empty
-        //     });
-        // }
 
         return activities.OrderBy(x => x.StartTime).ToList();
     }
@@ -413,10 +492,73 @@ public class TripPlanService : ITripPlanService
         }
     }
 
+    // public async Task<TripPlanDataModel?> UpdateTripPlanAsync(
+    //     Guid id,
+    //     TripPlanUpdateModel tripPlanUpdateModel,
+    //     CancellationToken cancellationToken)
+    // {
+    //     var validationResult = ValidateTripPlanSchedule(tripPlanUpdateModel);
+    //     if (!validationResult)
+    //     {
+    //         throw CustomExceptionFactory.CreateBadRequestError("Lỗi validation lịch trình:");
+    //     }
+
+    //     using var transaction = await _unitOfWork.BeginTransactionAsync();
+
+    //     try
+    //     {
+    //         var tripPlan = await _unitOfWork.TripPlanRepository
+    //             .ActiveEntities
+    //             .Include(tp => tp.TripPlanVersions)
+    //                 .ThenInclude(v => v.TripPlanLocations)
+    //             .FirstOrDefaultAsync(tp => tp.Id == id, cancellationToken) ?? throw CustomExceptionFactory.CreateNotFoundError("Trip plan");
+    //         var newVersion = new TripPlanVersion
+    //         {
+    //             TripPlanId = tripPlan.Id,
+    //             VersionDate = _timeService.SystemTimeNow,
+    //             Description = "Cập nhật lịch trình",
+    //             VersionNumber = tripPlan.TripPlanVersions.Count + 1,
+    //             Status = "Draft",
+    //         };
+
+    //         await _unitOfWork.TripPlanVersionRepository.AddAsync(newVersion);
+    //         await _unitOfWork.SaveAsync();
+
+    //         // Update vào version con
+    //         if (tripPlanUpdateModel.Locations == null)
+    //         {
+    //             tripPlanUpdateModel.Locations = new List<TripPlanLocationModel>();
+    //         }
+    //         await UpdateTripPlanLocationsAsync(newVersion, tripPlanUpdateModel.Locations);
+    //         // await UpdateTripPlanCuisinesAsync(newVersion, tripPlanUpdateModel.Cuisines);
+    //         // await UpdateTripPlanCraftVillagesAsync(newVersion, tripPlanUpdateModel.CraftVillages);
+
+    //         _mapper.Map(tripPlanUpdateModel, tripPlan);
+    //         tripPlan.UserTripPlanVersionId = newVersion.Id;
+
+    //         await _unitOfWork.SaveAsync();
+    //         await transaction.CommitAsync(cancellationToken);
+
+    //         return _mapper.Map<TripPlanDataModel>(tripPlan);
+    //     }
+    //     catch (CustomException)
+    //     {
+    //         throw;
+    //     }
+    //     catch (Exception)
+    //     {
+    //         throw CustomExceptionFactory.CreateInternalServerError();
+    //     }
+    //     finally
+    //     {
+    //         ////  _unitOfWork.Dispose();
+    //     }
+    // }
+
     public async Task<TripPlanDataModel?> UpdateTripPlanAsync(
-    Guid id,
-    TripPlanUpdateModel tripPlanUpdateModel,
-    CancellationToken cancellationToken)
+        Guid id,
+        TripPlanUpdateModel tripPlanUpdateModel,
+        CancellationToken cancellationToken)
     {
         var validationResult = ValidateTripPlanSchedule(tripPlanUpdateModel);
         if (!validationResult)
@@ -432,31 +574,58 @@ public class TripPlanService : ITripPlanService
                 .ActiveEntities
                 .Include(tp => tp.TripPlanVersions)
                     .ThenInclude(v => v.TripPlanLocations)
-                .FirstOrDefaultAsync(tp => tp.Id == id, cancellationToken) ?? throw CustomExceptionFactory.CreateNotFoundError("Trip plan");
-            var newVersion = new TripPlanVersion
+                .FirstOrDefaultAsync(tp => tp.Id == id, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Trip plan");
+
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var userRoles = await _userContextService.GetCurrentUserRolesAsync();
+            var isTourGuide = userRoles.Contains(AppRole.TOUR_GUIDE);
+
+            bool shouldCreateNewVersion = isTourGuide || !tripPlan.TripPlanVersions.Any();
+
+            TripPlanVersion? newVersion = null;
+
+            if (shouldCreateNewVersion)
             {
-                TripPlanId = tripPlan.Id,
-                VersionDate = _timeService.SystemTimeNow,
-                Description = "Cập nhật lịch trình",
-                VersionNumber = tripPlan.TripPlanVersions.Count + 1,
-                Status = "Draft",
-            };
+                newVersion = new TripPlanVersion
+                {
+                    TripPlanId = tripPlan.Id,
+                    VersionDate = _timeService.SystemTimeNow,
+                    Description = "Cập nhật lịch trình",
+                    VersionNumber = tripPlan.TripPlanVersions.Count + 1,
+                    Status = "Draft",
+                    IsFromTourGuide = isTourGuide
+                };
 
-            await _unitOfWork.TripPlanVersionRepository.AddAsync(newVersion);
-            await _unitOfWork.SaveAsync();
+                await _unitOfWork.TripPlanVersionRepository.AddAsync(newVersion);
+                await _unitOfWork.SaveAsync();
 
-            // Update vào version con
-            await UpdateTripPlanLocationsAsync(newVersion, tripPlanUpdateModel.Locations);
-            // await UpdateTripPlanCuisinesAsync(newVersion, tripPlanUpdateModel.Cuisines);
-            // await UpdateTripPlanCraftVillagesAsync(newVersion, tripPlanUpdateModel.CraftVillages);
+                // Update vào version con
+                if (tripPlanUpdateModel.Locations == null)
+                {
+                    tripPlanUpdateModel.Locations = new List<TripPlanLocationModel>();
+                }
+
+                await UpdateTripPlanLocationsAsync(newVersion, tripPlanUpdateModel.Locations);
+
+                // Gán lại version mới cho user nếu là user tạo
+                if (!isTourGuide)
+                {
+                    tripPlan.UserTripPlanVersionId = newVersion.Id;
+                }
+            }
 
             _mapper.Map(tripPlanUpdateModel, tripPlan);
-            tripPlan.TripPlanVersionId = newVersion.Id;
 
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);
 
-            return _mapper.Map<TripPlanDataModel>(tripPlan);
+            var result = _mapper.Map<TripPlanDataModel>(tripPlan);
+
+            result.TripPlanVersionId = newVersion != null ? newVersion.Id : (tripPlan.UserTripPlanVersionId ?? Guid.Empty);
+            result.IsFromTourGuide = isTourGuide;
+
+            return result;
         }
         catch (CustomException)
         {
@@ -465,10 +634,6 @@ public class TripPlanService : ITripPlanService
         catch (Exception)
         {
             throw CustomExceptionFactory.CreateInternalServerError();
-        }
-        finally
-        {
-            ////  _unitOfWork.Dispose();
         }
     }
 
@@ -572,56 +737,6 @@ public class TripPlanService : ITripPlanService
         }
     }
 
-    // private async Task UpdateTripPlanCraftVillagesAsync(
-    //     TripPlanVersion tripPlanVersion,
-    //     List<TripPlanCraftVillageModel> craftVillageModels)
-    // {
-    //     var existingIds = craftVillageModels
-    //         .Where(c => c.Id.HasValue)
-    //         .Select(c => c.Id.Value)
-    //         .ToList();
-
-    //     if (existingIds.Count != 0)
-    //     {
-    //         // Loại bỏ các món không còn tồn tại trong input
-    //         var craftVillagesToRemove = tripPlanVersion.TripPlanCraftVillages
-    //             .Where(c => !existingIds.Contains(c.Id))
-    //             .ToList();
-
-    //         _unitOfWork.TripPlanCraftVillageRepository.RemoveRange(craftVillagesToRemove);
-    //     }
-
-    //     foreach (var craftVillageModel in craftVillageModels)
-    //     {
-    //         if (craftVillageModel.Id.HasValue)
-    //         {
-    //             var existingCraftVillage = tripPlanVersion.TripPlanCraftVillages
-    //                 .FirstOrDefault(c => c.Id == craftVillageModel.Id.Value);
-
-    //             if (existingCraftVillage != null)
-    //             {
-    //                 existingCraftVillage.CraftVillageId = craftVillageModel.CraftVillageId;
-    //                 existingCraftVillage.StartTime = craftVillageModel.StartTime ?? DateTime.Now;
-    //                 existingCraftVillage.EndTime = craftVillageModel.EndTime ?? DateTime.Now;
-    //                 existingCraftVillage.Notes = craftVillageModel.Notes;
-    //             }
-    //         }
-    //         else
-    //         {
-    //             var newCraftVillage = new TripPlanCraftVillage
-    //             {
-    //                 TripPlanVersionId = tripPlanVersion.Id,
-    //                 CraftVillageId = craftVillageModel.CraftVillageId,
-    //                 StartTime = craftVillageModel.StartTime ?? DateTime.Now,
-    //                 EndTime = craftVillageModel.EndTime ?? DateTime.Now,
-    //                 Notes = craftVillageModel.Notes
-    //             };
-
-    //             await _unitOfWork.TripPlanCraftVillageRepository.AddAsync(newCraftVillage);
-    //         }
-    //     }
-    // }
-
     public async Task<TripPlanDataModel> AddTripPlanAsync(TripPlanCreateModel tripPlanCreateModel, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
@@ -690,27 +805,27 @@ public class TripPlanService : ITripPlanService
             // Optionally, handle else case (e.g., log or throw if required)
         }
 
-        foreach (var cuisine in tripPlanUpdateModel.Cuisines ?? new List<TripPlanCuisineModel>())
-        {
-            schedules.Add(new TripPlanItemSchedule
-            {
-                ItemType = "Cuisine",
-                StartTime = cuisine.StartTime.Value,
-                EndTime = cuisine.EndTime.Value,
-                ItemId = cuisine.Id
-            });
-        }
+        // foreach (var cuisine in tripPlanUpdateModel.Cuisines ?? new List<TripPlanCuisineModel>())
+        // {
+        //     schedules.Add(new TripPlanItemSchedule
+        //     {
+        //         ItemType = "Cuisine",
+        //         StartTime = cuisine.StartTime.Value,
+        //         EndTime = cuisine.EndTime.Value,
+        //         ItemId = cuisine.Id
+        //     });
+        // }
 
-        foreach (var craftVillage in tripPlanUpdateModel.CraftVillages ?? new List<TripPlanCraftVillageModel>())
-        {
-            schedules.Add(new TripPlanItemSchedule
-            {
-                ItemType = "CraftVillage",
-                StartTime = craftVillage.StartTime.Value,
-                EndTime = craftVillage.EndTime.Value,
-                ItemId = craftVillage.Id
-            });
-        }
+        // foreach (var craftVillage in tripPlanUpdateModel.CraftVillages ?? new List<TripPlanCraftVillageModel>())
+        // {
+        //     schedules.Add(new TripPlanItemSchedule
+        //     {
+        //         ItemType = "CraftVillage",
+        //         StartTime = craftVillage.StartTime.Value,
+        //         EndTime = craftVillage.EndTime.Value,
+        //         ItemId = craftVillage.Id
+        //     });
+        // }
 
         return schedules.OrderBy(s => s.StartTime).ToList();
     }
@@ -849,18 +964,14 @@ public class TripPlanService : ITripPlanService
         try
         {
             // var currentUserId = _userContextService.GetCurrentUserId();
-            var currentUserId = "example-user-id"; // Thay thế bằng cách lấy ID người dùng hiện tại
+            var currentUserId = "example-user-id";
             var currentTime = _timeService.SystemTimeNow;
 
             // Lấy phiên bản TripPlan hiện tại từ tripPlanId
             var tripPlan = await _unitOfWork.TripPlanRepository
                 .GetWithIncludeAsync(tripPlanId, include => include.Include(tp => tp.TripPlanVersions)
-                    .ThenInclude(v => v.TripPlanLocations));
-            if (tripPlan == null)
-                throw CustomExceptionFactory.CreateNotFoundError("Trip plan not found");
-            var version = tripPlan.TripPlanVersions.OrderByDescending(v => v.VersionNumber).FirstOrDefault();
-            if (version == null)
-                throw CustomExceptionFactory.CreateNotFoundError("No versions found for this trip plan");
+                    .ThenInclude(v => v.TripPlanLocations)) ?? throw CustomExceptionFactory.CreateNotFoundError("Trip plan not found");
+            var version = tripPlan.TripPlanVersions.OrderByDescending(v => v.VersionNumber).FirstOrDefault() ?? throw CustomExceptionFactory.CreateNotFoundError("No versions found for this trip plan");
 
             // Tạo phiên bản mới từ TripPlan hiện tại
             var newVersion = new TripPlanVersion
@@ -884,24 +995,6 @@ public class TripPlanService : ITripPlanService
                     Order = loc.Order
                 }).ToList();
 
-            // newVersion.TripPlanCuisines = (version.TripPlanCuisines ?? new List<TripPlanCuisine>())
-            //     .Select(cuisine => new TripPlanCuisine
-            //     {
-            //         CuisineId = cuisine.CuisineId,
-            //         StartTime = cuisine.StartTime,
-            //         EndTime = cuisine.EndTime,
-            //         Notes = cuisine.Notes
-            //     }).ToList();
-
-            // newVersion.TripPlanCraftVillages = (version.TripPlanCraftVillages ?? new List<TripPlanCraftVillage>())
-            //     .Select(craftVillage => new TripPlanCraftVillage
-            //     {
-            //         CraftVillageId = craftVillage.CraftVillageId,
-            //         StartTime = craftVillage.StartTime,
-            //         EndTime = craftVillage.EndTime,
-            //         Notes = craftVillage.Notes
-            //     }).ToList();
-
             await _unitOfWork.TripPlanVersionRepository.AddAsync(newVersion);
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync();
@@ -920,6 +1013,56 @@ public class TripPlanService : ITripPlanService
         }
     }
 
+    // private async Task UpdateTripPlanCraftVillagesAsync(
+    //     TripPlanVersion tripPlanVersion,
+    //     List<TripPlanCraftVillageModel> craftVillageModels)
+    // {
+    //     var existingIds = craftVillageModels
+    //         .Where(c => c.Id.HasValue)
+    //         .Select(c => c.Id.Value)
+    //         .ToList();
+
+    //     if (existingIds.Count != 0)
+    //     {
+    //         // Loại bỏ các món không còn tồn tại trong input
+    //         var craftVillagesToRemove = tripPlanVersion.TripPlanCraftVillages
+    //             .Where(c => !existingIds.Contains(c.Id))
+    //             .ToList();
+
+    //         _unitOfWork.TripPlanCraftVillageRepository.RemoveRange(craftVillagesToRemove);
+    //     }
+
+    //     foreach (var craftVillageModel in craftVillageModels)
+    //     {
+    //         if (craftVillageModel.Id.HasValue)
+    //         {
+    //             var existingCraftVillage = tripPlanVersion.TripPlanCraftVillages
+    //                 .FirstOrDefault(c => c.Id == craftVillageModel.Id.Value);
+
+    //             if (existingCraftVillage != null)
+    //             {
+    //                 existingCraftVillage.CraftVillageId = craftVillageModel.CraftVillageId;
+    //                 existingCraftVillage.StartTime = craftVillageModel.StartTime ?? DateTime.Now;
+    //                 existingCraftVillage.EndTime = craftVillageModel.EndTime ?? DateTime.Now;
+    //                 existingCraftVillage.Notes = craftVillageModel.Notes;
+    //             }
+    //         }
+    //         else
+    //         {
+    //             var newCraftVillage = new TripPlanCraftVillage
+    //             {
+    //                 TripPlanVersionId = tripPlanVersion.Id,
+    //                 CraftVillageId = craftVillageModel.CraftVillageId,
+    //                 StartTime = craftVillageModel.StartTime ?? DateTime.Now,
+    //                 EndTime = craftVillageModel.EndTime ?? DateTime.Now,
+    //                 Notes = craftVillageModel.Notes
+    //             };
+
+    //             await _unitOfWork.TripPlanCraftVillageRepository.AddAsync(newCraftVillage);
+    //         }
+    //     }
+    // }
+
     #endregion
 
 }
@@ -927,9 +1070,9 @@ public class TripPlanService : ITripPlanService
 public class TripPlanVersionDto
 {
     public Guid Id { get; set; }
-    public string Notes { get; set; }
+    public string? Notes { get; set; }
     public DateTimeOffset CreatedTime { get; set; }
-    public List<TripPlanLocationDto> TripPlanLocations { get; set; }
+    public List<TripPlanLocationDto>? TripPlanLocations { get; set; }
 }
 
 public class TripPlanLocationDto

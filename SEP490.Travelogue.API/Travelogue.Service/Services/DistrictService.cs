@@ -405,7 +405,7 @@ public class DistrictService : IDistrictService
                     item.Medias.Add(new MediaResponse
                     {
                         MediaUrl = media.MediaUrl,
-                        FileName = media.FileName,
+                        FileName = media.FileName ?? string.Empty,
                         FileType = media.FileType,
                         SizeInBytes = media.SizeInBytes,
                         CreatedTime = media.CreatedTime,
@@ -578,7 +578,7 @@ public class DistrictService : IDistrictService
             // upload ảnh
             var mediaResponses = new List<MediaResponse>();
             var imageUpload = districtUpdateModel.ImageUpload;
-            string newMediaUrl = null;
+            string? newMediaUrl = null;
             if (imageUpload != null)
             {
                 // Xóa ảnh cũ nếu tồn tại
@@ -607,46 +607,6 @@ public class DistrictService : IDistrictService
 
                 await _unitOfWork.DistrictMediaRepository.AddAsync(newDistrictMedia);
             }
-            //if (imageUploads != null && imageUploads.Count != 0)
-            //{
-            //    var oldMediaUrl = _unitOfWork.DistrictMediaRepository.Entities
-            //        .Where(dm => dm.DistrictId == existingDistrict.Id)
-            //        .Select(dm => dm.MediaUrl)
-            //        .FirstOrDefault();
-
-            //    if (oldMediaUrl != null)
-            //    {
-            //        var resultDelete = await _cloudinaryService.DeleteImageAsync(oldMediaUrl);
-            //    }
-            //    var imageUrls = await _cloudinaryService.UploadImagesAsync(imageUploads);
-
-            //    for (int i = 0; i < imageUploads.Count; i++)
-            //    {
-            //        var imageUpload = imageUploads[i];
-
-            //        var newDistrictMedia = new DistrictMedia
-            //        {
-            //            FileName = imageUpload.FileName,
-            //            FileType = imageUpload.ContentType,
-            //            DistrictId = existingDistrict.Id,
-            //            MediaUrl = imageUrls[i],
-            //            SizeInBytes = imageUpload.Length,
-            //            CreatedBy = currentUserId,
-            //            CreatedTime = _timeService.SystemTimeNow,
-            //            LastUpdatedBy = currentUserId,
-            //        };
-
-            //        await _unitOfWork.DistrictMediaRepository.AddAsync(newDistrictMedia);
-
-            //        mediaResponses.Add(new MediaResponse
-            //        {
-            //            MediaUrl = imageUrls[i],
-            //            FileName = imageUpload.FileName,
-            //            FileType = imageUpload.ContentType,
-            //            SizeInBytes = imageUpload.Length
-            //        });
-            //    }
-            //}
 
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);

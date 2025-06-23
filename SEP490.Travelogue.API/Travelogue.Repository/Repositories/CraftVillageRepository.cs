@@ -8,7 +8,7 @@ namespace Travelogue.Repository.Repositories;
 
 public interface ICraftVillageRepository : IGenericRepository<CraftVillage>
 {
-    Task<List<CraftVillage?>> GetByNameAsync(string title, CancellationToken cancellationToken);
+    Task<List<CraftVillage>> GetByNameAsync(string title, CancellationToken cancellationToken);
     Task<PagedResult<CraftVillage>> GetPageWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
 }
 public sealed class CraftVillageRepository : GenericRepository<CraftVillage>, ICraftVillageRepository
@@ -20,7 +20,7 @@ public sealed class CraftVillageRepository : GenericRepository<CraftVillage>, IC
         _context = dbContext;
     }
 
-    public async Task<List<CraftVillage?>> GetByNameAsync(string name, CancellationToken cancellationToken)
+    public async Task<List<CraftVillage>> GetByNameAsync(string name, CancellationToken cancellationToken)
     {
         try
         {
@@ -30,7 +30,8 @@ public sealed class CraftVillageRepository : GenericRepository<CraftVillage>, IC
             {
                 query = query
                     .Include(cv => cv.Location)
-                    .Where(cv => cv.Location.Name.Contains(name));
+                    .Where(cv => cv.Location != null && cv.Location.Name != null &&
+                        cv.Location.Name.ToLower().Contains(name.ToLower()));
             }
 
             var result = await query.ToListAsync(cancellationToken);

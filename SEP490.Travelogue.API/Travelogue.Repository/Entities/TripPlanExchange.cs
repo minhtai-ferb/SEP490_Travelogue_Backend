@@ -25,12 +25,6 @@ public class TripPlanExchange : BaseEntity
     public TripPlanExchangeSession Session { get; set; } = null!;
 
     [Required]
-    public DateTimeOffset StartDate { get; set; }
-
-    [Required]
-    public DateTimeOffset EndDate { get; set; }
-
-    [Required]
     public ExchangeSessionStatus Status { get; set; }
 
     [Required]
@@ -38,10 +32,10 @@ public class TripPlanExchange : BaseEntity
     public DateTimeOffset RequestedAt { get; set; }
 
     [DataType(DataType.DateTime)]
-    public DateTimeOffset? UserRespondedAt { get; set; }
+    public DateTimeOffset? RespondedAt { get; set; }
 
     [StringLength(1000)]
-    public string? UserResponseMessage { get; set; }
+    public string? ResponseMessage { get; set; }
 
     // Navigation Properties
 

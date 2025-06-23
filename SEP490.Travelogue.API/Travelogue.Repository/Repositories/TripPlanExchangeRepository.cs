@@ -5,10 +5,9 @@ using Travelogue.Repository.Entities;
 
 namespace Travelogue.Repository.Repositories;
 
-public interface ITourGuideBookingRequestRepository : IGenericRepository<TripPlanExchange>
+public interface ITripPlanExchangeRepository : IGenericRepository<TripPlanExchange>
 {
     Task<PagedResult<TripPlanExchange>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default);
-    // Task<PagedResult<TourGuideBookingRequest>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default);
     Task<PagedResult<TripPlanExchange>> GetPageWithSearchAsync(
         string? title,
         int pageNumber,
@@ -16,11 +15,11 @@ public interface ITourGuideBookingRequestRepository : IGenericRepository<TripPla
         CancellationToken cancellationToken = default);
 }
 
-public sealed class TourGuideBookingRequestRepository : GenericRepository<TripPlanExchange>, ITourGuideBookingRequestRepository
+public sealed class TripPlanExchangeRepository : GenericRepository<TripPlanExchange>, ITripPlanExchangeRepository
 {
     private readonly ApplicationDbContext _context;
 
-    public TourGuideBookingRequestRepository(ApplicationDbContext dbContext) : base(dbContext)
+    public TripPlanExchangeRepository(ApplicationDbContext dbContext) : base(dbContext)
     {
         _context = dbContext;
     }

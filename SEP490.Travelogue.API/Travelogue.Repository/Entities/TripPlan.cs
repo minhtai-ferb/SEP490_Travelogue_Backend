@@ -20,7 +20,7 @@ public sealed class TripPlan : BaseEntity
     [Required]
     public Guid UserId { get; set; }
 
-    public Guid? TripPlanVersionId { get; set; }
+    public Guid? UserTripPlanVersionId { get; set; }
 
     public User? User { get; set; }
     public ICollection<TripPlanVersion> TripPlanVersions { get; set; } = new List<TripPlanVersion>();

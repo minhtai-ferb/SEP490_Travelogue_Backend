@@ -46,8 +46,9 @@ public class UnitOfWork : IUnitOfWork
     public ITourGuideRepository TourGuideRepository { get; }
     public ITourRepository TourRepository { get; }
     public IOrderRepository OrderRepository { get; }
-    public ITourGuideBookingRequestRepository TourGuideBookingRequestRepository { get; }
+    public ITripPlanExchangeRepository TripPlanExchangeRepository { get; }
     public ITripPlanExchangeSessionRepository TripPlanExchangeSessionRepository { get; }
+    public IHistoricalLocationRepository HistoricalLocationRepository { get; }
 
     public UnitOfWork(ApplicationDbContext dbContext)
     {
@@ -88,8 +89,9 @@ public class UnitOfWork : IUnitOfWork
         TourGuideRepository = new TourGuideRepository(_dbContext);
         TourRepository = new TourRepository(_dbContext);
         OrderRepository = new OrderRepository(_dbContext);
-        TourGuideBookingRequestRepository = new TourGuideBookingRequestRepository(_dbContext);
+        TripPlanExchangeRepository = new TripPlanExchangeRepository(_dbContext);
         TripPlanExchangeSessionRepository = new TripPlanExchangeSessionRepository(_dbContext);
+        HistoricalLocationRepository = new HistoricalLocationRepository(_dbContext);
     }
 
     public IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity

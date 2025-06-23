@@ -6,7 +6,7 @@ public sealed class DistrictMedia : BaseEntity
 {
     public string MediaUrl { get; set; } = string.Empty;
     public string? FileName { get; set; }
-    public string FileType { get; set; }
+    public string? FileType { get; set; }
     public float SizeInBytes { get; set; }
     public Guid DistrictId { get; set; }
 

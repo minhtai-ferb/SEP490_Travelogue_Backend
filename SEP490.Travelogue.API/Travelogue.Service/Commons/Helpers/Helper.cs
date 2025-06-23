@@ -3,6 +3,7 @@ using System.Text;
 using Travelogue.Repository.Bases.Exceptions;
 
 namespace Travelogue.Service.Commons.Helpers;
+
 public static class Helper
 {
     public static bool IsValidUrl(string url)

@@ -17,8 +17,6 @@ public class TripPlanUpdateModel
     public DateTime EndDate { get; set; }
 
     public List<TripPlanLocationModel>? Locations { get; set; } = new List<TripPlanLocationModel>();
-    public List<TripPlanCuisineModel>? Cuisines { get; set; } = new List<TripPlanCuisineModel>();
-    public List<TripPlanCraftVillageModel>? CraftVillages { get; set; } = new List<TripPlanCraftVillageModel>();
 }
 
 public class TripPlanLocationModel

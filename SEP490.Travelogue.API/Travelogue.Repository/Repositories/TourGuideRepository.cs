@@ -8,10 +8,9 @@ namespace Travelogue.Repository.Repositories;
 public interface ITourGuideRepository : IGenericRepository<TourGuide>
 {
     Task<TourGuide?> GetByUserIdAsync(Guid userId);
-    Task<PagedResult<TourGuide>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default);
-    // Task<PagedResult<TourGuide>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default);
+
     Task<PagedResult<TourGuide>> GetPageWithSearchAsync(
-        string? title,
+        string? name,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken = default);
@@ -36,31 +35,8 @@ public sealed class TourGuideRepository : GenericRepository<TourGuide>, ITourGui
         return ActiveEntities.FirstOrDefaultAsync(tg => tg.UserId == userId);
     }
 
-    public async Task<PagedResult<TourGuide>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default)
-    {
-        if (pageNumber < 1 || pageSize < 1)
-        {
-            throw new ArgumentException("Page number and page size must be greater than zero.");
-        }
-
-        var totalItems = await ActiveEntities.CountAsync(cancellationToken);
-        var items = await ActiveEntities
-            //.Where(a => a.Name.Contains(name))
-            .Skip((pageNumber - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(cancellationToken);
-
-        return new PagedResult<TourGuide>
-        {
-            Items = items,
-            TotalCount = totalItems,
-            PageNumber = pageNumber,
-            PageSize = pageSize
-        };
-    }
-
     public async Task<PagedResult<TourGuide>> GetPageWithSearchAsync(
-        string? title,
+        string? name,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken = default)
@@ -72,10 +48,11 @@ public sealed class TourGuideRepository : GenericRepository<TourGuide>, ITourGui
 
         var query = ActiveEntities.AsQueryable();
 
-        // if (!string.IsNullOrWhiteSpace(title))
-        // {
-        //     query = query.Where(a => a.Name.Contains(title));
-        // }
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            query = query.Include(tg => tg.User)
+                         .Where(tg => tg.User != null && !string.IsNullOrEmpty(tg.User.FullName) && tg.User.FullName.ToLower().Contains(name.ToLower()));
+        }
 
         var totalItems = await query.CountAsync(cancellationToken);
 

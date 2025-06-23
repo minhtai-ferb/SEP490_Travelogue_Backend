@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Travelogue.Repository.Bases.BaseEntities;
-using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Repository.Entities;
 
@@ -17,11 +16,11 @@ public sealed class Location : BaseEntity
 
     [Range(-180, 180)]
     public double Longitude { get; set; }
+    public TimeSpan? OpenTime { get; set; }
+    public TimeSpan? CloseTime { get; set; }
 
     //[Range(0, 5)]
     //public double Rating { get; set; } = 0;
-    public HeritageRank HeritageRank { get; set; }
-    public Guid? TypeLocationId { get; set; }
     public Guid? DistrictId { get; set; }
 
     // Navigation Properties
@@ -29,7 +28,7 @@ public sealed class Location : BaseEntity
     public Cuisine? Cuisine { get; set; }
     public Hotel? Hotel { get; set; }
     public District? District { get; set; }
-    public TypeLocation? TypeLocation { get; set; }
+    public ICollection<LocationCategory> LocationCategories { get; set; }
     public ICollection<Experience>? Experiences { get; set; }
     public ICollection<Event>? Activities { get; set; }
     public ICollection<LocationMedia>? LocationMedias { get; set; }

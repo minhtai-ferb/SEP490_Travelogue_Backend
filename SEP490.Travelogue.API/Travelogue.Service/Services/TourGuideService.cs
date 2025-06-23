@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
@@ -17,7 +18,7 @@ public interface ITourGuideService
     // Task<TourGuideDataModel> AddTourGuideAsync(TourGuideCreateModel tourGuideCreateModel, CancellationToken cancellationToken);
     Task<TourGuideDataModel?> UpdateTourGuideAsync(Guid id, TourGuideUpdateModel tourGuideUpdateModel, CancellationToken cancellationToken);
     // Task DeleteTourGuideAsync(Guid id, CancellationToken cancellationToken);
-    // Task<PagedResult<TourGuideDataModel>> GetPagedTourGuideWithSearchAsync(string? title, string? categoryName, Guid? categoryId, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<PagedResult<TourGuideDataModel>> GetPagedTourGuideWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
 }
 
 public class TourGuideService : ITourGuideService
@@ -128,26 +129,6 @@ public class TourGuideService : ITourGuideService
 
             var dataModel = _mapper.Map<List<TourGuideDataModel>>(existingTourGuide);
 
-            // foreach (var item in dataModel)
-            // {
-            //     var districtMedia = _unitOfWork.TourGuideMediaRepository.ActiveEntities
-            //         .Where(dm => dm.TourGuideId == item.Id)
-            //         .OrderByDescending(dm => dm.CreatedTime)
-            //         .ToList();
-
-            //     foreach (var media in districtMedia)
-            //     {
-            //         item.Medias.Add(new MediaResponse
-            //         {
-            //             MediaUrl = media.MediaUrl,
-            //             FileName = media.FileName ?? string.Empty,
-            //             FileType = media.FileType,
-            //             SizeInBytes = media.SizeInBytes,
-            //             CreatedTime = media.CreatedTime,
-            //         });
-            //     }
-            // }
-
             return dataModel;
         }
         catch (CustomException)
@@ -161,6 +142,46 @@ public class TourGuideService : ITourGuideService
         finally
         {
             ////  _unitOfWork.Dispose();
+        }
+    }
+
+    public async Task<PagedResult<TourGuideDataModel>> GetPagedTourGuideWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var tourGuide = _unitOfWork.TourGuideRepository.ActiveEntities
+                .Include(tg => tg.User)
+                .Where(tg => tg.User.FullName.ToLower().Contains(name.ToLower()));
+
+            if (tourGuide == null)
+            {
+                return null; // Hoặc ném một ngoại lệ nếu cần
+            }
+
+            var tourGuideDetailResponse = _mapper.Map<TourGuideDataModel>(tourGuide);
+
+            var totalCount = await tourGuide.CountAsync(cancellationToken);
+
+            return new PagedResult<TourGuideDataModel>
+            {
+                Items = await tourGuide
+                    .OrderBy(tg => tg.User.FullName)
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(tg => _mapper.Map<TourGuideDataModel>(tg))
+                    .ToListAsync(cancellationToken),
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError();
         }
     }
 

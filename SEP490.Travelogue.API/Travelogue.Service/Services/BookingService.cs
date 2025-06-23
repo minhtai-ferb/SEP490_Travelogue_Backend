@@ -110,11 +110,11 @@ public class BookingService : IBookingService
             tourGuideBookingRequest.CreatedTime = currentTime;
             tourGuideBookingRequest.LastUpdatedTime = currentTime;
 
-            await _unitOfWork.TourGuideBookingRequestRepository.AddAsync(tourGuideBookingRequest);
+            await _unitOfWork.TripPlanExchangeRepository.AddAsync(tourGuideBookingRequest);
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);
 
-            var result = _unitOfWork.TourGuideBookingRequestRepository.ActiveEntities
+            var result = _unitOfWork.TripPlanExchangeRepository.ActiveEntities
                 .FirstOrDefault(tp => tp.Id == tourGuideBookingRequest.Id);
 
             return _mapper.Map<TourGuideBookingRequestDataModel>(result);
@@ -139,7 +139,7 @@ public class BookingService : IBookingService
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
 
-            var tourGuideBookingRequest = await _unitOfWork.TourGuideBookingRequestRepository.ActiveEntities
+            var tourGuideBookingRequest = await _unitOfWork.TripPlanExchangeRepository.ActiveEntities
                 .FirstOrDefaultAsync(r => r.Id == id, cancellationToken) ?? throw CustomExceptionFactory.CreateNotFoundError("tour guide booking request");
 
             tourGuideBookingRequest.Status = ExchangeSessionStatus.Cancelled;
@@ -149,11 +149,11 @@ public class BookingService : IBookingService
             tourGuideBookingRequest.CreatedTime = currentTime;
             tourGuideBookingRequest.LastUpdatedTime = currentTime;
 
-            await _unitOfWork.TourGuideBookingRequestRepository.AddAsync(tourGuideBookingRequest);
+            await _unitOfWork.TripPlanExchangeRepository.AddAsync(tourGuideBookingRequest);
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);
 
-            var result = _unitOfWork.TourGuideBookingRequestRepository.ActiveEntities
+            var result = _unitOfWork.TripPlanExchangeRepository.ActiveEntities
                 .FirstOrDefault(tp => tp.Id == tourGuideBookingRequest.Id);
 
             return _mapper.Map<TourGuideBookingRequestDataModel>(result);
@@ -185,7 +185,7 @@ public class BookingService : IBookingService
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
 
-            var bookingRequest = await _unitOfWork.TourGuideBookingRequestRepository
+            var bookingRequest = await _unitOfWork.TripPlanExchangeRepository
                 .GetWithIncludeAsync(bookingRequestId, include => include.Include(br => br.TripPlan))
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Booking request");
 
@@ -195,7 +195,7 @@ public class BookingService : IBookingService
 
             bookingRequest.SuggestedTripPlanVersionId = version.Id;
 
-            await _unitOfWork.TourGuideBookingRequestRepository.AddAsync(bookingRequest);
+            await _unitOfWork.TripPlanExchangeRepository.AddAsync(bookingRequest);
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync();
 
@@ -227,7 +227,7 @@ public class BookingService : IBookingService
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
 
-            var bookingRequest = await _unitOfWork.TourGuideBookingRequestRepository
+            var bookingRequest = await _unitOfWork.TripPlanExchangeRepository
                 .GetWithIncludeAsync(bookingRequestId, include => include.Include(br => br.TripPlan))
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Booking request");
 
@@ -237,7 +237,7 @@ public class BookingService : IBookingService
 
             bookingRequest.SuggestedTripPlanVersionId = version.Id;
 
-            await _unitOfWork.TourGuideBookingRequestRepository.AddAsync(bookingRequest);
+            await _unitOfWork.TripPlanExchangeRepository.AddAsync(bookingRequest);
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync();
 
@@ -288,7 +288,7 @@ public class BookingService : IBookingService
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
 
-            var bookingRequest = await _unitOfWork.TourGuideBookingRequestRepository
+            var bookingRequest = await _unitOfWork.TripPlanExchangeRepository
                 .GetWithIncludeAsync(bookingRequestId, include => include.Include(br => br.TripPlan))
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Booking request");
 
@@ -305,8 +305,8 @@ public class BookingService : IBookingService
             newBooking.OrderDate = currentTime;
             newBooking.CreatedBy = currentUserId;
             newBooking.LastUpdatedBy = currentUserId;
-            newBooking.ScheduledStartDate = bookingRequest.StartDate;
-            newBooking.ScheduledEndDate = bookingRequest.EndDate;
+            newBooking.ScheduledStartDate = bookingRequest.TripPlan.StartDate;
+            newBooking.ScheduledEndDate = bookingRequest.TripPlan.EndDate;
 
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync();

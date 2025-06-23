@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Travelogue.Repository.Bases.Responses;
 using Travelogue.Service.BusinessModels.ExchangeSessionModels;
 using Travelogue.Service.BusinessModels.TripPlanModels;
@@ -89,8 +88,8 @@ public class TripPlansController : ControllerBase
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
-    [HttpGet("version/{id}")]
-    public async Task<IActionResult> GetTripPlanVersion(Guid id)
+    [HttpPost("version/{id}")]
+    public async Task<IActionResult> CloneTripPlanVersion(Guid id)
     {
         // var result = await _tripPlanService.CreateVersionFromTripPlanAsync(id, string.Empty);
         var result = await _tripPlanService.CreateVersionFromTripPlanAsync(id, string.Empty);
@@ -100,8 +99,34 @@ public class TripPlansController : ControllerBase
         ));
     }
 
+    // [HttpPost("{tripPlanId}/exchanges/sessions")]
+    // public async Task<IActionResult> CreateExchangeSession(Guid tripPlanId, [FromBody] CreateExchangeSessionRequest request)
+    // {
+    //     if (tripPlanId == Guid.Empty)
+    //     {
+    //         return BadRequest("Trip plan ID cannot be empty.");
+    //     }
+
+    //     if (request == null)
+    //     {
+    //         return BadRequest("Request body cannot be null.");
+    //     }
+
+    //     await _tripPlanService.CreateExchangeSessionAsync(tripPlanId, request, new CancellationToken());
+    //     return Ok(ResponseModel<object>.OkResponseModel(
+    //         data: true,
+    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "request exchange session")
+    //     ));
+    // }
+
+    /// <summary>
+    /// Tạo phiên trao đổi mới (tự động tạo trip plan version mới)
+    /// </summary>
+    /// <param name="tripPlanId"></param>
+    /// <param name="request"></param>
+    /// <returns></returns>
     [HttpPost("{tripPlanId}/exchanges/sessions")]
-    public async Task<IActionResult> CreateExchangeSession(Guid tripPlanId, [FromBody] CreateExchangeSessionRequest request)
+    public async Task<IActionResult> CreateExchangeSessionWithoutTripPlanVersion(Guid tripPlanId, [FromBody] CreateExchangeSessionRequest request)
     {
         if (tripPlanId == Guid.Empty)
         {
@@ -113,21 +138,10 @@ public class TripPlansController : ControllerBase
             return BadRequest("Request body cannot be null.");
         }
 
-        await _tripPlanService.CreateExchangeSessionAsync(tripPlanId, request, new CancellationToken());
+        var result = await _tripPlanService.CreateExchangeSessionWithNewVersionAsync(tripPlanId, request, new CancellationToken());
         return Ok(ResponseModel<object>.OkResponseModel(
-            data: true,
+            data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "request exchange session")
         ));
-        // if (result.IsSuccess)
-        // {
-        //     return Ok(ResponseModel<object>.OkResponseModel(
-        //         data: result.Data,
-        //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "exchange session")
-        //     ));
-        // }
-
-        // return BadRequest(ResponseModel<object>.ErrorResponseModel(
-        //     message: result.ErrorMessage
-        // ));
     }
 }

@@ -25,6 +25,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<LocationCraftVillageSuggestion> LocationCraftVillageSuggestions { get; set; }
     public DbSet<LocationCuisineSuggestion> LocationCuisineSuggestions { get; set; }
     public DbSet<LocationHotelSuggestion> LocationHotelSuggestions { get; set; }
+    public DbSet<LocationCategory> LocationCategories { get; set; }
+    public DbSet<HistoricalLocation> HistoricalLocations { get; set; }
 
     // Craft Village Management
     public DbSet<CraftVillage> CraftVillages { get; set; }
@@ -47,7 +49,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<TourPlan> TourPlans { get; set; }
     public DbSet<TourPlanLocation> TourPlanLocations { get; set; }
     public DbSet<TourGuide> TourGuides { get; set; }
-    public DbSet<TourGuideAvailability> TourGuideAvailabilities { get; set; }
+    public DbSet<TourGuideUnavailability> TourGuideUnavailabilities { get; set; }
     public DbSet<TourGroup> TourGroups { get; set; }
     public DbSet<TourGroupMember> TourGroupMembers { get; set; }
     public DbSet<TourJoinRequest> TourJoinRequests { get; set; }

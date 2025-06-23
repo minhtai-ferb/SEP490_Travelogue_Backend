@@ -9,5 +9,6 @@ public class CreateExchangeSessionRequest
 
     [Required]
     public Guid TripPlanVersionId { get; set; }
-}
 
+    public string? GuideNote { get; set; }
+}

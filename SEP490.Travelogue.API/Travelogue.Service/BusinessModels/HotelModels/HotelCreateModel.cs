@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
 namespace Travelogue.Service.BusinessModels.HotelModels;
+
 public class HotelCreateModel
 {
     [Required, StringLength(100)]
@@ -13,4 +14,12 @@ public class HotelCreateModel
     public string? PhoneNumber { get; set; }
     public string? Email { get; set; }
     public string? Website { get; set; }
+
+    [Range(-90, 90)]
+    public double Latitude { get; set; }
+
+    [Range(-180, 180)]
+    public double Longitude { get; set; }
+    public TimeSpan? OpenTime { get; set; }
+    public TimeSpan? CloseTime { get; set; }
 }
