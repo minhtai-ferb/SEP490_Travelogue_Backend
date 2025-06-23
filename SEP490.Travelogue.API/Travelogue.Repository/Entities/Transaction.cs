@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Travelogue.Repository.Bases.BaseEntitys;
+using Travelogue.Repository.Bases.BaseEntities;
 using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Repository.Entities;
@@ -17,7 +17,7 @@ public sealed class Transaction : BaseEntity
 
     [Required]
     [EnumDataType(typeof(TransactionStatus))]
-    public TransactionStatus Status { get; set; } 
+    public TransactionStatus Status { get; set; }
 
     public Order? Order { get; set; }
 }

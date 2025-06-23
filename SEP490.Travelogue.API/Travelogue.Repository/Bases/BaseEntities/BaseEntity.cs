@@ -1,4 +1,4 @@
-﻿namespace Travelogue.Repository.Bases.BaseEntitys;
+﻿namespace Travelogue.Repository.Bases.BaseEntities;
 
 public class BaseEntity : IBaseEntity
 {

@@ -15,15 +15,15 @@ namespace Travelogue.Service.Services;
 
 public interface IHotelService
 {
-    Task<HotelDataModel?> GetHotelByIdAsync(Guid id, CancellationToken cancellationToken);
-    Task<List<HotelDataModel>> GetAllHotelsAsync(CancellationToken cancellationToken);
+    Task<HotelDetailDataModel?> GetHotelByIdAsync(Guid id, CancellationToken cancellationToken);
+    Task<List<HotelDetailDataModel>> GetAllHotelsAsync(CancellationToken cancellationToken);
     Task AddHotelAsync(HotelCreateModel hotelCreateModel, CancellationToken cancellationToken);
     Task UpdateHotelAsync(Guid id, HotelUpdateModel hotelUpdateModel, CancellationToken cancellationToken);
     Task DeleteHotelAsync(Guid id, CancellationToken cancellationToken);
     Task<HotelMediaResponse> AddHotelWithMediaAsync(HotelCreateWithMediaFileModel hotelCreateModel, string? thumbnailSelected, CancellationToken cancellationToken);
     Task UpdateHotelAsync(Guid id, HotelUpdateWithMediaFileModel hotelUpdateModel, string? thumbnailSelected, CancellationToken cancellationToken);
-    Task<PagedResult<HotelDataModel>> GetPagedHotelsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
-    Task<PagedResult<HotelDataModel>> GetPagedHotelsWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<PagedResult<HotelDetailDataModel>> GetPagedHotelsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<PagedResult<HotelDetailDataModel>> GetPagedHotelsWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<HotelMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
     Task<HotelMediaResponse> UploadMediaAsync(
         Guid id,
@@ -51,20 +51,29 @@ public class HotelService : IHotelService
 
     public async Task AddHotelAsync(HotelCreateModel hotelCreateModel, CancellationToken cancellationToken)
     {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+
         try
         {
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
+
+            var locationHotel = _mapper.Map<Location>(hotelCreateModel);
+            locationHotel.CreatedBy = currentUserId;
+            locationHotel.LastUpdatedBy = currentUserId;
+            locationHotel.CreatedTime = currentTime;
+            locationHotel.LastUpdatedTime = currentTime;
+            await _unitOfWork.LocationRepository.AddAsync(locationHotel);
 
             var newHotel = _mapper.Map<Hotel>(hotelCreateModel);
             newHotel.CreatedBy = currentUserId;
             newHotel.LastUpdatedBy = currentUserId;
             newHotel.CreatedTime = currentTime;
             newHotel.LastUpdatedTime = currentTime;
-
-            _unitOfWork.BeginTransaction();
+            newHotel.LocationId = locationHotel.Id;
             await _unitOfWork.HotelRepository.AddAsync(newHotel);
-            _unitOfWork.CommitTransaction();
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
         }
         catch (CustomException)
         {
@@ -76,7 +85,7 @@ public class HotelService : IHotelService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -130,25 +139,40 @@ public class HotelService : IHotelService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
-    public async Task<List<HotelDataModel>> GetAllHotelsAsync(CancellationToken cancellationToken)
+    public async Task<List<HotelDetailDataModel>> GetAllHotelsAsync(CancellationToken cancellationToken)
     {
         try
         {
             var existingHotel = await _unitOfWork.HotelRepository.GetAllAsync(cancellationToken);
             if (existingHotel == null || !existingHotel.Any())
             {
-                return new List<HotelDataModel>();
+                return new List<HotelDetailDataModel>();
             }
 
-            var hotelDataModels = _mapper.Map<List<HotelDataModel>>(existingHotel);
+            var hotelDataModels = _mapper.Map<List<HotelDetailDataModel>>(existingHotel);
 
             foreach (var hotelData in hotelDataModels)
             {
                 hotelData.Medias = await GetMediaByIdAsync(hotelData.Id, cancellationToken);
+                var locationHotel = _unitOfWork.LocationRepository
+                    .ActiveEntities
+                    .FirstOrDefault(l => l.Id == hotelData.LocationId);
+                if (locationHotel != null)
+                {
+                    hotelData.Address = locationHotel.Address;
+                    hotelData.Latitude = locationHotel.Latitude;
+                    hotelData.Longitude = locationHotel.Longitude;
+                    hotelData.LocationId = locationHotel.Id;
+                    hotelData.Name = locationHotel.Name;
+                    hotelData.Description = locationHotel.Description;
+                    hotelData.Content = locationHotel.Content;
+                    hotelData.OpenTime = locationHotel.OpenTime;
+                    hotelData.CloseTime = locationHotel.CloseTime;
+                }
             }
 
             return hotelDataModels;
@@ -163,11 +187,11 @@ public class HotelService : IHotelService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
-    public async Task<HotelDataModel?> GetHotelByIdAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<HotelDetailDataModel?> GetHotelByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         try
         {
@@ -177,7 +201,7 @@ public class HotelService : IHotelService
                 throw CustomExceptionFactory.CreateNotFoundError("hotel");
             }
 
-            var hotelDataModel = _mapper.Map<HotelDataModel>(existingHotel);
+            var hotelDataModel = _mapper.Map<HotelDetailDataModel>(existingHotel);
             hotelDataModel.Medias = await GetMediaByIdAsync(id, cancellationToken);
 
             return hotelDataModel;
@@ -192,24 +216,24 @@ public class HotelService : IHotelService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
-    public async Task<PagedResult<HotelDataModel>> GetPagedHotelsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<HotelDetailDataModel>> GetPagedHotelsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
             var pagedResult = await _unitOfWork.HotelRepository.GetPageAsync(pageNumber, pageSize);
 
-            var hotelDataModels = _mapper.Map<List<HotelDataModel>>(pagedResult.Items);
+            var hotelDataModels = _mapper.Map<List<HotelDetailDataModel>>(pagedResult.Items);
 
             foreach (var hotel in hotelDataModels)
             {
                 hotel.Medias = await GetMediaByIdAsync(hotel.Id, cancellationToken);
             }
 
-            return new PagedResult<HotelDataModel>
+            return new PagedResult<HotelDetailDataModel>
             {
                 Items = hotelDataModels,
                 TotalCount = pagedResult.TotalCount,
@@ -227,24 +251,24 @@ public class HotelService : IHotelService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
-    public async Task<PagedResult<HotelDataModel>> GetPagedHotelsWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<HotelDetailDataModel>> GetPagedHotelsWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
             var pagedResult = await _unitOfWork.HotelRepository.GetPageWithSearchAsync(name, pageNumber, pageSize, cancellationToken);
 
-            var hotelDataModels = _mapper.Map<List<HotelDataModel>>(pagedResult.Items);
+            var hotelDataModels = _mapper.Map<List<HotelDetailDataModel>>(pagedResult.Items);
 
             foreach (var hotel in hotelDataModels)
             {
                 hotel.Medias = await GetMediaByIdAsync(hotel.Id, cancellationToken);
             }
 
-            return new PagedResult<HotelDataModel>
+            return new PagedResult<HotelDetailDataModel>
             {
                 Items = hotelDataModels,
                 TotalCount = pagedResult.TotalCount,
@@ -262,7 +286,7 @@ public class HotelService : IHotelService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -297,7 +321,7 @@ public class HotelService : IHotelService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -354,7 +378,6 @@ public class HotelService : IHotelService
             return new HotelMediaResponse
             {
                 HotelId = existingHotel.Id,
-                HotelName = existingHotel.Name,
                 Media = mediaResponses
             };
         }
@@ -402,7 +425,7 @@ public class HotelService : IHotelService
                 return new HotelMediaResponse
                 {
                     HotelId = existingHotel.Id,
-                    HotelName = existingHotel.Name,
+                    // HotelName = existingHotel.Name,
                     Media = new List<MediaResponse>()
                 };
             }
@@ -428,7 +451,7 @@ public class HotelService : IHotelService
                 return new HotelMediaResponse
                 {
                     HotelId = existingHotel.Id,
-                    HotelName = existingHotel.Name,
+                    // HotelName = existingHotel.Name,
                     Media = new List<MediaResponse>()
                 };
             }
@@ -503,7 +526,7 @@ public class HotelService : IHotelService
             return new HotelMediaResponse
             {
                 HotelId = existingHotel.Id,
-                HotelName = existingHotel.Name,
+                // HotelName = existingHotel.Name,
                 Media = mediaResponses
             };
         }
@@ -607,7 +630,7 @@ public class HotelService : IHotelService
             return new HotelMediaResponse
             {
                 HotelId = newHotel.Id,
-                HotelName = newHotel.Name,
+                // HotelName = newHotel.Name,
                 Media = mediaResponses
             };
         }
@@ -818,7 +841,7 @@ public class HotelService : IHotelService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //       //  _unitOfWork.Dispose();
     //    }
     //}
 }

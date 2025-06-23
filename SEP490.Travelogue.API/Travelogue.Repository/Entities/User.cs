@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
-using Travelogue.Repository.Bases.BaseEntitys;
+using Travelogue.Repository.Bases.BaseEntities;
 using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Repository.Entities;
@@ -11,7 +11,6 @@ public sealed class User : BaseEntity
 {
     [Required, EmailAddress]
     public required string Email { get; set; }
-    public required string UserName { get; set; }
     public bool? EmailConfirmed { get; set; }
     public byte[]? PasswordHash { get; set; }
     public byte[]? PasswordSalt { get; set; }

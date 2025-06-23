@@ -18,6 +18,7 @@ public interface ILocationRepository : IGenericRepository<Location>
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken = default);
+    Task<List<string>> GetAllCategoriesAsync(Guid locationId, CancellationToken cancellationToken = default);
 }
 public sealed class LocationRepository : GenericRepository<Location>, ILocationRepository
 {
@@ -26,6 +27,29 @@ public sealed class LocationRepository : GenericRepository<Location>, ILocationR
     public LocationRepository(ApplicationDbContext dbContext) : base(dbContext)
     {
         _context = dbContext;
+    }
+
+    public async Task<List<string>> GetAllCategoriesAsync(Guid locationId, CancellationToken cancellationToken = default)
+    {
+        // return await _context.Locations
+        //     .SelectMany(l => l.Categories)
+        //     .Distinct()
+        //     .ToListAsync(cancellationToken);
+
+        var location = await _context.Locations
+            .Include(l => l.LocationCategories)
+            .ThenInclude(lc => lc.Category)
+            .FirstOrDefaultAsync(l => l.Id == locationId, cancellationToken);
+
+        if (location == null)
+        {
+            return new List<string>();
+        }
+
+        return location.LocationCategories
+            .Select(lc => lc.Category.Name)
+            .Distinct()
+            .ToList();
     }
 
     public async Task<PagedResult<Location>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default)
@@ -66,10 +90,10 @@ public sealed class LocationRepository : GenericRepository<Location>, ILocationR
             query = query.Where(a => a.Name.Contains(name));
         }
 
-        if (typeId != Guid.Empty)
-        {
-            query = query.Where(a => a.TypeLocationId == typeId);
-        }
+        // if (typeId != Guid.Empty)
+        // {
+        //     query = query.Where(a => a.TypeLocationId == typeId);
+        // }
 
         var items = await query
             .Skip((pageNumber - 1) * pageSize)
@@ -106,20 +130,20 @@ public sealed class LocationRepository : GenericRepository<Location>, ILocationR
             query = query.Where(a => a.Name.Contains(title));
         }
 
-        if (typeId.HasValue)
-        {
-            query = query.Where(a => a.TypeLocationId == typeId.Value);
-        }
+        // if (typeId.HasValue)
+        // {
+        //     query = query.Where(a => a.TypeLocationId == typeId.Value);
+        // }
 
         if (districtId.HasValue)
         {
             query = query.Where(a => a.DistrictId == districtId.Value);
         }
 
-        if (heritageRank.HasValue)
-        {
-            query = query.Where(a => a.HeritageRank == heritageRank.Value);
-        }
+        // if (heritageRank.HasValue)
+        // {
+        //     query = query.Where(a => a.HeritageRank == heritageRank.Value);
+        // }
 
         var totalItems = await query.CountAsync(cancellationToken);
 

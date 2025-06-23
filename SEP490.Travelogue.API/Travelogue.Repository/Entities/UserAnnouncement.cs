@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Travelogue.Repository.Bases.BaseEntitys;
+﻿using Travelogue.Repository.Bases.BaseEntities;
 
 namespace Travelogue.Repository.Entities;
+
 public sealed class UserAnnouncement : BaseEntity
 {
     public Guid AnnouncementId { get; set; }

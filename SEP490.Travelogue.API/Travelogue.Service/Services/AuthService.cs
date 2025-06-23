@@ -17,6 +17,7 @@ using Travelogue.Service.Commons.Implementations;
 using Travelogue.Service.Commons.Interfaces;
 
 namespace Travelogue.Service.Services;
+
 public interface IAuthService
 {
     Task<GetCurrentUserResponse> GetCurrentUser();
@@ -123,7 +124,7 @@ public class AuthService : IAuthService
             // Kiểm tra người dùng đã tồn tại chưa
             if (await _unitOfWork.UserRepository.GetUserByEmailAsync(model.Email) != null)
             {
-                throw CustomExceptionFactory.CreateBadRequest($"{ResponseMessages.EXISTED.Replace("{0}", "người dùng")}");
+                throw CustomExceptionFactory.CreateBadRequestError($"{ResponseMessages.EXISTED.Replace("{0}", "người dùng")}");
             }
 
             // Tạo mới role "user" nếu chưa có
@@ -146,14 +147,13 @@ public class AuthService : IAuthService
             // Kiểm tra mật khẩu xác nhận
             if (model.Password != model.ConfirmPassword)
             {
-                throw CustomExceptionFactory.CreateBadRequest("Vui lòng nhập lại mật khẩu chính xác");
+                throw CustomExceptionFactory.CreateBadRequestError("Vui lòng nhập lại mật khẩu chính xác");
             }
 
             // Khởi tạo User
             var newUser = _mapper.Map<User>(model);
             newUser.IsActive = true;
             newUser.IsDeleted = false;
-            newUser.UserName = model.Email;
 
             // tạo user
             User? resultCreateUser = await _unitOfWork.UserRepository.CreateUser(newUser, model.Password);
@@ -309,12 +309,12 @@ public class AuthService : IAuthService
             var user = await _unitOfWork.UserRepository.GetUserByIdAsync(id);
             if (user == null)
             {
-                throw CustomExceptionFactory.CreateBadRequest("Người dùng không tồn tại.");
+                throw CustomExceptionFactory.CreateBadRequestError("Người dùng không tồn tại.");
             }
 
             if (user.IsEmailVerified ?? false)
             {
-                throw CustomExceptionFactory.CreateBadRequest("Tài khoản đã được xác thực trước đó.");
+                throw CustomExceptionFactory.CreateBadRequestError("Tài khoản đã được xác thực trước đó.");
             }
 
             user.IsEmailVerified = true;
@@ -343,7 +343,7 @@ public class AuthService : IAuthService
             // Bussiness Logic: user login with their email ==> userName = email field
             // Find the Email string in the User Name field in the database 
             if ((await _unitOfWork.UserRepository.GetUserByEmailAsync(model.Email)) != null)
-                throw CustomExceptionFactory.CreateBadRequest($"{ResponseMessages.EXISTED.Replace("{0}", "người dùng")}");
+                throw CustomExceptionFactory.CreateBadRequestError($"{ResponseMessages.EXISTED.Replace("{0}", "người dùng")}");
 
             string roleId = model.RoleId?.ToString() ?? string.Empty;
             if (string.IsNullOrEmpty(roleId))
@@ -357,14 +357,12 @@ public class AuthService : IAuthService
 
             if (model.Password != model.ConfirmPassword)
             {
-                throw CustomExceptionFactory.CreateBadRequest("Vui lòng nhập lại mật khẩu chính xác");
+                throw CustomExceptionFactory.CreateBadRequestError("Vui lòng nhập lại mật khẩu chính xác");
             }
             var newUser = _mapper.Map<User>(model);
             newUser.IsActive = true;
             newUser.IsDeleted = false;
 
-            // Bussiness Logic: user login with their email ==> userName = email field
-            newUser.UserName = model.Email;
             User? resultCreateUser = await _unitOfWork.UserRepository.CreateUser(newUser, model.Password);
 
             bool resultAddRole = await _unitOfWork.UserRepository.AddToRoleAsync(newUser, role.Id!);
@@ -416,7 +414,7 @@ public class AuthService : IAuthService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -450,7 +448,7 @@ public class AuthService : IAuthService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -507,7 +505,7 @@ public class AuthService : IAuthService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -518,7 +516,7 @@ public class AuthService : IAuthService
             var resetToken = await _unitOfWork.PasswordResetTokenRepository.GetValidTokenAsync(model.Email, model.Token);
             if (resetToken == null || resetToken.ExpiryTime < DateTime.UtcNow || resetToken.IsUsed)
             {
-                throw CustomExceptionFactory.CreateBadRequest("Token không hợp lệ hoặc đã hết hạn.");
+                throw CustomExceptionFactory.CreateBadRequestError("Token không hợp lệ hoặc đã hết hạn.");
             }
 
             var user = await _unitOfWork.UserRepository.GetUserByEmailAsync(model.Email);
@@ -573,7 +571,6 @@ public class AuthService : IAuthService
                 VerificationToken = accessToken,
                 RefreshTokens = refreshToken,
                 UserId = user.Id,
-                Username = user.UserName!,
                 FullName = user.FullName,
                 Email = user.Email!,
                 IsEmailVerified = user.IsEmailVerified ?? false,
@@ -592,7 +589,7 @@ public class AuthService : IAuthService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -662,7 +659,6 @@ public class AuthService : IAuthService
                 VerificationToken = accessToken,
                 RefreshTokens = refreshToken,
                 UserId = user.Id,
-                Username = user.UserName!,
                 FullName = user.FullName,
                 Email = user.Email!,
                 IsEmailVerified = user.IsEmailVerified ?? false,
@@ -681,7 +677,7 @@ public class AuthService : IAuthService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -731,7 +727,6 @@ public class AuthService : IAuthService
                 VerificationToken = newAccessToken,
                 RefreshTokens = newRefreshToken,
                 UserId = user.Id,
-                Username = user.UserName!,
                 FullName = user.FullName,
                 Email = user.Email!,
                 IsEmailVerified = user.IsEmailVerified ?? false,
@@ -878,7 +873,6 @@ public class AuthService : IAuthService
                 VerificationToken = accessToken,
                 RefreshTokens = refreshToken,
                 UserId = user.Id,
-                Username = user.UserName!,
                 FullName = user.FullName,
                 Email = user.Email!,
                 IsEmailVerified = user.IsEmailVerified ?? false,
@@ -903,7 +897,6 @@ public class AuthService : IAuthService
         {
             var newUser = new User
             {
-                UserName = email,
                 Email = email,
                 GoogleId = googleId,
                 FullName = fullName,
@@ -1034,7 +1027,6 @@ public class AuthService : IAuthService
                 VerificationToken = accessToken,
                 RefreshTokens = refreshToken,
                 UserId = user.Id,
-                Username = user.UserName!,
                 FullName = user.FullName,
                 Email = user.Email!,
                 IsEmailVerified = user.IsEmailVerified ?? false,

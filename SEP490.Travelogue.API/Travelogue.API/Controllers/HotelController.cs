@@ -5,6 +5,7 @@ using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 
 namespace Travelogue.API.Controllers;
+
 [Route("api/[controller]")]
 [ApiController]
 public class HotelController : ControllerBase
@@ -54,7 +55,7 @@ public class HotelController : ControllerBase
     public async Task<IActionResult> GetAllHotels()
     {
         var hotels = await _hotelService.GetAllHotelsAsync(new CancellationToken());
-        return Ok(ResponseModel<List<HotelDataModel>>.OkResponseModel(
+        return Ok(ResponseModel<List<HotelDetailDataModel>>.OkResponseModel(
             data: hotels,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "hotel")
         ));
@@ -69,7 +70,7 @@ public class HotelController : ControllerBase
     public async Task<IActionResult> GetHotelById(Guid id)
     {
         var hotel = await _hotelService.GetHotelByIdAsync(id, new CancellationToken());
-        return Ok(ResponseModel<HotelDataModel>.OkResponseModel(
+        return Ok(ResponseModel<HotelDetailDataModel>.OkResponseModel(
             data: hotel,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "hotel")
         ));

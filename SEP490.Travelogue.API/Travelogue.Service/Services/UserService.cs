@@ -80,7 +80,7 @@ public class UserService : IUserService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -127,7 +127,7 @@ public class UserService : IUserService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -196,7 +196,7 @@ public class UserService : IUserService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -226,7 +226,7 @@ public class UserService : IUserService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -256,7 +256,7 @@ public class UserService : IUserService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -299,7 +299,7 @@ public class UserService : IUserService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -329,7 +329,7 @@ public class UserService : IUserService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -348,7 +348,7 @@ public class UserService : IUserService
             var userRoleExists = await _unitOfWork.UserRoleRepository.RoleExistsForUserAsync(userId, role.Id);
             if (userRoleExists)
             {
-                throw CustomExceptionFactory.CreateBadRequest("Người dùng đã có vai trò này");
+                throw CustomExceptionFactory.CreateBadRequestError("Người dùng đã có vai trò này");
             }
             var result = await _unitOfWork.UserRoleRepository.AddRolesToUser(userId, new List<Guid> { role.Id });
 
@@ -557,7 +557,7 @@ public class UserService : IUserService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 }

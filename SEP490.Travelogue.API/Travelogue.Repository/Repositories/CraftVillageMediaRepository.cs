@@ -6,7 +6,7 @@ namespace Travelogue.Repository.Repositories;
 
 public interface ICraftVillageMediaRepository : IGenericRepository<CraftVillageMedia>
 {
-    Task<CraftVillageMedia> GetFirstByCraftVillageIdAsync(Guid id);
+    Task<CraftVillageMedia?> GetFirstByCraftVillageIdAsync(Guid id);
 }
 public sealed class CraftVillageMediaRepository : GenericRepository<CraftVillageMedia>, ICraftVillageMediaRepository
 {

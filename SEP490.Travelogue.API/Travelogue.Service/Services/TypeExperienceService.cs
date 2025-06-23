@@ -57,7 +57,7 @@ public class TypeExperienceService : ITypeExperienceService
             {
                 if (!matchedCategory.IsDeleted)
                 {
-                    throw CustomExceptionFactory.CreateBadRequest("Danh mục đã tồn tại trong hệ thống.");
+                    throw CustomExceptionFactory.CreateBadRequestError("Danh mục đã tồn tại trong hệ thống.");
                 }
 
                 matchedCategory.IsDeleted = false;
@@ -91,7 +91,7 @@ public class TypeExperienceService : ITypeExperienceService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -113,7 +113,7 @@ public class TypeExperienceService : ITypeExperienceService
 
             if (isInUsing)
             {
-                throw CustomExceptionFactory.CreateBadRequest(ResponseMessages.BE_USED);
+                throw CustomExceptionFactory.CreateBadRequestError(ResponseMessages.BE_USED);
             }
 
             existingTypeExperience.LastUpdatedBy = currentUserId;
@@ -136,7 +136,7 @@ public class TypeExperienceService : ITypeExperienceService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -162,7 +162,7 @@ public class TypeExperienceService : ITypeExperienceService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -188,7 +188,7 @@ public class TypeExperienceService : ITypeExperienceService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -214,7 +214,7 @@ public class TypeExperienceService : ITypeExperienceService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -244,7 +244,7 @@ public class TypeExperienceService : ITypeExperienceService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -274,7 +274,7 @@ public class TypeExperienceService : ITypeExperienceService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 
@@ -300,7 +300,7 @@ public class TypeExperienceService : ITypeExperienceService
 
             if (duplicateExists)
             {
-                throw CustomExceptionFactory.CreateBadRequest("Tên danh mục đã tồn tại trong hệ thống.");
+                throw CustomExceptionFactory.CreateBadRequestError("Tên danh mục đã tồn tại trong hệ thống.");
             }
 
             _mapper.Map(typeExperienceUpdateModel, existingTypeExperience);
@@ -322,7 +322,7 @@ public class TypeExperienceService : ITypeExperienceService
         }
         finally
         {
-            _unitOfWork.Dispose();
+           //  _unitOfWork.Dispose();
         }
     }
 }

@@ -72,7 +72,7 @@ public class CuisineService : ICuisineService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -126,7 +126,7 @@ public class CuisineService : ICuisineService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -159,7 +159,7 @@ public class CuisineService : ICuisineService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -188,7 +188,7 @@ public class CuisineService : ICuisineService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -223,7 +223,7 @@ public class CuisineService : ICuisineService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -263,7 +263,7 @@ public class CuisineService : ICuisineService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -298,7 +298,7 @@ public class CuisineService : ICuisineService
         }
         finally
         {
-            _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -308,7 +308,7 @@ public class CuisineService : ICuisineService
         try
         {
             var currentUserId = _userContextService.GetCurrentUserId();
-            var existingCuisine = await _unitOfWork.CuisineRepository.GetByIdAsync(id, cancellationToken);
+            var existingCuisine = await _unitOfWork.CuisineRepository.GetWithIncludeAsync(id, c => c.Include(c => c.Location));
             if (existingCuisine == null || existingCuisine.IsDeleted)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("nhà hàng");
@@ -355,7 +355,7 @@ public class CuisineService : ICuisineService
             return new CuisineMediaResponse
             {
                 CuisineId = existingCuisine.Id,
-                CuisineName = existingCuisine.Name,
+                CuisineName = existingCuisine.Location.Name,
                 Media = mediaResponses
             };
         }
@@ -459,7 +459,8 @@ public class CuisineService : ICuisineService
             return new CuisineMediaResponse
             {
                 CuisineId = newCuisine.Id,
-                CuisineName = newCuisine.Name,
+                // ???
+                CuisineName = newCuisine.Location.Name,
                 Media = mediaResponses
             };
         }
@@ -724,7 +725,7 @@ public class CuisineService : ICuisineService
     //    }
     //    finally
     //    {
-    //        _unitOfWork.Dispose();
+    //       //  _unitOfWork.Dispose();
     //    }
     //}
 }

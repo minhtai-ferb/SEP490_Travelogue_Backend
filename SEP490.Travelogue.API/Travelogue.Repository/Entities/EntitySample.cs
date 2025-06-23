@@ -1,7 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using Travelogue.Repository.Bases.BaseEntitys;
-
-namespace Travelogue.Repository.Entities;
+﻿namespace Travelogue.Repository.Entities;
 
 public class EntitySample
 {

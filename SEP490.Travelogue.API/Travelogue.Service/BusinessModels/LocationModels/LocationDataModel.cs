@@ -2,6 +2,7 @@
 using Travelogue.Service.BusinessModels.MediaModel;
 
 namespace Travelogue.Service.BusinessModels.LocationModels;
+
 public class LocationDataModel
 {
     public Guid Id { get; set; }
