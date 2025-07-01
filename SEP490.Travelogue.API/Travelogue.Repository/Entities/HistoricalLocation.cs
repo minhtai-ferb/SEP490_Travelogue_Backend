@@ -7,6 +7,8 @@ public sealed class HistoricalLocation : BaseEntity
 {
     public HeritageRank HeritageRank { get; set; }
     public DateTime? EstablishedDate { get; set; }
-    public Guid? LocationId { get; set; }
+    public Guid LocationId { get; set; }
+    public Guid? TypeHistoricalLocationId { get; set; }
     public Location? Location { get; set; } = null!;
+    public TypeHistoricalLocation? TypeHistoricalLocation { get; set; } = null!;
 }

@@ -5,6 +5,7 @@ using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 
 namespace Travelogue.API.Controllers;
+
 [Route("api/[controller]")]
 [ApiController]
 public class NewsCategoryController : ControllerBase
@@ -51,11 +52,11 @@ public class NewsCategoryController : ControllerBase
     /// </summary>
     /// <returns></returns>
     [HttpGet]
-    public async Task<IActionResult> GetAllNewsCategorys()
+    public async Task<IActionResult> GetAllNewsCategories()
     {
-        var newss = await _newsService.GetAllNewsCategorysAsync(new CancellationToken());
+        var news = await _newsService.GetAllNewsCategoriesAsync(new CancellationToken());
         return Ok(ResponseModel<List<NewsCategoryDataModel>>.OkResponseModel(
-            data: newss,
+            data: news,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "news")
         ));
     }
@@ -98,13 +99,13 @@ public class NewsCategoryController : ControllerBase
     /// <returns>Trả về danh sách các news</returns>
     [HttpGet("get-paged")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetPagedNewsCategory(int pageNumber = 1, int pageSize = 10)
+    public async Task<IActionResult> GetPagedNewsCategories(int pageNumber = 1, int pageSize = 10)
     {
-        var newss = await _newsService.GetPagedNewsCategorysAsync(pageNumber, pageSize, new CancellationToken());
+        var news = await _newsService.GetPagedNewsCategoriesAsync(pageNumber, pageSize, new CancellationToken());
         return Ok(PagedResponseModel<object>.OkResponseModel(
-            data: newss.Items,
+            data: news.Items,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "news"),
-            totalCount: newss.TotalCount,
+            totalCount: news.TotalCount,
             pageSize: pageSize,
             pageNumber: pageNumber
         ));
@@ -119,13 +120,13 @@ public class NewsCategoryController : ControllerBase
     /// <returns>Trả về danh sách các news</returns>
     [HttpGet("search-paged")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetPagedNewsCategoryWithSearch(string? name, int pageNumber = 1, int pageSize = 10)
+    public async Task<IActionResult> GetPagedNewsCategoriesWithSearch(string? name, int pageNumber = 1, int pageSize = 10)
     {
-        var newss = await _newsService.GetPagedNewsCategorysWithSearchAsync(pageNumber, pageSize, name ??= "", new CancellationToken());
+        var news = await _newsService.GetPagedNewsCategoriesWithSearchAsync(name ?? string.Empty, pageNumber, pageSize, new CancellationToken());
         return Ok(PagedResponseModel<object>.OkResponseModel(
-            data: newss.Items,
+            data: news.Items,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "news"),
-            totalCount: newss.TotalCount,
+            totalCount: news.TotalCount,
             pageSize: pageSize,
             pageNumber: pageNumber
         ));

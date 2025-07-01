@@ -6,6 +6,7 @@ using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 
 namespace Travelogue.Repository.Repositories;
+
 public interface IUserRepository : IGenericRepository<User>
 {
     Task<IEnumerable<User>> GetUsersByFullNameAsync(string fullName);
@@ -23,7 +24,7 @@ public interface IUserRepository : IGenericRepository<User>
     Task<bool> AddToRoleAsync(User user, Guid roleId);
     Task<bool> AddToRoleAsync(User user, string roleName);
     Task<List<Role>?> GetRolesAsync(User user);
-    Task<List<Role>?> GetRolesByUserIdAsync(Guid userId);
+    Task<List<Role>> GetRolesByUserIdAsync(Guid userId);
     Task<User?> GetUserByIdAsync(Guid id);
 }
 public class UserRepository : GenericRepository<User>, IUserRepository
@@ -250,7 +251,7 @@ public class UserRepository : GenericRepository<User>, IUserRepository
         }
     }
 
-    public async Task<List<Role>?> GetRolesByUserIdAsync(Guid userId)
+    public async Task<List<Role>> GetRolesByUserIdAsync(Guid userId)
     {
         try
         {

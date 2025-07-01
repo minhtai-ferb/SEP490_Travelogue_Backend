@@ -11,7 +11,8 @@ public sealed class Order : BaseEntity
     public Guid UserId { get; set; }
     public Guid? TourId { get; set; }
     public Guid? TourGuideId { get; set; }
-    public Guid? VersionId { get; set; }
+    public Guid? TripPlanVersionId { get; set; }
+    public Guid TourVersionId { get; set; }
 
     [Required]
     public DateTimeOffset OrderDate { get; set; }
@@ -35,4 +36,5 @@ public sealed class Order : BaseEntity
     public TourGuide? TourGuide { get; set; }
     public TripPlan? TripPlan { get; set; }
     public TripPlanVersion? TripPlanVersion { get; set; }
+    public TourPlanVersion TourPlanVersion { get; set; } = default!;
 }

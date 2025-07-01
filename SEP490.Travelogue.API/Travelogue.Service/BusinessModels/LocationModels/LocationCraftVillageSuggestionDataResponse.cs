@@ -1,6 +1,7 @@
 ﻿using Travelogue.Service.BusinessModels.MediaModel;
 
 namespace Travelogue.Service.BusinessModels.LocationModels;
+
 public class LocationCraftVillageSuggestionDataResponse
 {
     public Guid LocationId { get; set; }

@@ -25,12 +25,9 @@ public class UnitOfWork : IUnitOfWork
     public ITypeEventRepository TypeEventRepository { get; }
     public ITypeExperienceRepository TypeExperienceRepository { get; }
     public IHotelRepository HotelRepository { get; }
-    public IHotelMediaRepository HotelMediaRepository { get; }
     public ILocationHotelSuggestionRepository LocationHotelSuggestionRepository { get; }
     public ICraftVillageRepository CraftVillageRepository { get; }
-    public ICraftVillageMediaRepository CraftVillageMediaRepository { get; }
     public ICuisineRepository CuisineRepository { get; }
-    public ICuisineMediaRepository CuisineMediaRepository { get; }
     public IMediaRepository MediaRepository { get; }
     public IDistrictRepository DistrictRepository { get; }
     public INewsRepository NewsRepository { get; }
@@ -49,6 +46,10 @@ public class UnitOfWork : IUnitOfWork
     public ITripPlanExchangeRepository TripPlanExchangeRepository { get; }
     public ITripPlanExchangeSessionRepository TripPlanExchangeSessionRepository { get; }
     public IHistoricalLocationRepository HistoricalLocationRepository { get; }
+    public ITypeHistoricalLocationRepository TypeHistoricalLocationRepository { get; }
+    public ITourPlanLocationRepository TourPlanLocationRepository { get; }
+    public ITourPlanVersionRepository TourPlanVersionRepository { get; }
+    public ITourTypeRepository TourTypeRepository { get; }
 
     public UnitOfWork(ApplicationDbContext dbContext)
     {
@@ -68,12 +69,9 @@ public class UnitOfWork : IUnitOfWork
         TypeEventRepository = new TypeEventRepository(_dbContext);
         TypeExperienceRepository = new TypeExperienceRepository(_dbContext);
         HotelRepository = new HotelRepository(_dbContext);
-        HotelMediaRepository = new HotelMediaRepository(_dbContext);
         LocationHotelSuggestionRepository = new LocationHotelSuggestionRepository(_dbContext);
         CraftVillageRepository = new CraftVillageRepository(_dbContext);
-        CraftVillageMediaRepository = new CraftVillageMediaRepository(_dbContext);
         CuisineRepository = new CuisineRepository(_dbContext);
-        CuisineMediaRepository = new CuisineMediaRepository(_dbContext);
         MediaRepository = new MediaRepository(_dbContext);
         DistrictRepository = new DistrictRepository(_dbContext);
         NewsRepository = new NewsRepository(_dbContext);
@@ -92,6 +90,10 @@ public class UnitOfWork : IUnitOfWork
         TripPlanExchangeRepository = new TripPlanExchangeRepository(_dbContext);
         TripPlanExchangeSessionRepository = new TripPlanExchangeSessionRepository(_dbContext);
         HistoricalLocationRepository = new HistoricalLocationRepository(_dbContext);
+        TypeHistoricalLocationRepository = new TypeHistoricalLocationRepository(_dbContext);
+        TourPlanLocationRepository = new TourPlanLocationRepository(_dbContext);
+        TourPlanVersionRepository = new TourPlanVersionRepository(_dbContext);
+        TourTypeRepository = new TourTypeRepository(_dbContext);
     }
 
     public IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity

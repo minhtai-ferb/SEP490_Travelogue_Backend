@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
 namespace Travelogue.Service.BusinessModels.CraftVillageModels;
+
 public class CraftVillageCreateModel
 {
     [Required, StringLength(100)]
@@ -13,4 +14,5 @@ public class CraftVillageCreateModel
     public string? PhoneNumber { get; set; }
     public string? Email { get; set; }
     public string? Website { get; set; }
+    public bool WorkshopsAvailable { get; set; } = false;
 }

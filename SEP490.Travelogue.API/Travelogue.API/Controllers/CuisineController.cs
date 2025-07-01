@@ -5,6 +5,7 @@ using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 
 namespace Travelogue.API.Controllers;
+
 [Route("api/[controller]")]
 [ApiController]
 public class CuisineController : ControllerBase
@@ -111,16 +112,16 @@ public class CuisineController : ControllerBase
         ));
     }
 
-    [HttpPost("upload-media")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> UploadMedia(Guid id, [FromForm] List<IFormFile> imageUploads, string? thumbnailFileName)
-    {
-        var result = await _cuisineService.UploadMediaAsync(id, imageUploads, new CancellationToken());
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPLOAD_SUCCESS, "media")
-        ));
-    }
+    // [HttpPost("upload-media")]
+    // [ProducesResponseType(StatusCodes.Status200OK)]
+    // public async Task<IActionResult> UploadMedia(Guid id, [FromForm] List<IFormFile> imageUploads, string? thumbnailFileName)
+    // {
+    //     var result = await _cuisineService.UploadMediaAsync(id, imageUploads, new CancellationToken());
+    //     return Ok(ResponseModel<object>.OkResponseModel(
+    //         data: result,
+    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPLOAD_SUCCESS, "media")
+    //     ));
+    // }
 
     [HttpDelete("delete-media")]
     [ProducesResponseType(StatusCodes.Status200OK)]

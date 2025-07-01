@@ -3,6 +3,7 @@ using FirebaseAdmin;
 using FirebaseAdmin.Auth;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Travelogue.API;
 using Travelogue.API.Middlewares;
 using Travelogue.Repository;
@@ -71,6 +72,13 @@ app.UseSwagger();
 app.UseSwaggerUI();
 //app.UseHttpsRedirection();
 app.UseHttpsRedirection();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(Directory.GetCurrentDirectory(), "UploadedImages")),
+    RequestPath = "/UploadedImages"
+});
 
 app.UseAuthentication();
 app.UseAuthorization();

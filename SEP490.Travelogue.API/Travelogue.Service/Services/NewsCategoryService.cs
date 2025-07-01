@@ -15,12 +15,12 @@ namespace Travelogue.Service.Services;
 public interface INewsCategoryService
 {
     Task<NewsCategoryDataModel?> GetNewsCategoryByIdAsync(Guid id, CancellationToken cancellationToken);
-    Task<List<NewsCategoryDataModel>> GetAllNewsCategorysAsync(CancellationToken cancellationToken);
+    Task<List<NewsCategoryDataModel>> GetAllNewsCategoriesAsync(CancellationToken cancellationToken);
     Task AddNewsCategoryAsync(NewsCategoryCreateModel newsCreateModel, CancellationToken cancellationToken);
     Task UpdateNewsCategoryAsync(Guid id, NewsCategoryUpdateModel newsUpdateModel, CancellationToken cancellationToken);
     Task DeleteNewsCategoryAsync(Guid id, CancellationToken cancellationToken);
-    Task<PagedResult<NewsCategoryDataModel>> GetPagedNewsCategorysAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
-    Task<PagedResult<NewsCategoryDataModel>> GetPagedNewsCategorysWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken);
+    Task<PagedResult<NewsCategoryDataModel>> GetPagedNewsCategoriesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<PagedResult<NewsCategoryDataModel>> GetPagedNewsCategoriesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
 }
 
 public class NewsCategoryService : INewsCategoryService
@@ -94,7 +94,7 @@ public class NewsCategoryService : INewsCategoryService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -139,11 +139,11 @@ public class NewsCategoryService : INewsCategoryService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
-    public async Task<List<NewsCategoryDataModel>> GetAllNewsCategorysAsync(CancellationToken cancellationToken)
+    public async Task<List<NewsCategoryDataModel>> GetAllNewsCategoriesAsync(CancellationToken cancellationToken)
     {
         try
         {
@@ -165,7 +165,7 @@ public class NewsCategoryService : INewsCategoryService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -191,7 +191,7 @@ public class NewsCategoryService : INewsCategoryService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -217,11 +217,11 @@ public class NewsCategoryService : INewsCategoryService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
-    public async Task<PagedResult<NewsCategoryDataModel>> GetPagedNewsCategorysAsync(int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<NewsCategoryDataModel>> GetPagedNewsCategoriesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
@@ -247,11 +247,11 @@ public class NewsCategoryService : INewsCategoryService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
-    public async Task<PagedResult<NewsCategoryDataModel>> GetPagedNewsCategorysWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken)
+    public async Task<PagedResult<NewsCategoryDataModel>> GetPagedNewsCategoriesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
@@ -277,7 +277,7 @@ public class NewsCategoryService : INewsCategoryService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -325,10 +325,7 @@ public class NewsCategoryService : INewsCategoryService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
-
-    // có add kèm theo ảnh
-
 }

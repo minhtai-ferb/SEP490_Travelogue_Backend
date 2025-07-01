@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Travelogue.Repository.Bases.BaseEntities;
 
 namespace Travelogue.Repository.Entities;
@@ -12,15 +13,20 @@ public sealed class Tour : BaseEntity
     public string? Description { get; set; }
     public string? Content { get; set; }
 
-    [Range(0, double.MaxValue)]
-    public decimal Price { get; set; }
+    public int TotalDays { get; set; }
 
     [Required]
     public Guid TourTypeId { get; set; }
 
+    public Guid? CurrentVersionId { get; set; }
+
+    [ForeignKey(nameof(CurrentVersionId))]
+    public TourPlanVersion? CurrentVersion { get; set; }
+
     public TourType TourType { get; set; } = default!;
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
     public ICollection<TourGroup> TourGroups { get; set; } = new List<TourGroup>();
-    public ICollection<TourPlan> TourPlans { get; set; } = new List<TourPlan>();
-    public ICollection<Order> Orders { get; set; } = new List<Order>();
+    public ICollection<TourSchedule> TourSchedules { get; set; } = new List<TourSchedule>();
+    // public ICollection<TourPlanLocation> TourPlanLocations { get; set; } = new List<TourPlanLocation>();
+    public ICollection<TourPlanVersion> TourPlanVersions { get; set; } = new List<TourPlanVersion>();
 }

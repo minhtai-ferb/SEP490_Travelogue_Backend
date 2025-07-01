@@ -29,12 +29,6 @@ public class UserContextService : IUserContextService
             throw new CustomException(StatusCodes.Status401Unauthorized, ResponseCodeConstants.UNAUTHORIZED, ResponseMessages.LOGIN_REQUIRED);
         }
 
-        //var currentUserId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-        //if (string.IsNullOrEmpty(currentUserId))
-        //{
-        //    throw new CustomException(StatusCodes.Status401Unauthorized, ResponseCodeConstants.UNAUTHORIZED, "User ID claim is not found");
-        //}
-
         var currentUserId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
         if (string.IsNullOrEmpty(currentUserId))
         {
@@ -79,6 +73,61 @@ public class UserContextService : IUserContextService
         return Task.FromResult(roles);
     }
 
+    public bool HasRole(params string[] roles)
+    {
+        var userRoles = _httpContextAccessor.HttpContext?.User?.Claims
+            .Where(c => c.Type == ClaimTypes.Role)
+            .Select(c => c.Value)
+            .ToList();
+
+        return userRoles != null && roles.Any(r => userRoles.Contains(r));
+    }
+
+    public bool HasRole(string role)
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
+        {
+            throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "Http context is null. Please Login.");
+        }
+
+        var user = httpContext.User;
+        if (user == null || user?.Identity == null || !user.Identity.IsAuthenticated)
+        {
+            throw new CustomException(StatusCodes.Status401Unauthorized, ResponseCodeConstants.UNAUTHORIZED, ResponseMessages.LOGIN_REQUIRED);
+        }
+
+        return user.IsInRole(role) || user.Claims.Any(c => (c.Type == ClaimTypes.Role || c.Type == "role") && c.Value.Equals(role, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public bool HasAnyRole(params string[] roles)
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
+        {
+            throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "Http context is null. Please Login.");
+        }
+
+        var user = httpContext.User;
+        if (user == null || user?.Identity == null || !user.Identity.IsAuthenticated)
+        {
+            throw new CustomException(StatusCodes.Status401Unauthorized, ResponseCodeConstants.UNAUTHORIZED, ResponseMessages.LOGIN_REQUIRED);
+        }
+
+        return roles.Any(role =>
+            user.IsInRole(role) ||
+            user.Claims.Any(c =>
+                (c.Type == ClaimTypes.Role || c.Type == "role") &&
+                c.Value.Equals(role, StringComparison.OrdinalIgnoreCase)
+            )
+        );
+    }
+
+    public bool IsAuthenticated()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        return httpContext?.User?.Identity?.IsAuthenticated == true;
+    }
 
     public string GetUserToken()
     {
