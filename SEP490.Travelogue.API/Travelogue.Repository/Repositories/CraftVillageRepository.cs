@@ -10,6 +10,7 @@ public interface ICraftVillageRepository : IGenericRepository<CraftVillage>
 {
     Task<List<CraftVillage>> GetByNameAsync(string title, CancellationToken cancellationToken);
     Task<PagedResult<CraftVillage>> GetPageWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+    Task<CraftVillage?> GetByLocationId(Guid locationId, CancellationToken cancellationToken);
 }
 public sealed class CraftVillageRepository : GenericRepository<CraftVillage>, ICraftVillageRepository
 {
@@ -18,6 +19,24 @@ public sealed class CraftVillageRepository : GenericRepository<CraftVillage>, IC
     public CraftVillageRepository(ApplicationDbContext dbContext) : base(dbContext)
     {
         _context = dbContext;
+    }
+
+    public async Task<CraftVillage?> GetByLocationId(Guid locationId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var craftVillage = await _context.CraftVillages.Include(h => h.Location)
+                .FirstOrDefaultAsync(a => a.LocationId == locationId, cancellationToken);
+            return craftVillage;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError();
+        }
     }
 
     public async Task<List<CraftVillage>> GetByNameAsync(string name, CancellationToken cancellationToken)

@@ -6,9 +6,9 @@ public sealed class EventMedia : BaseEntity
 {
     public string MediaUrl { get; set; } = string.Empty;
     public string? FileName { get; set; }
-    public string FileType { get; set; }
-    public float SizeInBytes { get; set; }
-    public bool IsThumbnail { get; set; }
+    public string? FileType { get; set; }
+    public float SizeInBytes { get; set; } = 0;
+    public bool IsThumbnail { get; set; } = false;
     public Guid EventId { get; set; }
 
     // Navigation Properties

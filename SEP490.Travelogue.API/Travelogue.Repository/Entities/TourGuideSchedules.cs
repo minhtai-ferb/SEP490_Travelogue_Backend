@@ -4,7 +4,7 @@ using Travelogue.Repository.Bases.BaseEntities;
 
 namespace Travelogue.Repository.Entities;
 
-public sealed class TourGuideUnavailability : BaseEntity
+public sealed class TourGuideSchedules : BaseEntity
 {
     [ForeignKey("TourGuide")]
     public Guid TourGuideId { get; set; }

@@ -20,16 +20,16 @@ public interface IHotelService
     Task AddHotelAsync(HotelCreateModel hotelCreateModel, CancellationToken cancellationToken);
     Task UpdateHotelAsync(Guid id, HotelUpdateModel hotelUpdateModel, CancellationToken cancellationToken);
     Task DeleteHotelAsync(Guid id, CancellationToken cancellationToken);
-    Task<HotelMediaResponse> AddHotelWithMediaAsync(HotelCreateWithMediaFileModel hotelCreateModel, string? thumbnailSelected, CancellationToken cancellationToken);
-    Task UpdateHotelAsync(Guid id, HotelUpdateWithMediaFileModel hotelUpdateModel, string? thumbnailSelected, CancellationToken cancellationToken);
+    // Task<HotelMediaResponse> AddHotelWithMediaAsync(HotelCreateWithMediaFileModel hotelCreateModel, string? thumbnailSelected, CancellationToken cancellationToken);
+    // Task UpdateHotelAsync(Guid id, HotelUpdateWithMediaFileModel hotelUpdateModel, string? thumbnailSelected, CancellationToken cancellationToken);
     Task<PagedResult<HotelDetailDataModel>> GetPagedHotelsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<PagedResult<HotelDetailDataModel>> GetPagedHotelsWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
-    Task<HotelMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
-    Task<HotelMediaResponse> UploadMediaAsync(
-        Guid id,
-        List<IFormFile>? imageUploads,
-        string? thumbnailSelected,
-        CancellationToken cancellationToken);
+    // Task<HotelMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
+    // Task<HotelMediaResponse> UploadMediaAsync(
+    //     Guid id,
+    //     List<IFormFile>? imageUploads,
+    //     string? thumbnailSelected,
+    //     CancellationToken cancellationToken);
 }
 
 public class HotelService : IHotelService
@@ -46,7 +46,7 @@ public class HotelService : IHotelService
         _mapper = mapper;
         _userContextService = userContextService;
         _timeService = timeService;
-        this._cloudinaryService = cloudinaryService;
+        _cloudinaryService = cloudinaryService;
     }
 
     public async Task AddHotelAsync(HotelCreateModel hotelCreateModel, CancellationToken cancellationToken)
@@ -110,8 +110,8 @@ public class HotelService : IHotelService
                 .Where(s => s.HotelId == id)
                 .ForEachAsync(s => s.IsDeleted = true, cancellationToken);
 
-            await _unitOfWork.HotelMediaRepository.ActiveEntities
-                .Where(s => s.HotelId == id)
+            await _unitOfWork.LocationMediaRepository.ActiveEntities
+                .Where(s => s.LocationId == existingHotel.LocationId)
                 .ForEachAsync(s => s.IsDeleted = true, cancellationToken);
 
             //if (isInUsing)
@@ -325,478 +325,412 @@ public class HotelService : IHotelService
         }
     }
 
-    public async Task<HotelMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken)
-    {
-        _unitOfWork.BeginTransaction();
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-            var existingHotel = await _unitOfWork.HotelRepository.GetByIdAsync(id, cancellationToken);
-            if (existingHotel == null || existingHotel.IsDeleted)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("khách sạn");
-            }
+    // public async Task<HotelMediaResponse> UploadMediaAsync(
+    //     Guid id,
+    //     List<IFormFile>? imageUploads,
+    //     string? thumbnailSelected,
+    //     CancellationToken cancellationToken)
+    // {
+    //     using var transaction = await _unitOfWork.BeginTransactionAsync();
+    //     try
+    //     {
+    //         var currentUserId = _userContextService.GetCurrentUserId();
+    //         var existingHotel = await _unitOfWork.HotelRepository.GetByIdAsync(id, cancellationToken);
+    //         if (existingHotel == null || existingHotel.IsDeleted)
+    //         {
+    //             throw CustomExceptionFactory.CreateNotFoundError("hotel");
+    //         }
 
-            if (imageUploads == null || !imageUploads.Any())
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("medias");
-            }
+    //         if (imageUploads == null || imageUploads.Count == 0)
+    //         {
+    //             throw CustomExceptionFactory.CreateNotFoundError("images");
+    //         }
 
-            var imageUrls = await _cloudinaryService.UploadImagesAsync(imageUploads);
-            var mediaResponses = new List<MediaResponse>();
+    //         var allMedia = _unitOfWork.HotelMediaRepository.Entities
+    //             .Where(dm => dm.HotelId == existingHotel.Id).ToList();
 
-            for (int i = 0; i < imageUploads.Count; i++)
-            {
-                var imageUpload = imageUploads[i];
+    //         // Nếu không có ảnh mới & không có thumbnailSelected => Chỉ cập nhật thông tin hotel
+    //         if ((imageUploads == null || imageUploads.Count == 0) && string.IsNullOrEmpty(thumbnailSelected))
+    //         {
+    //             await _unitOfWork.SaveAsync();
+    //             await transaction.CommitAsync(cancellationToken);
+    //             return new HotelMediaResponse
+    //             {
+    //                 HotelId = existingHotel.Id,
+    //                 // HotelName = existingHotel.Name,
+    //                 Media = new List<MediaResponse>()
+    //             };
+    //         }
 
-                var newHotelMedia = new HotelMedia
-                {
-                    FileName = imageUpload.FileName,
-                    FileType = imageUpload.ContentType,
-                    HotelId = existingHotel.Id,
-                    MediaUrl = imageUrls[i],
-                    SizeInBytes = imageUpload.Length,
-                    CreatedBy = currentUserId,
-                    CreatedTime = _timeService.SystemTimeNow,
-                    LastUpdatedBy = currentUserId,
-                };
+    //         bool isThumbnailUpdated = false;
 
-                await _unitOfWork.HotelMediaRepository.AddAsync(newHotelMedia);
+    //         // Nếu có thumbnailSelected và nó là link (ảnh cũ) -> Cập nhật ảnh cũ làm thumbnail
+    //         if (!string.IsNullOrEmpty(thumbnailSelected) && Helper.IsValidUrl(thumbnailSelected))
+    //         {
+    //             foreach (var media in allMedia)
+    //             {
+    //                 media.IsThumbnail = media.MediaUrl == thumbnailSelected;
+    //                 _unitOfWork.HotelMediaRepository.Update(media);
+    //             }
+    //             isThumbnailUpdated = true; // Đánh dấu đã cập nhật thumbnail
+    //         }
 
-                mediaResponses.Add(new MediaResponse
-                {
-                    MediaUrl = imageUrls[i],
-                    FileName = imageUpload.FileName,
-                    FileType = imageUpload.ContentType,
-                    SizeInBytes = imageUpload.Length
-                });
-            }
+    //         // Nếu không có ảnh mới nhưng có thumbnailSelected là ảnh cũ -> Dừng ở đây
+    //         if (imageUploads == null || imageUploads.Count == 0)
+    //         {
+    //             await _unitOfWork.SaveAsync();
+    //             await transaction.CommitAsync(cancellationToken);
+    //             return new HotelMediaResponse
+    //             {
+    //                 HotelId = existingHotel.Id,
+    //                 // HotelName = existingHotel.Name,
+    //                 Media = new List<MediaResponse>()
+    //             };
+    //         }
 
-            await _unitOfWork.SaveAsync();
-            _unitOfWork.CommitTransaction();
+    //         // Có ảnh mới -> Upload lên Cloudinary
+    //         var imageUrls = await _cloudinaryService.UploadImagesAsync(imageUploads);
+    //         var mediaResponses = new List<MediaResponse>();
 
-            return new HotelMediaResponse
-            {
-                HotelId = existingHotel.Id,
-                Media = mediaResponses
-            };
-        }
-        catch (CustomException)
-        {
-            await _unitOfWork.RollBackAsync();
-            throw;
-        }
-        catch (Exception)
-        {
-            await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
-        }
-    }
+    //         for (int i = 0; i < imageUploads.Count; i++)
+    //         {
+    //             var imageUpload = imageUploads[i];
+    //             bool isThumbnail = false;
 
-    public async Task<HotelMediaResponse> UploadMediaAsync(
-        Guid id,
-        List<IFormFile>? imageUploads,
-        string? thumbnailSelected,
-        CancellationToken cancellationToken)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-            var existingHotel = await _unitOfWork.HotelRepository.GetByIdAsync(id, cancellationToken);
-            if (existingHotel == null || existingHotel.IsDeleted)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("hotel");
-            }
+    //             // Nếu thumbnailSelected là tên file -> Đặt ảnh mới làm thumbnail
+    //             if (!string.IsNullOrEmpty(thumbnailSelected) && !Helper.IsValidUrl(thumbnailSelected))
+    //             {
+    //                 isThumbnail = imageUpload.FileName == thumbnailSelected;
+    //             }
 
-            if (imageUploads == null || imageUploads.Count == 0)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("images");
-            }
+    //             var newHotelMedia = new HotelMedia
+    //             {
+    //                 FileName = imageUpload.FileName,
+    //                 FileType = imageUpload.ContentType,
+    //                 HotelId = existingHotel.Id,
+    //                 MediaUrl = imageUrls[i],
+    //                 SizeInBytes = imageUpload.Length,
+    //                 IsThumbnail = isThumbnail,
+    //                 CreatedBy = currentUserId,
+    //                 CreatedTime = _timeService.SystemTimeNow,
+    //                 LastUpdatedBy = currentUserId,
+    //             };
 
-            var allMedia = _unitOfWork.HotelMediaRepository.Entities
-                .Where(dm => dm.HotelId == existingHotel.Id).ToList();
+    //             await _unitOfWork.HotelMediaRepository.AddAsync(newHotelMedia);
+    //             mediaResponses.Add(new MediaResponse
+    //             {
+    //                 MediaUrl = imageUrls[i],
+    //                 FileName = imageUpload.FileName,
+    //                 FileType = imageUpload.ContentType,
+    //                 IsThumbnail = isThumbnail,
+    //                 SizeInBytes = imageUpload.Length
+    //             });
 
-            // Nếu không có ảnh mới & không có thumbnailSelected => Chỉ cập nhật thông tin hotel
-            if ((imageUploads == null || imageUploads.Count == 0) && string.IsNullOrEmpty(thumbnailSelected))
-            {
-                await _unitOfWork.SaveAsync();
-                await transaction.CommitAsync(cancellationToken);
-                return new HotelMediaResponse
-                {
-                    HotelId = existingHotel.Id,
-                    // HotelName = existingHotel.Name,
-                    Media = new List<MediaResponse>()
-                };
-            }
+    //             // Nếu ảnh mới được chọn làm thumbnail -> Cập nhật tất cả ảnh cũ về IsThumbnail = false
+    //             if (isThumbnail)
+    //             {
+    //                 foreach (var media in allMedia)
+    //                 {
+    //                     media.IsThumbnail = false;
+    //                     _unitOfWork.HotelMediaRepository.Update(media);
+    //                 }
+    //                 isThumbnailUpdated = true;
+    //             }
+    //         }
 
-            bool isThumbnailUpdated = false;
+    //         // Nếu chưa có ảnh nào được chọn làm thumbnail, đặt ảnh mới đầu tiên làm thumbnail
+    //         if (!isThumbnailUpdated && mediaResponses.Count > 0)
+    //         {
+    //             var firstMedia = mediaResponses.First();
+    //             var firstMediaEntity = await _unitOfWork.HotelMediaRepository.ActiveEntities
+    //                 .FirstOrDefaultAsync(m => m.MediaUrl == firstMedia.MediaUrl);
 
-            // Nếu có thumbnailSelected và nó là link (ảnh cũ) -> Cập nhật ảnh cũ làm thumbnail
-            if (!string.IsNullOrEmpty(thumbnailSelected) && Helper.IsValidUrl(thumbnailSelected))
-            {
-                foreach (var media in allMedia)
-                {
-                    media.IsThumbnail = media.MediaUrl == thumbnailSelected;
-                    _unitOfWork.HotelMediaRepository.Update(media);
-                }
-                isThumbnailUpdated = true; // Đánh dấu đã cập nhật thumbnail
-            }
+    //             if (firstMediaEntity != null)
+    //             {
+    //                 firstMediaEntity.IsThumbnail = true;
+    //                 _unitOfWork.HotelMediaRepository.Update(firstMediaEntity);
+    //             }
+    //         }
 
-            // Nếu không có ảnh mới nhưng có thumbnailSelected là ảnh cũ -> Dừng ở đây
-            if (imageUploads == null || imageUploads.Count == 0)
-            {
-                await _unitOfWork.SaveAsync();
-                await transaction.CommitAsync(cancellationToken);
-                return new HotelMediaResponse
-                {
-                    HotelId = existingHotel.Id,
-                    // HotelName = existingHotel.Name,
-                    Media = new List<MediaResponse>()
-                };
-            }
+    //         await _unitOfWork.SaveAsync();
+    //         await transaction.CommitAsync(cancellationToken);
 
-            // Có ảnh mới -> Upload lên Cloudinary
-            var imageUrls = await _cloudinaryService.UploadImagesAsync(imageUploads);
-            var mediaResponses = new List<MediaResponse>();
-
-            for (int i = 0; i < imageUploads.Count; i++)
-            {
-                var imageUpload = imageUploads[i];
-                bool isThumbnail = false;
-
-                // Nếu thumbnailSelected là tên file -> Đặt ảnh mới làm thumbnail
-                if (!string.IsNullOrEmpty(thumbnailSelected) && !Helper.IsValidUrl(thumbnailSelected))
-                {
-                    isThumbnail = imageUpload.FileName == thumbnailSelected;
-                }
-
-                var newHotelMedia = new HotelMedia
-                {
-                    FileName = imageUpload.FileName,
-                    FileType = imageUpload.ContentType,
-                    HotelId = existingHotel.Id,
-                    MediaUrl = imageUrls[i],
-                    SizeInBytes = imageUpload.Length,
-                    IsThumbnail = isThumbnail,
-                    CreatedBy = currentUserId,
-                    CreatedTime = _timeService.SystemTimeNow,
-                    LastUpdatedBy = currentUserId,
-                };
-
-                await _unitOfWork.HotelMediaRepository.AddAsync(newHotelMedia);
-                mediaResponses.Add(new MediaResponse
-                {
-                    MediaUrl = imageUrls[i],
-                    FileName = imageUpload.FileName,
-                    FileType = imageUpload.ContentType,
-                    IsThumbnail = isThumbnail,
-                    SizeInBytes = imageUpload.Length
-                });
-
-                // Nếu ảnh mới được chọn làm thumbnail -> Cập nhật tất cả ảnh cũ về IsThumbnail = false
-                if (isThumbnail)
-                {
-                    foreach (var media in allMedia)
-                    {
-                        media.IsThumbnail = false;
-                        _unitOfWork.HotelMediaRepository.Update(media);
-                    }
-                    isThumbnailUpdated = true;
-                }
-            }
-
-            // Nếu chưa có ảnh nào được chọn làm thumbnail, đặt ảnh mới đầu tiên làm thumbnail
-            if (!isThumbnailUpdated && mediaResponses.Count > 0)
-            {
-                var firstMedia = mediaResponses.First();
-                var firstMediaEntity = await _unitOfWork.HotelMediaRepository.ActiveEntities
-                    .FirstOrDefaultAsync(m => m.MediaUrl == firstMedia.MediaUrl);
-
-                if (firstMediaEntity != null)
-                {
-                    firstMediaEntity.IsThumbnail = true;
-                    _unitOfWork.HotelMediaRepository.Update(firstMediaEntity);
-                }
-            }
-
-            await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync(cancellationToken);
-
-            return new HotelMediaResponse
-            {
-                HotelId = existingHotel.Id,
-                // HotelName = existingHotel.Name,
-                Media = mediaResponses
-            };
-        }
-        catch (CustomException)
-        {
-            await _unitOfWork.RollBackAsync();
-            throw;
-        }
-        catch (Exception)
-        {
-            await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
-        }
-    }
+    //         return new HotelMediaResponse
+    //         {
+    //             HotelId = existingHotel.Id,
+    //             // HotelName = existingHotel.Name,
+    //             Media = mediaResponses
+    //         };
+    //     }
+    //     catch (CustomException)
+    //     {
+    //         await _unitOfWork.RollBackAsync();
+    //         throw;
+    //     }
+    //     catch (Exception)
+    //     {
+    //         await _unitOfWork.RollBackAsync();
+    //         throw CustomExceptionFactory.CreateInternalServerError();
+    //     }
+    // }
 
     // có add ảnh kèm theo
-    public async Task<HotelMediaResponse> AddHotelWithMediaAsync(HotelCreateWithMediaFileModel hotelCreateModel, string? thumbnailSelected, CancellationToken cancellationToken)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-            var currentTime = _timeService.SystemTimeNow;
+    // public async Task<HotelMediaResponse> AddHotelWithMediaAsync(HotelCreateWithMediaFileModel hotelCreateModel, string? thumbnailSelected, CancellationToken cancellationToken)
+    // {
+    //     using var transaction = await _unitOfWork.BeginTransactionAsync();
+    //     try
+    //     {
+    //         var currentUserId = _userContextService.GetCurrentUserId();
+    //         var currentTime = _timeService.SystemTimeNow;
 
-            //var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), hotelCreateModel.DistrictId ?? Guid.Empty, cancellationToken);
-            //if (!checkRole)
-            //{
-            //    throw CustomExceptionFactory.CreateForbiddenError();
-            //}
+    //         //var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), hotelCreateModel.DistrictId ?? Guid.Empty, cancellationToken);
+    //         //if (!checkRole)
+    //         //{
+    //         //    throw CustomExceptionFactory.CreateForbiddenError();
+    //         //}
 
-            var newHotel = _mapper.Map<Hotel>(hotelCreateModel);
-            newHotel.CreatedBy = currentUserId;
-            newHotel.LastUpdatedBy = currentUserId;
-            newHotel.CreatedTime = currentTime;
-            newHotel.LastUpdatedTime = currentTime;
+    //         var newHotel = _mapper.Map<Hotel>(hotelCreateModel);
+    //         newHotel.CreatedBy = currentUserId;
+    //         newHotel.LastUpdatedBy = currentUserId;
+    //         newHotel.CreatedTime = currentTime;
+    //         newHotel.LastUpdatedTime = currentTime;
 
-            await _unitOfWork.HotelRepository.AddAsync(newHotel);
-            await _unitOfWork.SaveAsync();
+    //         await _unitOfWork.HotelRepository.AddAsync(newHotel);
+    //         await _unitOfWork.SaveAsync();
 
-            var mediaResponses = new List<MediaResponse>();
+    //         var mediaResponses = new List<MediaResponse>();
 
-            if (hotelCreateModel.ImageUploads != null && hotelCreateModel.ImageUploads.Count > 0)
-            {
-                var imageUrls = await _cloudinaryService.UploadImagesAsync(hotelCreateModel.ImageUploads);
+    //         if (hotelCreateModel.ImageUploads != null && hotelCreateModel.ImageUploads.Count > 0)
+    //         {
+    //             var imageUrls = await _cloudinaryService.UploadImagesAsync(hotelCreateModel.ImageUploads);
 
-                bool isAutoSelectThumbnail = string.IsNullOrEmpty(thumbnailSelected);
-                bool thumbnailSet = false;
+    //             bool isAutoSelectThumbnail = string.IsNullOrEmpty(thumbnailSelected);
+    //             bool thumbnailSet = false;
 
-                for (int i = 0; i < hotelCreateModel.ImageUploads.Count; i++)
-                {
-                    var imageFile = hotelCreateModel.ImageUploads[i];
-                    var imageUrl = imageUrls[i];
+    //             for (int i = 0; i < hotelCreateModel.ImageUploads.Count; i++)
+    //             {
+    //                 var imageFile = hotelCreateModel.ImageUploads[i];
+    //                 var imageUrl = imageUrls[i];
 
-                    var newHotelMedia = new HotelMedia
-                    {
-                        FileName = imageFile.FileName,
-                        FileType = imageFile.ContentType,
-                        HotelId = newHotel.Id,
-                        MediaUrl = imageUrl,
-                        SizeInBytes = imageFile.Length,
-                        CreatedBy = currentUserId,
-                        CreatedTime = _timeService.SystemTimeNow,
-                        LastUpdatedBy = currentUserId,
-                    };
+    //                 var newHotelMedia = new HotelMedia
+    //                 {
+    //                     FileName = imageFile.FileName,
+    //                     FileType = imageFile.ContentType,
+    //                     HotelId = newHotel.Id,
+    //                     MediaUrl = imageUrl,
+    //                     SizeInBytes = imageFile.Length,
+    //                     CreatedBy = currentUserId,
+    //                     CreatedTime = _timeService.SystemTimeNow,
+    //                     LastUpdatedBy = currentUserId,
+    //                 };
 
-                    // Chọn ảnh làm thumbnail
-                    if ((isAutoSelectThumbnail && i == 0) || (!isAutoSelectThumbnail && imageFile.FileName == thumbnailSelected))
-                    {
-                        newHotelMedia.IsThumbnail = true;
-                        thumbnailSet = true;
-                    }
+    //                 // Chọn ảnh làm thumbnail
+    //                 if ((isAutoSelectThumbnail && i == 0) || (!isAutoSelectThumbnail && imageFile.FileName == thumbnailSelected))
+    //                 {
+    //                     newHotelMedia.IsThumbnail = true;
+    //                     thumbnailSet = true;
+    //                 }
 
-                    await _unitOfWork.HotelMediaRepository.AddAsync(newHotelMedia);
+    //                 await _unitOfWork.HotelMediaRepository.AddAsync(newHotelMedia);
 
-                    mediaResponses.Add(new MediaResponse
-                    {
-                        MediaUrl = imageUrl,
-                        FileName = imageFile.FileName,
-                        FileType = imageFile.ContentType,
-                        SizeInBytes = imageFile.Length
-                    });
-                }
+    //                 mediaResponses.Add(new MediaResponse
+    //                 {
+    //                     MediaUrl = imageUrl,
+    //                     FileName = imageFile.FileName,
+    //                     FileType = imageFile.ContentType,
+    //                     SizeInBytes = imageFile.Length
+    //                 });
+    //             }
 
-                // Trường hợp người dùng chọn ảnh thumbnail nhưng không tìm thấy ảnh khớp
-                if (!thumbnailSet && hotelCreateModel.ImageUploads.Count > 0)
-                {
-                    var firstMedia = mediaResponses.First();
-                    var firstHotelMedia = await _unitOfWork.HotelMediaRepository
-                        .GetFirstByHotelIdAsync(newHotel.Id);
-                    if (firstHotelMedia != null)
-                    {
-                        firstHotelMedia.IsThumbnail = true;
-                        _unitOfWork.HotelMediaRepository.Update(firstHotelMedia);
-                    }
-                }
-            }
+    //             // Trường hợp người dùng chọn ảnh thumbnail nhưng không tìm thấy ảnh khớp
+    //             if (!thumbnailSet && hotelCreateModel.ImageUploads.Count > 0)
+    //             {
+    //                 var firstMedia = mediaResponses.First();
+    //                 var firstHotelMedia = await _unitOfWork.HotelMediaRepository
+    //                     .GetFirstByHotelIdAsync(newHotel.Id);
+    //                 if (firstHotelMedia != null)
+    //                 {
+    //                     firstHotelMedia.IsThumbnail = true;
+    //                     _unitOfWork.HotelMediaRepository.Update(firstHotelMedia);
+    //                 }
+    //             }
+    //         }
 
-            await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync(cancellationToken);
+    //         await _unitOfWork.SaveAsync();
+    //         await transaction.CommitAsync(cancellationToken);
 
-            return new HotelMediaResponse
-            {
-                HotelId = newHotel.Id,
-                // HotelName = newHotel.Name,
-                Media = mediaResponses
-            };
-        }
-        catch (CustomException)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw;
-        }
-        catch (Exception)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError();
-        }
-    }
+    //         return new HotelMediaResponse
+    //         {
+    //             HotelId = newHotel.Id,
+    //             // HotelName = newHotel.Name,
+    //             Media = mediaResponses
+    //         };
+    //     }
+    //     catch (CustomException)
+    //     {
+    //         await transaction.RollbackAsync(cancellationToken);
+    //         throw;
+    //     }
+    //     catch (Exception)
+    //     {
+    //         await transaction.RollbackAsync(cancellationToken);
+    //         throw CustomExceptionFactory.CreateInternalServerError();
+    //     }
+    // }
 
     // có update ảnh kèm theo
-    public async Task UpdateHotelAsync(
-        Guid id,
-        HotelUpdateWithMediaFileModel hotelUpdateModel,
-        string? thumbnailSelected,
-        CancellationToken cancellationToken)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
+    // public async Task UpdateHotelAsync(
+    //     Guid id,
+    //     HotelUpdateWithMediaFileModel hotelUpdateModel,
+    //     string? thumbnailSelected,
+    //     CancellationToken cancellationToken)
+    // {
+    //     using var transaction = await _unitOfWork.BeginTransactionAsync();
+    //     try
+    //     {
+    //         var currentUserId = _userContextService.GetCurrentUserId();
 
-            //var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), hotelUpdateModel.DistrictId ?? Guid.Empty, cancellationToken);
-            //if (!checkRole)
-            //{
-            //    throw CustomExceptionFactory.CreateForbiddenError();
-            //}
+    //         //var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), hotelUpdateModel.DistrictId ?? Guid.Empty, cancellationToken);
+    //         //if (!checkRole)
+    //         //{
+    //         //    throw CustomExceptionFactory.CreateForbiddenError();
+    //         //}
 
-            var existingHotel = await _unitOfWork.HotelRepository.GetByIdAsync(id, cancellationToken);
-            if (existingHotel == null || existingHotel.IsDeleted)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("hotel");
-            }
+    //         var existingHotel = await _unitOfWork.HotelRepository.GetByIdAsync(id, cancellationToken);
+    //         if (existingHotel == null || existingHotel.IsDeleted)
+    //         {
+    //             throw CustomExceptionFactory.CreateNotFoundError("hotel");
+    //         }
 
-            _mapper.Map(hotelUpdateModel, existingHotel);
+    //         _mapper.Map(hotelUpdateModel, existingHotel);
 
-            existingHotel.LastUpdatedBy = currentUserId;
-            existingHotel.LastUpdatedTime = _timeService.SystemTimeNow;
+    //         existingHotel.LastUpdatedBy = currentUserId;
+    //         existingHotel.LastUpdatedTime = _timeService.SystemTimeNow;
 
-            _unitOfWork.HotelRepository.Update(existingHotel);
+    //         _unitOfWork.HotelRepository.Update(existingHotel);
 
-            // xu ly anh
-            var imageUploads = hotelUpdateModel.ImageUploads;
-            var allMedia = _unitOfWork.HotelMediaRepository.ActiveEntities
-                .Where(dm => dm.HotelId == existingHotel.Id).ToList();
+    //         // xu ly anh
+    //         var imageUploads = hotelUpdateModel.ImageUploads;
+    //         var allMedia = _unitOfWork.HotelMediaRepository.ActiveEntities
+    //             .Where(dm => dm.HotelId == existingHotel.Id).ToList();
 
-            // Nếu không có ảnh mới & không có thumbnailSelected => Chỉ cập nhật thông tin hotel
-            if ((imageUploads == null || imageUploads.Count == 0) && string.IsNullOrEmpty(thumbnailSelected))
-            {
-                await _unitOfWork.SaveAsync();
-                await transaction.CommitAsync(cancellationToken);
-                return;
-            }
+    //         // Nếu không có ảnh mới & không có thumbnailSelected => Chỉ cập nhật thông tin hotel
+    //         if ((imageUploads == null || imageUploads.Count == 0) && string.IsNullOrEmpty(thumbnailSelected))
+    //         {
+    //             await _unitOfWork.SaveAsync();
+    //             await transaction.CommitAsync(cancellationToken);
+    //             return;
+    //         }
 
-            bool isThumbnailUpdated = false;
+    //         bool isThumbnailUpdated = false;
 
-            // Nếu có thumbnailSelected và nó là link (ảnh cũ) -> Cập nhật ảnh cũ làm thumbnail
-            if (!string.IsNullOrEmpty(thumbnailSelected) && Helper.IsValidUrl(thumbnailSelected))
-            {
-                foreach (var media in allMedia)
-                {
-                    media.IsThumbnail = media.MediaUrl == thumbnailSelected;
-                    _unitOfWork.HotelMediaRepository.Update(media);
-                }
-                isThumbnailUpdated = true; // Đánh dấu đã cập nhật thumbnail
-            }
+    //         // Nếu có thumbnailSelected và nó là link (ảnh cũ) -> Cập nhật ảnh cũ làm thumbnail
+    //         if (!string.IsNullOrEmpty(thumbnailSelected) && Helper.IsValidUrl(thumbnailSelected))
+    //         {
+    //             foreach (var media in allMedia)
+    //             {
+    //                 media.IsThumbnail = media.MediaUrl == thumbnailSelected;
+    //                 _unitOfWork.HotelMediaRepository.Update(media);
+    //             }
+    //             isThumbnailUpdated = true; // Đánh dấu đã cập nhật thumbnail
+    //         }
 
-            // Nếu không có ảnh mới nhưng có thumbnailSelected là ảnh cũ -> Dừng ở đây
-            if (imageUploads == null || imageUploads.Count == 0)
-            {
-                await _unitOfWork.SaveAsync();
-                await transaction.CommitAsync(cancellationToken);
-                return;
-            }
+    //         // Nếu không có ảnh mới nhưng có thumbnailSelected là ảnh cũ -> Dừng ở đây
+    //         if (imageUploads == null || imageUploads.Count == 0)
+    //         {
+    //             await _unitOfWork.SaveAsync();
+    //             await transaction.CommitAsync(cancellationToken);
+    //             return;
+    //         }
 
-            // Có ảnh mới -> Upload lên Cloudinary
-            var imageUrls = await _cloudinaryService.UploadImagesAsync(imageUploads);
-            var mediaResponses = new List<MediaResponse>();
+    //         // Có ảnh mới -> Upload lên Cloudinary
+    //         var imageUrls = await _cloudinaryService.UploadImagesAsync(imageUploads);
+    //         var mediaResponses = new List<MediaResponse>();
 
-            for (int i = 0; i < imageUploads.Count; i++)
-            {
-                var imageUpload = imageUploads[i];
-                bool isThumbnail = false;
+    //         for (int i = 0; i < imageUploads.Count; i++)
+    //         {
+    //             var imageUpload = imageUploads[i];
+    //             bool isThumbnail = false;
 
-                // Nếu thumbnailSelected là tên file -> Đặt ảnh mới làm thumbnail
-                if (!string.IsNullOrEmpty(thumbnailSelected) && !Helper.IsValidUrl(thumbnailSelected))
-                {
-                    isThumbnail = imageUpload.FileName == thumbnailSelected;
-                }
+    //             // Nếu thumbnailSelected là tên file -> Đặt ảnh mới làm thumbnail
+    //             if (!string.IsNullOrEmpty(thumbnailSelected) && !Helper.IsValidUrl(thumbnailSelected))
+    //             {
+    //                 isThumbnail = imageUpload.FileName == thumbnailSelected;
+    //             }
 
-                var newHotelMedia = new HotelMedia
-                {
-                    FileName = imageUpload.FileName,
-                    FileType = imageUpload.ContentType,
-                    HotelId = existingHotel.Id,
-                    MediaUrl = imageUrls[i],
-                    SizeInBytes = imageUpload.Length,
-                    IsThumbnail = isThumbnail,
-                    CreatedBy = currentUserId,
-                    CreatedTime = _timeService.SystemTimeNow,
-                    LastUpdatedBy = currentUserId,
-                };
+    //             var newHotelMedia = new HotelMedia
+    //             {
+    //                 FileName = imageUpload.FileName,
+    //                 FileType = imageUpload.ContentType,
+    //                 HotelId = existingHotel.Id,
+    //                 MediaUrl = imageUrls[i],
+    //                 SizeInBytes = imageUpload.Length,
+    //                 IsThumbnail = isThumbnail,
+    //                 CreatedBy = currentUserId,
+    //                 CreatedTime = _timeService.SystemTimeNow,
+    //                 LastUpdatedBy = currentUserId,
+    //             };
 
-                await _unitOfWork.HotelMediaRepository.AddAsync(newHotelMedia);
-                mediaResponses.Add(new MediaResponse
-                {
-                    MediaUrl = imageUrls[i],
-                    FileName = imageUpload.FileName,
-                    FileType = imageUpload.ContentType,
-                    IsThumbnail = isThumbnail,
-                    SizeInBytes = imageUpload.Length
-                });
+    //             await _unitOfWork.HotelMediaRepository.AddAsync(newHotelMedia);
+    //             mediaResponses.Add(new MediaResponse
+    //             {
+    //                 MediaUrl = imageUrls[i],
+    //                 FileName = imageUpload.FileName,
+    //                 FileType = imageUpload.ContentType,
+    //                 IsThumbnail = isThumbnail,
+    //                 SizeInBytes = imageUpload.Length
+    //             });
 
-                // Nếu ảnh mới được chọn làm thumbnail -> Cập nhật tất cả ảnh cũ về IsThumbnail = false
-                if (isThumbnail)
-                {
-                    foreach (var media in allMedia)
-                    {
-                        media.IsThumbnail = false;
-                        _unitOfWork.HotelMediaRepository.Update(media);
-                    }
-                    isThumbnailUpdated = true;
-                }
-            }
+    //             // Nếu ảnh mới được chọn làm thumbnail -> Cập nhật tất cả ảnh cũ về IsThumbnail = false
+    //             if (isThumbnail)
+    //             {
+    //                 foreach (var media in allMedia)
+    //                 {
+    //                     media.IsThumbnail = false;
+    //                     _unitOfWork.HotelMediaRepository.Update(media);
+    //                 }
+    //                 isThumbnailUpdated = true;
+    //             }
+    //         }
 
-            // Nếu chưa có ảnh nào được chọn làm thumbnail, đặt ảnh mới đầu tiên làm thumbnail
-            if (!isThumbnailUpdated && mediaResponses.Count > 0)
-            {
-                var firstMedia = mediaResponses.First();
-                var firstMediaEntity = await _unitOfWork.HotelMediaRepository.ActiveEntities
-                    .FirstOrDefaultAsync(m => m.MediaUrl == firstMedia.MediaUrl);
+    //         // Nếu chưa có ảnh nào được chọn làm thumbnail, đặt ảnh mới đầu tiên làm thumbnail
+    //         if (!isThumbnailUpdated && mediaResponses.Count > 0)
+    //         {
+    //             var firstMedia = mediaResponses.First();
+    //             var firstMediaEntity = await _unitOfWork.HotelMediaRepository.ActiveEntities
+    //                 .FirstOrDefaultAsync(m => m.MediaUrl == firstMedia.MediaUrl);
 
-                if (firstMediaEntity != null)
-                {
-                    firstMediaEntity.IsThumbnail = true;
-                    _unitOfWork.HotelMediaRepository.Update(firstMediaEntity);
-                }
-            }
+    //             if (firstMediaEntity != null)
+    //             {
+    //                 firstMediaEntity.IsThumbnail = true;
+    //                 _unitOfWork.HotelMediaRepository.Update(firstMediaEntity);
+    //             }
+    //         }
 
-            await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync(cancellationToken);
-        }
-        catch (CustomException)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw;
-        }
-        catch (Exception)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError();
-        }
-    }
+    //         await _unitOfWork.SaveAsync();
+    //         await transaction.CommitAsync(cancellationToken);
+    //     }
+    //     catch (CustomException)
+    //     {
+    //         await transaction.RollbackAsync(cancellationToken);
+    //         throw;
+    //     }
+    //     catch (Exception)
+    //     {
+    //         await transaction.RollbackAsync(cancellationToken);
+    //         throw CustomExceptionFactory.CreateInternalServerError();
+    //     }
+    // }
 
     private async Task<List<MediaResponse>> GetMediaByIdAsync(Guid hotelId, CancellationToken cancellationToken)
     {
         try
         {
-            var hotelMedias = await _unitOfWork.HotelMediaRepository
+            var existingHotel = await _unitOfWork.HotelRepository.GetByIdAsync(hotelId, cancellationToken);
+
+            var hotelMedias = await _unitOfWork.LocationMediaRepository
                 .ActiveEntities
-                .Where(em => em.HotelId == hotelId)
+                .Where(em => em.LocationId == existingHotel!.LocationId)
                 .ToListAsync(cancellationToken);
 
             return hotelMedias.Select(x => new MediaResponse
@@ -813,9 +747,9 @@ public class HotelService : IHotelService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 

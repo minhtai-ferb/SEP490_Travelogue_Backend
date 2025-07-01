@@ -10,7 +10,6 @@ public interface ITypeEventRepository : IGenericRepository<TypeEvent>
 {
     Task<TypeEvent?> GetByNameAsync(string typeName, CancellationToken cancellationToken);
     Task<PagedResult<TypeEvent>> GetPageWithSearchAsync(string? typeName, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
-    Task<string?> GetTypeEventNameById(Guid? typeEventId);
 }
 public sealed class TypeEventRepository : GenericRepository<TypeEvent>, ITypeEventRepository
 {
@@ -64,24 +63,5 @@ public sealed class TypeEventRepository : GenericRepository<TypeEvent>, ITypeEve
             PageNumber = pageNumber,
             PageSize = pageSize
         };
-    }
-
-    public async Task<string?> GetTypeEventNameById(Guid? typeEventId)
-    {
-        try
-        {
-            var query = ActiveEntities.AsQueryable();
-            var nameEvents = query.FirstOrDefaultAsync(x => x.Id == typeEventId);
-            var result = nameEvents.Result?.TypeName;
-            return result;
-        }
-        catch (CustomException)
-        {
-            throw;
-        }
-        catch (Exception)
-        {
-            throw CustomExceptionFactory.CreateInternalServerError();
-        }
     }
 }

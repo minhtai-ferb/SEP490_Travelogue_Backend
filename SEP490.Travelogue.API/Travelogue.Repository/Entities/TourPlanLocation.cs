@@ -6,16 +6,20 @@ namespace Travelogue.Repository.Entities;
 public sealed class TourPlanLocation : BaseEntity
 {
     [Required]
-    public Guid TourPlanId { get; set; }
+    public Guid TourPlanVersionId { get; set; }
 
     [Required]
     public Guid LocationId { get; set; }
-    [DataType(DataType.DateTime)]
-    public DateTime StartTime { get; set; }
 
-    [DataType(DataType.DateTime)]
-    public DateTime EndTime { get; set; }
+    [Required]
+    public int DayOrder { get; set; }
 
-    public TourPlan? TourPlan { get; set; }
-    public Location? Location { get; set; }
+    [Required]
+    public TimeSpan StartTime { get; set; }
+    [Required]
+    public TimeSpan EndTime { get; set; }
+    public string? Notes { get; set; }
+
+    public TourPlanVersion TourPlanVersion { get; set; } = null!;
+    public Location Location { get; set; } = null!;
 }

@@ -64,7 +64,11 @@ public class CustomExceptionHandlerMiddleware
     private async Task HandleExceptionAsync(HttpContext context, CustomException ex)
     {
         // var response = new ResponseModel<object>(ex.StatusCode, null, null, ex.ErrorMessage?.ToString());
-        var response = ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.ErrorMessage?.ToString(), null);
+        var response = ResponseModel<object>.ErrorResponseModel(
+            ex.StatusCode,
+            ex.ErrorMessage?.ToString() ?? "An unexpected error occurred.",
+            null
+        );
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = ex.StatusCode;
 

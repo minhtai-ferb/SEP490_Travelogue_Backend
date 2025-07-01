@@ -12,8 +12,7 @@ public class LocationDataModel
     public double Latitude { get; set; }
     public double Longitude { get; set; }
     public double Rating { get; set; } = 0;
-    public Guid? TypeLocationId { get; set; }
-    public string? TypeLocationName { get; set; }
+    public List<string>? Categories { get; set; }
     public Guid? DistrictId { get; set; }
     public string? DistrictName { get; set; }
     public HeritageRank HeritageRank { get; set; }

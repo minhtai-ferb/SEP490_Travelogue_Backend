@@ -1,6 +1,6 @@
-using Travelogue.Repository.Entities;
 using Travelogue.Service.BusinessModels.CraftVillageModels;
 using Travelogue.Service.BusinessModels.CuisineModels;
+using Travelogue.Service.BusinessModels.HistoricalLocationModels;
 using Travelogue.Service.BusinessModels.HotelModels;
 using Travelogue.Service.BusinessModels.MediaModel;
 
@@ -22,5 +22,5 @@ public class LocationDataDetailModel
     public HotelDataModel? Hotel { get; set; }
     public CuisineDataModel? Cuisine { get; set; }
     public CraftVillageDataModel? CraftVillage { get; set; }
-    public HistoricalLocation? HistoricalLocation { get; set; } = null!;
+    public HistoricalLocationDataModel? HistoricalLocation { get; set; }
 }

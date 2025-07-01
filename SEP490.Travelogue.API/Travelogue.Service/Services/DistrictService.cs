@@ -291,7 +291,7 @@ public class DistrictService : IDistrictService
                     {
                         MediaUrl = media.MediaUrl,
                         FileName = media.FileName ?? string.Empty,
-                        FileType = media.FileType,
+                        FileType = media.FileType ?? string.Empty,
                         SizeInBytes = media.SizeInBytes,
                         CreatedTime = media.CreatedTime,
                     });
@@ -406,7 +406,7 @@ public class DistrictService : IDistrictService
                     {
                         MediaUrl = media.MediaUrl,
                         FileName = media.FileName ?? string.Empty,
-                        FileType = media.FileType,
+                        FileType = media.FileType ?? string.Empty,
                         SizeInBytes = media.SizeInBytes,
                         CreatedTime = media.CreatedTime,
                     });
@@ -823,7 +823,7 @@ public class DistrictService : IDistrictService
         }
     }
 
-    // ----------------- Helper -----------------
+    #region Helper Methods
     public static string GenerateNormalizedRoleName(string input)
     {
         if (string.IsNullOrWhiteSpace(input)) return "admin";
@@ -868,98 +868,5 @@ public class DistrictService : IDistrictService
 
         return titleCase;
     }
-
-    //public async Task<DistrictMediaResponse> UploadMediaAsync(Guid id, IFormFile imageUpload, CancellationToken cancellationToken)
-    //{
-    //    try
-    //    {
-    //        var currentUserId = _userContextService.GetCurrentUserId();
-    //        var existingDistrict = await _unitOfWork.DistrictRepository.GetByIdAsync(id, cancellationToken);
-    //        if (existingDistrict == null || existingDistrict.IsDeleted)
-    //        {
-    //            throw CustomExceptionFactory.CreateNotFoundError("district");
-    //        }
-
-    //        string imageUrl = string.Empty;
-
-    //        if (imageUpload != null && imageUpload.Length > 0)
-    //        {
-    //            imageUrl = await _cloudinaryService.UploadImageAsync(imageUpload);
-    //        }
-    //        else
-    //        {
-    //            throw CustomExceptionFactory.CreateNotFoundError("image");
-    //        }
-
-    //        var newDistrictMedia = new DistrictMedia
-    //        {
-    //            FileName = imageUpload.FileName,
-    //            FileType = imageUpload.ContentType,
-    //            DistrictId = existingDistrict.Id,
-    //            MediaUrl = imageUrl,
-    //            SizeInBytes = imageUpload.Length,
-    //            CreatedBy = currentUserId,
-    //            CreatedTime = _timeService.SystemTimeNow,
-    //            LastUpdatedBy = currentUserId,
-    //        };
-
-    //        await _unitOfWork.DistrictMediaRepository.AddAsync(newDistrictMedia);
-    //        await _unitOfWork.SaveAsync();
-
-    //        return new DistrictMediaResponse
-    //        {
-    //            DistrictId = existingDistrict.Id,
-    //            DistrictName = existingDistrict.Name,
-    //            MediaUrl = imageUrl,
-    //            FileName = imageUpload.FileName,
-    //            FileType = imageUpload.ContentType,
-    //            SizeInBytes = imageUpload.Length,
-    //            CreatedTime = newDistrictMedia.CreatedTime,
-    //            CreatedBy = newDistrictMedia.CreatedBy,
-    //            LastUpdatedBy = newDistrictMedia.LastUpdatedBy
-    //        };
-    //    }
-    //    catch (CustomException)
-    //    {
-    //        throw;
-    //    }
-    //    catch (Exception)
-    //    {
-    //        throw CustomExceptionFactory.CreateInternalServerError();
-    //    }
-    //    finally
-    //    {
-    //        ////  _unitOfWork.Dispose();
-    //    }
-    //}
-
-    //public async Task<PagedResult<DistrictDataModel>> GetPagedDistrictsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken)
-    //{
-    //    try
-    //    {
-    //        var pagedResult = await _unitOfWork.DistrictRepository.GetPageAsync(pageNumber, pageSize);
-
-    //        var districtDataModels = _mapper.Map<List<DistrictDataModel>>(pagedResult.Items);
-
-    //        return new PagedResult<DistrictDataModel>
-    //        {
-    //            Items = districtDataModels,
-    //            TotalCount = pagedResult.TotalCount,
-    //            PageNumber = pageNumber,
-    //            PageSize = pageSize
-    //        };
-    //    }
-    //    catch (CustomException)
-    //    {
-    //        throw;
-    //    }
-    //    catch (Exception)
-    //    {
-    //        throw CustomExceptionFactory.CreateInternalServerError();
-    //    }
-    //    finally
-    //    {
-    //        ////  _unitOfWork.Dispose();
-    //    }
-    //}
+    #endregion
 }

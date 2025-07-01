@@ -1,7 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.CraftVillageModels;
+using Travelogue.Service.BusinessModels.CuisineModels;
+using Travelogue.Service.BusinessModels.HistoricalLocationModels;
+using Travelogue.Service.BusinessModels.HotelModels;
 
 namespace Travelogue.Service.BusinessModels.LocationModels;
+
 public class LocationUpdateModel
 {
     public required string Name { get; set; }
@@ -14,7 +19,13 @@ public class LocationUpdateModel
 
     [Range(0, 5)]
     public double Rating { get; set; } = 0;
-    public Guid? TypeLocationId { get; set; }
+
+    [Required]
+    public List<LocationType> Types { get; set; } = new();
     public Guid? DistrictId { get; set; }
     public HeritageRank HeritageRank { get; set; }
+    public HotelCreateModel? Hotel { get; set; }
+    public CuisineCreateModel? Cuisine { get; set; }
+    public CraftVillageCreateModel? CraftVillage { get; set; }
+    public HistoricalLocationCreateModel? HistoricalLocation { get; set; }
 }

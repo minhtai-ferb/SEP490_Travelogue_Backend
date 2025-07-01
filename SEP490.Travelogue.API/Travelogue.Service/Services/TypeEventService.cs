@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
@@ -91,7 +92,7 @@ public class TypeEventService : ITypeEventService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -136,7 +137,7 @@ public class TypeEventService : ITypeEventService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -162,7 +163,7 @@ public class TypeEventService : ITypeEventService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -188,7 +189,7 @@ public class TypeEventService : ITypeEventService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -214,7 +215,7 @@ public class TypeEventService : ITypeEventService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -244,7 +245,7 @@ public class TypeEventService : ITypeEventService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -274,7 +275,7 @@ public class TypeEventService : ITypeEventService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -322,7 +323,7 @@ public class TypeEventService : ITypeEventService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 }

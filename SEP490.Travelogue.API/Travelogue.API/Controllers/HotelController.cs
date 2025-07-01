@@ -132,14 +132,14 @@ public class HotelController : ControllerBase
         ));
     }
 
-    [HttpPost("upload-media")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> UploadMedia(Guid id, [FromForm] List<IFormFile> imageUploads, string? thumbnailFileName)
-    {
-        var result = await _hotelService.UploadMediaAsync(id, imageUploads, thumbnailFileName, new CancellationToken());
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPLOAD_SUCCESS, "media")
-        ));
-    }
+    // [HttpPost("upload-media")]
+    // [ProducesResponseType(StatusCodes.Status200OK)]
+    // public async Task<IActionResult> UploadMedia(Guid id, [FromForm] List<IFormFile> imageUploads, string? thumbnailFileName)
+    // {
+    //     var result = await _hotelService.UploadMediaAsync(id, imageUploads, thumbnailFileName, new CancellationToken());
+    //     return Ok(ResponseModel<object>.OkResponseModel(
+    //         data: result,
+    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPLOAD_SUCCESS, "media")
+    //     ));
+    // }
 }

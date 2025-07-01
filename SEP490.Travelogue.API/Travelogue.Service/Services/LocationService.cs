@@ -10,6 +10,7 @@ using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.CraftVillageModels;
 using Travelogue.Service.BusinessModels.CuisineModels;
+using Travelogue.Service.BusinessModels.HistoricalLocationModels;
 using Travelogue.Service.BusinessModels.HotelModels;
 using Travelogue.Service.BusinessModels.LocationModels;
 using Travelogue.Service.BusinessModels.MediaModel;
@@ -52,7 +53,7 @@ public interface ILocationService
         CancellationToken cancellationToken);
 
     Task<List<LocationDataModel>> GetAllLocationAdminAsync();
-    Task<LocationDataModel?> GetLocationByIdWithVideosAsync(Guid id, CancellationToken cancellationToken);
+    Task<LocationDataDetailModel?> GetLocationByIdWithVideosAsync(Guid id, CancellationToken cancellationToken);
 }
 
 public class LocationService : ILocationService
@@ -63,8 +64,9 @@ public class LocationService : ILocationService
     private readonly ITimeService _timeService;
     private readonly ICloudinaryService _cloudinaryService;
     private readonly IEnumService _enumService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public LocationService(IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService, ICloudinaryService cloudinaryService, IEnumService enumService)
+    public LocationService(IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService, ICloudinaryService cloudinaryService, IEnumService enumService, IHttpContextAccessor httpContextAccessor)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -72,7 +74,53 @@ public class LocationService : ILocationService
         _timeService = timeService;
         _cloudinaryService = cloudinaryService;
         _enumService = enumService;
+        _httpContextAccessor = httpContextAccessor;
     }
+
+    // public async Task<LocationDataModel> AddLocationAsync(LocationCreateModel locationCreateModel, CancellationToken cancellationToken)
+    // {
+    //     using var transaction = await _unitOfWork.BeginTransactionAsync();
+    //     try
+    //     {
+    //         var currentUserId = _userContextService.GetCurrentUserId();
+    //         var currentTime = _timeService.SystemTimeNow;
+
+    //         var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), locationCreateModel.DistrictId ?? Guid.Empty, cancellationToken);
+    //         if (!checkRole)
+    //         {
+    //             throw CustomExceptionFactory.CreateForbiddenError();
+    //         }
+
+    //         var newLocation = _mapper.Map<Location>(locationCreateModel);
+    //         newLocation.CreatedBy = currentUserId;
+    //         newLocation.LastUpdatedBy = currentUserId;
+    //         newLocation.CreatedTime = currentTime;
+    //         newLocation.LastUpdatedTime = currentTime;
+
+    //         await _unitOfWork.LocationRepository.AddAsync(newLocation);
+    //         await _unitOfWork.SaveAsync();
+    //         await transaction.CommitAsync(cancellationToken);
+
+    //         var result = _unitOfWork.LocationRepository.ActiveEntities
+    //             .FirstOrDefault(l => l.Id == newLocation.Id);
+
+    //         return _mapper.Map<LocationDataModel>(result);
+    //     }
+    //     catch (CustomException)
+    //     {
+    //         await _unitOfWork.RollBackAsync();
+    //         throw;
+    //     }
+    //     catch (Exception)
+    //     {
+    //         await _unitOfWork.RollBackAsync();
+    //         throw CustomExceptionFactory.CreateInternalServerError();
+    //     }
+    //     finally
+    //     {
+    //         //  _unitOfWork.Dispose();
+    //     }
+    // }
 
     public async Task<LocationDataModel> AddLocationAsync(LocationCreateModel locationCreateModel, CancellationToken cancellationToken)
     {
@@ -88,11 +136,100 @@ public class LocationService : ILocationService
                 throw CustomExceptionFactory.CreateForbiddenError();
             }
 
+            // Danh sách type hợp lệ
+            var typeSet = locationCreateModel.Types.ToHashSet();
+
+            // Danh sách lỗi không đồng bộ
+            var errors = new List<string>();
+
+            // Kiểm tra từng loại dữ liệu có đồng bộ với type
+            if (locationCreateModel.Hotel != null && !typeSet.Contains(LocationType.Hotel))
+                errors.Add("Hotel data is provided but 'Hotel' type is missing.");
+
+            if (locationCreateModel.Cuisine != null && !typeSet.Contains(LocationType.Cuisine))
+                errors.Add("Cuisine data is provided but 'Cuisine' type is missing.");
+
+            if (locationCreateModel.CraftVillage != null && !typeSet.Contains(LocationType.CraftVillage))
+                errors.Add("CraftVillage data is provided but 'CraftVillage' type is missing.");
+
+            if (locationCreateModel.HistoricalLocation != null && !typeSet.Contains(LocationType.HistoricalSite))
+                errors.Add("HistoricalLocation data is provided but 'HistoricalSite' type is missing.");
+
+            // nếu type có nhưng không có dữ liệu
+            if (typeSet.Contains(LocationType.Hotel) && locationCreateModel.Hotel == null)
+                errors.Add("Type 'Hotel' is specified but Hotel data is missing.");
+
+            if (typeSet.Contains(LocationType.Cuisine) && locationCreateModel.Cuisine == null)
+                errors.Add("Type 'Cuisine' is specified but Cuisine data is missing.");
+
+            if (typeSet.Contains(LocationType.CraftVillage) && locationCreateModel.CraftVillage == null)
+                errors.Add("Type 'CraftVillage' is specified but CraftVillage data is missing.");
+
+            if (typeSet.Contains(LocationType.HistoricalSite) && locationCreateModel.HistoricalLocation == null)
+                errors.Add("Type 'HistoricalSite' is specified but HistoricalLocation data is missing.");
+
+            if (errors.Count > 0)
+                throw new InvalidOperationException(string.Join(" | ", errors));
+
             var newLocation = _mapper.Map<Location>(locationCreateModel);
             newLocation.CreatedBy = currentUserId;
             newLocation.LastUpdatedBy = currentUserId;
             newLocation.CreatedTime = currentTime;
             newLocation.LastUpdatedTime = currentTime;
+
+            newLocation.LocationTypes = typeSet.Select(type => new LocationTypeMapping
+            {
+                Type = type,
+                LocationId = newLocation.Id
+            }).ToList();
+
+            // Gán dữ liệu phụ nếu có
+            if (locationCreateModel.Hotel != null)
+            {
+                newLocation.Hotel = new Hotel
+                {
+                    PhoneNumber = locationCreateModel.Hotel.PhoneNumber,
+                    Email = locationCreateModel.Hotel.Email,
+                    Website = locationCreateModel.Hotel.Website,
+                    PricePerNight = locationCreateModel.Hotel.PricePerNight,
+                    LocationId = newLocation.Id
+                };
+            }
+
+            if (locationCreateModel.CraftVillage != null)
+            {
+                newLocation.CraftVillage = new CraftVillage
+                {
+                    PhoneNumber = locationCreateModel.CraftVillage.PhoneNumber,
+                    Email = locationCreateModel.CraftVillage.Email,
+                    Website = locationCreateModel.CraftVillage.Website,
+                    WorkshopsAvailable = locationCreateModel.CraftVillage.WorkshopsAvailable,
+                    LocationId = newLocation.Id
+                };
+            }
+
+            if (locationCreateModel.Cuisine != null)
+            {
+                newLocation.Cuisine = new Cuisine
+                {
+                    PhoneNumber = locationCreateModel.Cuisine.PhoneNumber,
+                    Email = locationCreateModel.Cuisine.Email,
+                    Website = locationCreateModel.Cuisine.Website,
+                    CuisineType = locationCreateModel.Cuisine.CuisineType,
+                    LocationId = newLocation.Id
+                };
+            }
+
+            if (locationCreateModel.HistoricalLocation != null)
+            {
+                newLocation.HistoricalLocation = new HistoricalLocation
+                {
+                    HeritageRank = locationCreateModel.HistoricalLocation.HeritageRank,
+                    EstablishedDate = locationCreateModel.HistoricalLocation.EstablishedDate,
+                    LocationId = newLocation.Id,
+                    TypeHistoricalLocationId = locationCreateModel.HistoricalLocation.TypeHistoricalLocationId,
+                };
+            }
 
             await _unitOfWork.LocationRepository.AddAsync(newLocation);
             await _unitOfWork.SaveAsync();
@@ -105,11 +242,13 @@ public class LocationService : ILocationService
         }
         catch (CustomException)
         {
+            await _unitOfWork.RollBackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            await _unitOfWork.RollBackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -199,7 +338,7 @@ public class LocationService : ILocationService
             {
                 locationData.Medias = await GetMediaWithoutVideoByIdAsync(locationData.Id, cancellationToken);
                 locationData.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationData.DistrictId ?? Guid.Empty);
-                locationData.TypeLocationName = await _unitOfWork.TypeLocationRepository.GetTypeLocationNameById(locationData.TypeLocationId ?? Guid.Empty);
+                locationData.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationData.Id);
 
                 //locationData.HeritageRankName = _enumService.GetEnumDisplayName(locationData.HeritageRank);
             }
@@ -225,24 +364,66 @@ public class LocationService : ILocationService
         try
         {
             var existingLocation = await _unitOfWork.LocationRepository.GetWithIncludeAsync(id, include => include
-                .Include(l => l.LocationCategories)
-                    .ThenInclude(l => l.Category));
+                .Include(l => l.LocationTypes)
+            );
             if (existingLocation == null || existingLocation.IsDeleted)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("location");
             }
 
             var hotel = await _unitOfWork.HotelRepository.GetByLocationId(existingLocation.Id, cancellationToken);
-            var cuisine = await _unitOfWork.CuisineRepository.GetByIdAsync(existingLocation.Id, cancellationToken);
-            var craftVillage = await _unitOfWork.CraftVillageRepository.GetByIdAsync(existingLocation.Id, cancellationToken);
-            var historicalLocation = await _unitOfWork.HistoricalLocationRepository.GetByIdAsync(existingLocation.Id, cancellationToken);
+            var cuisine = await _unitOfWork.CuisineRepository.GetByLocationId(existingLocation.Id, cancellationToken);
+            var craftVillage = await _unitOfWork.CraftVillageRepository.GetByLocationId(existingLocation.Id, cancellationToken);
+            var historicalLocation = await _unitOfWork.HistoricalLocationRepository.GetByLocationId(existingLocation.Id, cancellationToken);
 
             var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
 
             locationDataModel.Hotel = hotel != null ? _mapper.Map<HotelDataModel>(hotel) : null;
             locationDataModel.Cuisine = cuisine != null ? _mapper.Map<CuisineDataModel>(cuisine) : null;
             locationDataModel.CraftVillage = craftVillage != null ? _mapper.Map<CraftVillageDataModel>(craftVillage) : null;
-            locationDataModel.HistoricalLocation = historicalLocation != null ? _mapper.Map<HistoricalLocation>(historicalLocation) : null;
+            locationDataModel.HistoricalLocation = historicalLocation != null ? _mapper.Map<HistoricalLocationDataModel>(historicalLocation) : null;
+
+            locationDataModel.Medias = await GetMediaWithoutVideoByIdAsync(id, cancellationToken);
+            locationDataModel.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationDataModel.DistrictId);
+            locationDataModel.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationDataModel.Id, cancellationToken);
+
+            return locationDataModel;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+        finally
+        {
+            //  _unitOfWork.Dispose();
+        }
+    }
+
+    public async Task<LocationDataDetailModel?> GetLocationByIdWithVideosAsync(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var existingLocation = await _unitOfWork.LocationRepository.GetByIdAsync(id, cancellationToken);
+            if (existingLocation == null || existingLocation.IsDeleted)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("location");
+            }
+
+            var hotel = await _unitOfWork.HotelRepository.GetByLocationId(existingLocation.Id, cancellationToken);
+            var cuisine = await _unitOfWork.CuisineRepository.GetByLocationId(existingLocation.Id, cancellationToken);
+            var craftVillage = await _unitOfWork.CraftVillageRepository.GetByLocationId(existingLocation.Id, cancellationToken);
+            var historicalLocation = await _unitOfWork.HistoricalLocationRepository.GetByLocationId(existingLocation.Id, cancellationToken);
+
+            var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
+
+            locationDataModel.Hotel = hotel != null ? _mapper.Map<HotelDataModel>(hotel) : null;
+            locationDataModel.Cuisine = cuisine != null ? _mapper.Map<CuisineDataModel>(cuisine) : null;
+            locationDataModel.CraftVillage = craftVillage != null ? _mapper.Map<CraftVillageDataModel>(craftVillage) : null;
+            locationDataModel.HistoricalLocation = historicalLocation != null ? _mapper.Map<HistoricalLocationDataModel>(historicalLocation) : null;
 
             locationDataModel.Medias = await GetMediaWithoutVideoByIdAsync(id, cancellationToken);
             locationDataModel.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationDataModel.DistrictId);
@@ -264,75 +445,137 @@ public class LocationService : ILocationService
         }
     }
 
-    public async Task<LocationDataModel?> GetLocationByIdWithVideosAsync(Guid id, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var existingLocation = await _unitOfWork.LocationRepository.GetByIdAsync(id, cancellationToken);
-            if (existingLocation == null || existingLocation.IsDeleted)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("location");
-            }
-
-            var locationDataModel = _mapper.Map<LocationDataModel>(existingLocation);
-            locationDataModel.Medias = await GetMediaByIdAsync(id, cancellationToken);
-            locationDataModel.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationDataModel.DistrictId);
-            locationDataModel.TypeLocationName = await _unitOfWork.TypeLocationRepository.GetTypeLocationNameById(locationDataModel.TypeLocationId);
-
-            return locationDataModel;
-        }
-        catch (CustomException)
-        {
-            throw;
-        }
-        catch (Exception)
-        {
-            throw CustomExceptionFactory.CreateInternalServerError();
-        }
-        finally
-        {
-            //  _unitOfWork.Dispose();
-        }
-    }
-
     public async Task UpdateLocationAsync(Guid id, LocationUpdateModel locationUpdateModel, CancellationToken cancellationToken)
     {
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
             var currentUserId = _userContextService.GetCurrentUserId();
+            var currentTime = _timeService.SystemTimeNow;
 
-            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), locationUpdateModel.DistrictId ?? Guid.Empty, cancellationToken);
+            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(
+                Guid.Parse(currentUserId),
+                locationUpdateModel.DistrictId ?? Guid.Empty,
+                cancellationToken);
+
             if (!checkRole)
-            {
                 throw CustomExceptionFactory.CreateForbiddenError();
-            }
 
             var existingLocation = await _unitOfWork.LocationRepository.GetByIdAsync(id, cancellationToken);
             if (existingLocation == null || existingLocation.IsDeleted)
-            {
                 throw CustomExceptionFactory.CreateNotFoundError("location");
-            }
+
+            var typeSet = locationUpdateModel.Types.ToHashSet();
+            var errors = new List<string>();
+
+            if (locationUpdateModel.Hotel != null && !typeSet.Contains(LocationType.Hotel))
+                errors.Add("Hotel data is provided but 'Hotel' type is missing.");
+            if (locationUpdateModel.Cuisine != null && !typeSet.Contains(LocationType.Cuisine))
+                errors.Add("Cuisine data is provided but 'Cuisine' type is missing.");
+            if (locationUpdateModel.CraftVillage != null && !typeSet.Contains(LocationType.CraftVillage))
+                errors.Add("CraftVillage data is provided but 'CraftVillage' type is missing.");
+            if (locationUpdateModel.HistoricalLocation != null && !typeSet.Contains(LocationType.HistoricalSite))
+                errors.Add("HistoricalLocation data is provided but 'HistoricalSite' type is missing.");
+
+            if (typeSet.Contains(LocationType.Hotel) && locationUpdateModel.Hotel == null)
+                errors.Add("Type 'Hotel' is specified but Hotel data is missing.");
+            if (typeSet.Contains(LocationType.Cuisine) && locationUpdateModel.Cuisine == null)
+                errors.Add("Type 'Cuisine' is specified but Cuisine data is missing.");
+            if (typeSet.Contains(LocationType.CraftVillage) && locationUpdateModel.CraftVillage == null)
+                errors.Add("Type 'CraftVillage' is specified but CraftVillage data is missing.");
+            if (typeSet.Contains(LocationType.HistoricalSite) && locationUpdateModel.HistoricalLocation == null)
+                errors.Add("Type 'HistoricalSite' is specified but HistoricalLocation data is missing.");
+
+            if (errors.Count > 0)
+                throw new InvalidOperationException(string.Join(" | ", errors));
 
             _mapper.Map(locationUpdateModel, existingLocation);
-
             existingLocation.LastUpdatedBy = currentUserId;
-            existingLocation.LastUpdatedTime = _timeService.SystemTimeNow;
+            existingLocation.LastUpdatedTime = currentTime;
 
-            _unitOfWork.BeginTransaction();
+            // Cập nhật lại LocationTypes
+            existingLocation.LocationTypes.Clear();
+            foreach (var type in typeSet)
+            {
+                existingLocation.LocationTypes.Add(new LocationTypeMapping
+                {
+                    LocationId = existingLocation.Id,
+                    Type = type
+                });
+            }
+
+            // Cập nhật dữ liệu phụ
+            if (locationUpdateModel.Hotel != null)
+            {
+                if (existingLocation.Hotel == null)
+                    existingLocation.Hotel = new Hotel { LocationId = existingLocation.Id };
+
+                existingLocation.Hotel.PhoneNumber = locationUpdateModel.Hotel.PhoneNumber;
+                existingLocation.Hotel.Email = locationUpdateModel.Hotel.Email;
+                existingLocation.Hotel.Website = locationUpdateModel.Hotel.Website;
+                existingLocation.Hotel.PricePerNight = locationUpdateModel.Hotel.PricePerNight;
+            }
+            else
+            {
+                existingLocation.Hotel = null;
+            }
+
+            if (locationUpdateModel.CraftVillage != null)
+            {
+                if (existingLocation.CraftVillage == null)
+                    existingLocation.CraftVillage = new CraftVillage { LocationId = existingLocation.Id };
+
+                existingLocation.CraftVillage.PhoneNumber = locationUpdateModel.CraftVillage.PhoneNumber;
+                existingLocation.CraftVillage.Email = locationUpdateModel.CraftVillage.Email;
+                existingLocation.CraftVillage.Website = locationUpdateModel.CraftVillage.Website;
+                existingLocation.CraftVillage.WorkshopsAvailable = locationUpdateModel.CraftVillage.WorkshopsAvailable;
+            }
+            else
+            {
+                existingLocation.CraftVillage = null;
+            }
+
+            if (locationUpdateModel.Cuisine != null)
+            {
+                if (existingLocation.Cuisine == null)
+                    existingLocation.Cuisine = new Cuisine { LocationId = existingLocation.Id };
+
+                existingLocation.Cuisine.PhoneNumber = locationUpdateModel.Cuisine.PhoneNumber;
+                existingLocation.Cuisine.Email = locationUpdateModel.Cuisine.Email;
+                existingLocation.Cuisine.Website = locationUpdateModel.Cuisine.Website;
+                existingLocation.Cuisine.CuisineType = locationUpdateModel.Cuisine.CuisineType;
+            }
+            else
+            {
+                existingLocation.Cuisine = null;
+            }
+
+            if (locationUpdateModel.HistoricalLocation != null)
+            {
+                if (existingLocation.HistoricalLocation == null)
+                    existingLocation.HistoricalLocation = new HistoricalLocation { LocationId = existingLocation.Id };
+
+                existingLocation.HistoricalLocation.HeritageRank = locationUpdateModel.HistoricalLocation.HeritageRank;
+                existingLocation.HistoricalLocation.EstablishedDate = locationUpdateModel.HistoricalLocation.EstablishedDate;
+            }
+            else
+            {
+                existingLocation.HistoricalLocation = null;
+            }
+
             _unitOfWork.LocationRepository.Update(existingLocation);
-            _unitOfWork.CommitTransaction();
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
         }
         catch (CustomException)
         {
+            await _unitOfWork.RollBackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
-        }
-        finally
-        {
-            //  _unitOfWork.Dispose();
+            await _unitOfWork.RollBackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -694,7 +937,6 @@ public class LocationService : ILocationService
 
     public async Task<LocationCraftVillageSuggestionDataResponse> GetRecommendedCraftVillagesAsync(Guid locationId, CancellationToken cancellationToken)
     {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
             var existingLocation = await _unitOfWork.LocationRepository.GetByIdAsync(locationId, cancellationToken);
@@ -703,26 +945,28 @@ public class LocationService : ILocationService
                 throw CustomExceptionFactory.CreateNotFoundError("location");
             }
 
-            var craftVillagesData = await _unitOfWork.LocationCraftVillageSuggestionRepository
+            // Lấy danh sách craft village được gợi ý
+            var craftVillageSuggestions = await _unitOfWork.LocationCraftVillageSuggestionRepository
                 .ActiveEntities
-                .Where(cv => cv.LocationId == locationId && !cv.IsDeleted)
+                .Where(cv => cv.LocationId == locationId && !cv.IsDeleted && cv.CraftVillage != null && cv.CraftVillage.Location != null)
                 .Select(cv => new
                 {
                     cv.CraftVillageId,
-                    Name = cv.CraftVillage != null && cv.CraftVillage.Location != null ? cv.CraftVillage.Location.Name ?? string.Empty : string.Empty,
-                    Description = cv.CraftVillage != null && cv.CraftVillage.Location != null ? cv.CraftVillage.Location.Description ?? string.Empty : string.Empty,
-                    Address = cv.CraftVillage != null && cv.CraftVillage.Location != null ? cv.CraftVillage.Location.Address ?? string.Empty : string.Empty
+                    Name = cv.CraftVillage.Location.Name ?? string.Empty,
+                    Description = cv.CraftVillage.Location.Description ?? string.Empty,
+                    Address = cv.CraftVillage.Location.Address ?? string.Empty
                 })
                 .ToListAsync(cancellationToken);
 
-            var craftVillageIds = craftVillagesData.Select(h => h.CraftVillageId).ToList();
+            var craftVillageLocationIds = craftVillageSuggestions.Select(x => x.CraftVillageId).ToList();
 
-            var craftVillageMedias = await _unitOfWork.CraftVillageMediaRepository
+            // Lấy media từ bảng LocationMedia (liên quan đến các CraftVillage LocationId)
+            var craftVillageMedias = await _unitOfWork.LocationMediaRepository
                 .ActiveEntities
-                .Where(m => craftVillageIds.Contains(m.CraftVillageId))
+                .Where(m => m.LocationId != null && craftVillageLocationIds.Contains(m.LocationId))
                 .Select(m => new
                 {
-                    m.CraftVillageId,
+                    LocationId = m.LocationId,
                     Media = new MediaResponse
                     {
                         MediaUrl = m.MediaUrl,
@@ -734,18 +978,18 @@ public class LocationService : ILocationService
                 })
                 .ToListAsync(cancellationToken);
 
-            var mediaLookup = craftVillageMedias.ToLookup(m => m.CraftVillageId, m => m.Media);
+            // Nhóm media theo LocationId (là CraftVillageId)
+            var mediaLookup = craftVillageMedias.ToLookup(m => m.LocationId, m => m.Media);
 
-            var craftVillages = craftVillagesData.Select(data => new CraftVillageResponse
+            // Map kết quả
+            var craftVillages = craftVillageSuggestions.Select(data => new CraftVillageResponse
             {
                 Id = data.CraftVillageId,
                 Name = data.Name,
-                Description = data.Description ?? string.Empty,
-                Address = data.Address ?? string.Empty,
+                Description = data.Description,
+                Address = data.Address,
                 Medias = mediaLookup[data.CraftVillageId].ToList()
             }).ToList();
-
-            await transaction.CommitAsync(cancellationToken);
 
             return new LocationCraftVillageSuggestionDataResponse
             {
@@ -756,15 +1000,14 @@ public class LocationService : ILocationService
         }
         catch (CustomException)
         {
-            await transaction.RollbackAsync(cancellationToken);
             throw;
         }
         catch (Exception)
         {
-            await transaction.RollbackAsync(cancellationToken);
             throw CustomExceptionFactory.CreateInternalServerError();
         }
     }
+
 
     public async Task<bool> AddRecommendedCraftVillagesAsync(Guid locationId, List<Guid> craftVillageIds, CancellationToken cancellationToken)
     {
@@ -942,11 +1185,13 @@ public class LocationService : ILocationService
 
             var cuisineIds = cuisinesData.Select(r => r.CuisineId).ToList();
 
-            var cuisineMedias = await _unitOfWork.CuisineMediaRepository.ActiveEntities
-                .Where(m => cuisineIds.Contains(m.CuisineId))
+            // Lấy media từ bảng LocationMedia (liên quan đến các CraftVillage LocationId)
+            var cuisineMedias = await _unitOfWork.LocationMediaRepository
+                .ActiveEntities
+                .Where(m => m.LocationId != null && cuisineIds.Contains(m.LocationId))
                 .Select(m => new
                 {
-                    m.CuisineId,
+                    LocationId = m.LocationId,
                     Media = new MediaResponse
                     {
                         MediaUrl = m.MediaUrl,
@@ -958,7 +1203,7 @@ public class LocationService : ILocationService
                 })
                 .ToListAsync(cancellationToken);
 
-            var mediaLookup = cuisineMedias.ToLookup(m => m.CuisineId, m => m.Media);
+            var mediaLookup = cuisineMedias.ToLookup(m => m.LocationId, m => m.Media);
 
             var cuisines = cuisinesData.Select(data => new CuisineResponse
             {
@@ -1151,7 +1396,7 @@ public class LocationService : ILocationService
             {
                 locationData.Medias = await GetMediaWithoutVideoByIdAsync(locationData.Id, cancellationToken);
                 locationData.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationData.DistrictId ?? Guid.Empty);
-                locationData.TypeLocationName = await _unitOfWork.TypeLocationRepository.GetTypeLocationNameById(locationData.TypeLocationId ?? Guid.Empty);
+                locationData.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationData.Id);
             }
 
             return new PagedResult<LocationDataModel>
@@ -1543,6 +1788,51 @@ public class LocationService : ILocationService
         }
     }
 
+    public async Task<MediaResponse> UploadImageAsync(IFormFile image)
+    {
+        try
+        {
+            if (image == null || image.Length == 0)
+                throw CustomExceptionFactory.CreateNotFoundError("images");
+
+            var folderPath = Path.Combine(Directory.GetCurrentDirectory(), "UploadedImages");
+            if (!Directory.Exists(folderPath))
+                Directory.CreateDirectory(folderPath);
+
+            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(image.FileName);
+            var filePath = Path.Combine(folderPath, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await image.CopyToAsync(stream);
+            }
+
+            // Url
+            var request = _httpContextAccessor.HttpContext?.Request;
+            var imageUrl = request != null
+                ? $"{request.Scheme}://{request.Host}/UploadedImages/{fileName}"
+                : $"/UploadedImages/{fileName}";
+
+            return new MediaResponse
+            {
+                FileName = fileName,
+                MediaUrl = imageUrl,
+                FileType = image.ContentType,
+                SizeInBytes = image.Length,
+                IsThumbnail = false,
+                CreatedTime = _timeService.SystemTimeNow
+            };
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
     public async Task<LocationMediaResponse> UploadMediaAsync(
         Guid id,
         List<IFormFile>? imageUploads,
@@ -1883,42 +2173,6 @@ public class LocationService : ILocationService
         }).ToList();
     }
 
-    private async Task<List<MediaResponse>> GetMediaByCraftVillageIdAsync(Guid craftVillageId, CancellationToken cancellationToken)
-    {
-        var craftVillageMedias = await _unitOfWork.CraftVillageMediaRepository
-            .ActiveEntities
-            .Where(em => em.CraftVillageId == craftVillageId)
-            .ToListAsync(cancellationToken);
-
-        return craftVillageMedias.Select(x => new MediaResponse
-        {
-            MediaUrl = x.MediaUrl,
-            FileName = x.FileName ?? string.Empty,
-            FileType = x.FileType,
-            IsThumbnail = x.IsThumbnail,
-            SizeInBytes = x.SizeInBytes,
-            CreatedTime = x.CreatedTime
-        }).ToList();
-    }
-
-    private async Task<List<MediaResponse>> GetMediaByCuisineIdAsync(Guid cuisineId, CancellationToken cancellationToken)
-    {
-        var cuisineMedias = await _unitOfWork.CuisineMediaRepository
-            .ActiveEntities
-            .Where(em => em.CuisineId == cuisineId)
-            .ToListAsync(cancellationToken);
-
-        return cuisineMedias.Select(em => new MediaResponse
-        {
-            MediaUrl = em.MediaUrl,
-            FileName = em.FileName ?? string.Empty,
-            FileType = em.FileType,
-            IsThumbnail = em.IsThumbnail,
-            SizeInBytes = em.SizeInBytes,
-            CreatedTime = em.CreatedTime
-        }).ToList();
-    }
-
     public async Task<bool> DeleteMediaAsync(Guid id, List<string> deletedImages, CancellationToken cancellationToken)
     {
         _unitOfWork.BeginTransaction();
@@ -1977,7 +2231,6 @@ public class LocationService : ILocationService
     {
         var locationIds = locationDataModels.Select(x => x.Id).ToList();
         var districtIds = locationDataModels.Where(x => x.DistrictId.HasValue).Select(x => x.DistrictId.Value).Distinct().ToList();
-        var typeLocationIds = locationDataModels.Where(x => x.TypeLocationId.HasValue).Select(x => x.TypeLocationId.Value).Distinct().ToList();
 
         var allMedias = await _unitOfWork.LocationMediaRepository
             .ActiveEntities
@@ -1988,11 +2241,6 @@ public class LocationService : ILocationService
             .ActiveEntities
             .Where(d => districtIds.Contains(d.Id))
             .ToDictionaryAsync(d => d.Id, d => d.Name, cancellationToken);
-
-        var typeLocationNames = await _unitOfWork.TypeLocationRepository
-            .ActiveEntities
-            .Where(t => typeLocationIds.Contains(t.Id))
-            .ToDictionaryAsync(t => t.Id, t => t.Name, cancellationToken);
 
         foreach (var location in locationDataModels)
         {
@@ -2005,10 +2253,7 @@ public class LocationService : ILocationService
                 location.DistrictName = districtName;
             }
 
-            if (location.TypeLocationId.HasValue && typeLocationNames.TryGetValue(location.TypeLocationId.Value, out var typeLocationName))
-            {
-                location.TypeLocationName = typeLocationName;
-            }
+            location.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(location.Id);
 
             location.HeritageRankName = _enumService.GetEnumDisplayName(location.HeritageRank);
         }

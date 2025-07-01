@@ -6,4 +6,8 @@ public interface IUserContextService
     string GetUserToken();
     string? TryGetCurrentUserId();
     Task<List<string>> GetCurrentUserRolesAsync();
+    bool HasRole(string roleName);
+    bool HasRole(params string[] roles);
+    bool HasAnyRole(params string[] roles);
+    bool IsAuthenticated();
 }
