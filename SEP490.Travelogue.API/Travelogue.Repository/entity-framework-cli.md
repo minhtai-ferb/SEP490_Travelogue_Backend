@@ -29,7 +29,7 @@ dotnet ef migrations add <MigrationName> --startup-project <StartupProjectPath>
 ### 🔸 Ví dụ:
 
 ```bash
-dotnet ef migrations add InitialCreate --startup-project ../Travelogue.API
+dotnet ef migrations add MediaEntity --startup-project ../Travelogue.API
 ```
 
 ---

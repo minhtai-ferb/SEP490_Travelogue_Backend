@@ -11,5 +11,7 @@ public class HistoricalLocationDataModel
     public DateTime? EstablishedDate { get; set; }
     public HeritageRank HeritageRank { get; set; }
     public string HeritageRankName { get; set; } = string.Empty;
+    public Guid? TypeHistoricalLocationId { get; set; }
+    public string TypeHistoricalLocationName { get; set; } = string.Empty;
     public List<MediaResponse> Medias { get; set; } = new List<MediaResponse>();
 }

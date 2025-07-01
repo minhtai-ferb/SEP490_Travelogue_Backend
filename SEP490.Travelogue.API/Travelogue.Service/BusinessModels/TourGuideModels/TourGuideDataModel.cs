@@ -4,6 +4,7 @@ namespace Travelogue.Service.BusinessModels.TourGuideModels;
 
 public class TourGuideDataModel
 {
+    public Guid Id { get; set; }
     public string Email { get; set; }
     public string UserName { get; set; }
     public Gender Sex { get; set; }

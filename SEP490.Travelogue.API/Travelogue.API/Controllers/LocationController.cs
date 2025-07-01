@@ -84,7 +84,7 @@ public class LocationController : ControllerBase
     public async Task<IActionResult> GetLocationByIdVideo(Guid id)
     {
         var location = await _locationService.GetLocationByIdWithVideosAsync(id, new CancellationToken());
-        return Ok(ResponseModel<LocationDataModel>.OkResponseModel(
+        return Ok(ResponseModel<LocationDataDetailModel>.OkResponseModel(
             data: location,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "location")
         ));

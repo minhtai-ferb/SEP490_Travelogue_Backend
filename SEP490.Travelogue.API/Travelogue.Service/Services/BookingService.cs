@@ -301,7 +301,7 @@ public class BookingService : IBookingService
             bookingRequest.Status = ExchangeSessionStatus.AcceptedByUser;
 
             var newBooking = _mapper.Map<Order>(bookingRequest);
-            newBooking.VersionId = bookingRequest.SuggestedTripPlanVersionId ?? bookingRequest.TripPlanVersionId;
+            newBooking.TripPlanVersionId = bookingRequest.SuggestedTripPlanVersionId ?? bookingRequest.TripPlanVersionId;
             newBooking.OrderDate = currentTime;
             newBooking.CreatedBy = currentUserId;
             newBooking.LastUpdatedBy = currentUserId;
@@ -317,7 +317,7 @@ public class BookingService : IBookingService
                 UserId = newBooking.UserId,
                 TourId = newBooking.TourId,
                 TourGuideId = newBooking.TourGuideId,
-                VersionId = newBooking.VersionId,
+                VersionId = newBooking.TripPlanVersionId,
                 OrderDate = newBooking.OrderDate,
                 ScheduledStartDate = newBooking.ScheduledStartDate,
                 ScheduledEndDate = newBooking.ScheduledEndDate,

@@ -12,7 +12,7 @@ public sealed class Cuisine : BaseEntity
     public Guid? LocationId { get; set; }
 
     // Navigation Properties
-    public Location? Location { get; set; } = null!;
+    public Location Location { get; set; } = null!;
     public ICollection<LocationCuisineSuggestion> LocationCuisineSuggestions { get; set; } = new List<LocationCuisineSuggestion>();
     // public ICollection<TripPlanCuisine> TripPlanCuisines { get; set; } = new List<TripPlanCuisine>();
 }

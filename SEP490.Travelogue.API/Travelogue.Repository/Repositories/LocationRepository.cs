@@ -3,6 +3,7 @@ using Travelogue.Repository.Bases;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Repository.Utils;
 
 namespace Travelogue.Repository.Repositories;
 
@@ -31,14 +32,8 @@ public sealed class LocationRepository : GenericRepository<Location>, ILocationR
 
     public async Task<List<string>> GetAllCategoriesAsync(Guid locationId, CancellationToken cancellationToken = default)
     {
-        // return await _context.Locations
-        //     .SelectMany(l => l.Categories)
-        //     .Distinct()
-        //     .ToListAsync(cancellationToken);
-
         var location = await _context.Locations
-            .Include(l => l.LocationCategories)
-            .ThenInclude(lc => lc.Category)
+            .Include(l => l.LocationTypes)
             .FirstOrDefaultAsync(l => l.Id == locationId, cancellationToken);
 
         if (location == null)
@@ -46,8 +41,8 @@ public sealed class LocationRepository : GenericRepository<Location>, ILocationR
             return new List<string>();
         }
 
-        return location.LocationCategories
-            .Select(lc => lc.Category.Name)
+        return location.LocationTypes
+            .Select(lt => lt.Type.GetDisplayName())
             .Distinct()
             .ToList();
     }

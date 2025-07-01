@@ -27,29 +27,28 @@ public class ApplicationDbContext : DbContext
     public DbSet<LocationHotelSuggestion> LocationHotelSuggestions { get; set; }
     public DbSet<LocationCategory> LocationCategories { get; set; }
     public DbSet<HistoricalLocation> HistoricalLocations { get; set; }
+    public DbSet<TypeHistoricalLocation> TypeHistoricalLocations { get; set; }
 
     // Craft Village Management
     public DbSet<CraftVillage> CraftVillages { get; set; }
-    public DbSet<CraftVillageMedia> CraftVillageMedia { get; set; }
     public DbSet<CraftVillageInterest> CraftVillageInterests { get; set; }
 
     // Cuisine Management
     public DbSet<Cuisine> Cuisines { get; set; }
-    public DbSet<CuisineMedia> CuisineMedias { get; set; }
     public DbSet<CuisineInterest> CuisineInterests { get; set; }
 
     // Hotel Management
     public DbSet<Hotel> Hotels { get; set; }
-    public DbSet<HotelMedia> HotelMedias { get; set; }
 
     // Tour Management
     public DbSet<Tour> Tours { get; set; }
     public DbSet<TourType> TourTypes { get; set; }
     public DbSet<TourInterest> TourInterests { get; set; }
-    public DbSet<TourPlan> TourPlans { get; set; }
+    public DbSet<TourPlanVersion> TourPlanVersions { get; set; }
+    public DbSet<TourSchedule> TourSchedules { get; set; }
     public DbSet<TourPlanLocation> TourPlanLocations { get; set; }
     public DbSet<TourGuide> TourGuides { get; set; }
-    public DbSet<TourGuideUnavailability> TourGuideUnavailabilities { get; set; }
+    public DbSet<TourGuideSchedules> TourGuideSchedules { get; set; }
     public DbSet<TourGroup> TourGroups { get; set; }
     public DbSet<TourGroupMember> TourGroupMembers { get; set; }
     public DbSet<TourJoinRequest> TourJoinRequests { get; set; }
@@ -109,6 +108,12 @@ public class ApplicationDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<Tour>()
+            .HasOne(t => t.CurrentVersion)
+            .WithMany()
+            .HasForeignKey(t => t.CurrentVersionId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Experience>()
             .HasOne(a => a.Location)

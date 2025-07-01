@@ -20,16 +20,16 @@ public interface ICraftVillageService
     Task AddCraftVillageAsync(CraftVillageCreateModel craftVillageCreateModel, CancellationToken cancellationToken);
     Task UpdateCraftVillageAsync(Guid id, CraftVillageUpdateModel craftVillageUpdateModel, CancellationToken cancellationToken);
     Task DeleteCraftVillageAsync(Guid id, CancellationToken cancellationToken);
-    Task<CraftVillageMediaResponse> AddCraftVillageWithMediaAsync(CraftVillageCreateWithMediaFileModel craftVillageCreateModel, string? thumbnailSelected, CancellationToken cancellationToken);
-    Task UpdateCraftVillageAsync(Guid id, CraftVillageUpdateWithMediaFileModel craftVillageUpdateModel, string? thumbnailSelected, CancellationToken cancellationToken);
+    // Task<CraftVillageMediaResponse> AddCraftVillageWithMediaAsync(CraftVillageCreateWithMediaFileModel craftVillageCreateModel, string? thumbnailSelected, CancellationToken cancellationToken);
+    // Task UpdateCraftVillageAsync(Guid id, CraftVillageUpdateWithMediaFileModel craftVillageUpdateModel, string? thumbnailSelected, CancellationToken cancellationToken);
     Task<PagedResult<CraftVillageDataModel>> GetPagedCraftVillagesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<PagedResult<CraftVillageDataModel>> GetPagedCraftVillagesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
-    Task<CraftVillageMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
-    Task<CraftVillageMediaResponse> UploadMediaAsync(
-        Guid id,
-        List<IFormFile>? imageUploads,
-        string? thumbnailSelected,
-        CancellationToken cancellationToken);
+    // Task<CraftVillageMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
+    // Task<CraftVillageMediaResponse> UploadMediaAsync(
+    //     Guid id,
+    //     List<IFormFile>? imageUploads,
+    //     string? thumbnailSelected,
+    //     CancellationToken cancellationToken);
 }
 
 public class CraftVillageService : ICraftVillageService
@@ -101,8 +101,8 @@ public class CraftVillageService : ICraftVillageService
                 .Where(s => s.CraftVillageId == id)
                 .ForEachAsync(s => s.IsDeleted = true, cancellationToken);
 
-            await _unitOfWork.CraftVillageMediaRepository.ActiveEntities
-                .Where(s => s.CraftVillageId == id)
+            await _unitOfWork.LocationMediaRepository.ActiveEntities
+                .Where(s => s.LocationId == existingCraftVillage.LocationId)
                 .ForEachAsync(s => s.IsDeleted = true, cancellationToken);
 
             //if (isInUsing)
@@ -138,17 +138,59 @@ public class CraftVillageService : ICraftVillageService
     {
         try
         {
-            var existingCraftVillage = await _unitOfWork.CraftVillageRepository.GetAllAsync(cancellationToken);
-            if (existingCraftVillage == null || !existingCraftVillage.Any())
+            var existingCraftVillages = await _unitOfWork.CraftVillageRepository
+                .ActiveEntities
+                .Include(cv => cv.Location)
+                .ToListAsync(cancellationToken);
+
+            if (existingCraftVillages == null || !existingCraftVillages.Any())
             {
                 return new List<CraftVillageDataModel>();
             }
 
-            var craftVillageDataModels = _mapper.Map<List<CraftVillageDataModel>>(existingCraftVillage);
+            var craftVillageDataModels = _mapper.Map<List<CraftVillageDataModel>>(existingCraftVillages);
 
+            // Lấy danh sách LocationId tương ứng
+            var locationIds = existingCraftVillages
+                .Select(cv => cv.LocationId)
+                .Distinct()
+                .ToList();
+
+            // Lấy danh sách media theo LocationId
+            var locationMedias = await _unitOfWork.LocationMediaRepository
+                .ActiveEntities
+                .Where(m => m.LocationId != null && locationIds.Contains(m.LocationId))
+                .Select(m => new
+                {
+                    LocationId = m.LocationId,
+                    Media = new MediaResponse
+                    {
+                        MediaUrl = m.MediaUrl,
+                        FileName = m.FileName ?? string.Empty,
+                        FileType = m.FileType,
+                        SizeInBytes = m.SizeInBytes,
+                        CreatedTime = m.CreatedTime
+                    }
+                })
+                .ToListAsync(cancellationToken);
+
+            var mediaLookup = locationMedias.ToLookup(m => m.LocationId, m => m.Media);
+
+            // Gán thêm thông tin location và media vào từng craft village
             foreach (var craftVillageData in craftVillageDataModels)
             {
-                craftVillageData.Medias = await GetMediaByIdAsync(craftVillageData.Id, cancellationToken);
+                var craftVillage = existingCraftVillages.FirstOrDefault(cv => cv.Id == craftVillageData.Id);
+                if (craftVillage?.Location != null)
+                {
+                    craftVillageData.LocationName = craftVillage.Location.Name;
+                    craftVillageData.Description = craftVillage.Location.Description;
+                    craftVillageData.Address = craftVillage.Location.Address;
+                    craftVillageData.Latitude = craftVillage.Location.Latitude;
+                    craftVillageData.Longitude = craftVillage.Location.Longitude;
+                    craftVillageData.DistrictId = craftVillage.Location.DistrictId;
+                    craftVillageData.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(craftVillage.LocationId, cancellationToken);
+                    craftVillageData.Medias = mediaLookup[craftVillage.LocationId].ToList();
+                }
             }
 
             return craftVillageDataModels;
@@ -161,11 +203,8 @@ public class CraftVillageService : ICraftVillageService
         {
             throw CustomExceptionFactory.CreateInternalServerError();
         }
-        finally
-        {
-            //  _unitOfWork.Dispose();
-        }
     }
+
 
     public async Task<CraftVillageDataModel?> GetCraftVillageByIdAsync(Guid id, CancellationToken cancellationToken)
     {
@@ -301,479 +340,164 @@ public class CraftVillageService : ICraftVillageService
         }
     }
 
-    public async Task<CraftVillageMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken)
-    {
-        _unitOfWork.BeginTransaction();
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-            var existingCraftVillage = await _unitOfWork.CraftVillageRepository.GetByIdAsync(id, cancellationToken);
-            if (existingCraftVillage == null || existingCraftVillage.IsDeleted)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("khách sạn");
-            }
+    // public async Task<CraftVillageMediaResponse> UploadMediaAsync(
+    //     Guid id,
+    //     List<IFormFile>? imageUploads,
+    //     string? thumbnailSelected,
+    //     CancellationToken cancellationToken)
+    // {
+    //     using var transaction = await _unitOfWork.BeginTransactionAsync();
+    //     try
+    //     {
+    //         var currentUserId = _userContextService.GetCurrentUserId();
+    //         var existingCraftVillage = await _unitOfWork.CraftVillageRepository.GetByIdAsync(id, cancellationToken);
+    //         if (existingCraftVillage == null || existingCraftVillage.IsDeleted)
+    //         {
+    //             throw CustomExceptionFactory.CreateNotFoundError("craftVillage");
+    //         }
 
-            if (imageUploads == null || !imageUploads.Any())
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("medias");
-            }
+    //         if (imageUploads == null || imageUploads.Count == 0)
+    //         {
+    //             throw CustomExceptionFactory.CreateNotFoundError("images");
+    //         }
 
-            var imageUrls = await _cloudinaryService.UploadImagesAsync(imageUploads);
-            var mediaResponses = new List<MediaResponse>();
+    //         var allMedia = _unitOfWork.CraftVillageMediaRepository.Entities
+    //             .Where(dm => dm.CraftVillageId == existingCraftVillage.Id).ToList();
 
-            for (int i = 0; i < imageUploads.Count; i++)
-            {
-                var imageUpload = imageUploads[i];
+    //         // Nếu không có ảnh mới & không có thumbnailSelected => Chỉ cập nhật thông tin craftVillage
+    //         if ((imageUploads == null || imageUploads.Count == 0) && string.IsNullOrEmpty(thumbnailSelected))
+    //         {
+    //             await _unitOfWork.SaveAsync();
+    //             await transaction.CommitAsync(cancellationToken);
+    //             return new CraftVillageMediaResponse
+    //             {
+    //                 CraftVillageId = existingCraftVillage.Id,
+    //                 CraftVillageName = existingCraftVillage.Location?.Name,
+    //                 Media = new List<MediaResponse>()
+    //             };
+    //         }
 
-                var newCraftVillageMedia = new CraftVillageMedia
-                {
-                    FileName = imageUpload.FileName,
-                    FileType = imageUpload.ContentType,
-                    CraftVillageId = existingCraftVillage.Id,
-                    MediaUrl = imageUrls[i],
-                    SizeInBytes = imageUpload.Length,
-                    CreatedBy = currentUserId,
-                    CreatedTime = _timeService.SystemTimeNow,
-                    LastUpdatedBy = currentUserId,
-                };
+    //         bool isThumbnailUpdated = false;
 
-                await _unitOfWork.CraftVillageMediaRepository.AddAsync(newCraftVillageMedia);
+    //         // Nếu có thumbnailSelected và nó là link (ảnh cũ) -> Cập nhật ảnh cũ làm thumbnail
+    //         if (!string.IsNullOrEmpty(thumbnailSelected) && Helper.IsValidUrl(thumbnailSelected))
+    //         {
+    //             foreach (var media in allMedia)
+    //             {
+    //                 media.IsThumbnail = media.MediaUrl == thumbnailSelected;
+    //                 _unitOfWork.CraftVillageMediaRepository.Update(media);
+    //             }
+    //             isThumbnailUpdated = true; // Đánh dấu đã cập nhật thumbnail
+    //         }
 
-                mediaResponses.Add(new MediaResponse
-                {
-                    MediaUrl = imageUrls[i],
-                    FileName = imageUpload.FileName,
-                    FileType = imageUpload.ContentType,
-                    SizeInBytes = imageUpload.Length
-                });
-            }
+    //         // Nếu không có ảnh mới nhưng có thumbnailSelected là ảnh cũ -> Dừng ở đây
+    //         if (imageUploads == null || imageUploads.Count == 0)
+    //         {
+    //             await _unitOfWork.SaveAsync();
+    //             await transaction.CommitAsync(cancellationToken);
+    //             return new CraftVillageMediaResponse
+    //             {
+    //                 CraftVillageId = existingCraftVillage.Id,
+    //                 CraftVillageName = existingCraftVillage.Location?.Name,
+    //                 Media = new List<MediaResponse>()
+    //             };
+    //         }
 
-            await _unitOfWork.SaveAsync();
-            _unitOfWork.CommitTransaction();
+    //         // Có ảnh mới -> Upload lên Cloudinary
+    //         var imageUrls = await _cloudinaryService.UploadImagesAsync(imageUploads);
+    //         var mediaResponses = new List<MediaResponse>();
 
-            return new CraftVillageMediaResponse
-            {
-                CraftVillageId = existingCraftVillage.Id,
-                CraftVillageName = existingCraftVillage.Location?.Name,
-                Media = mediaResponses
-            };
-        }
-        catch (CustomException)
-        {
-            await _unitOfWork.RollBackAsync();
-            throw;
-        }
-        catch (Exception)
-        {
-            await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
-        }
-    }
+    //         for (int i = 0; i < imageUploads.Count; i++)
+    //         {
+    //             var imageUpload = imageUploads[i];
+    //             bool isThumbnail = false;
 
-    public async Task<CraftVillageMediaResponse> UploadMediaAsync(
-        Guid id,
-        List<IFormFile>? imageUploads,
-        string? thumbnailSelected,
-        CancellationToken cancellationToken)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-            var existingCraftVillage = await _unitOfWork.CraftVillageRepository.GetByIdAsync(id, cancellationToken);
-            if (existingCraftVillage == null || existingCraftVillage.IsDeleted)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("craftVillage");
-            }
+    //             // Nếu thumbnailSelected là tên file -> Đặt ảnh mới làm thumbnail
+    //             if (!string.IsNullOrEmpty(thumbnailSelected) && !Helper.IsValidUrl(thumbnailSelected))
+    //             {
+    //                 isThumbnail = imageUpload.FileName == thumbnailSelected;
+    //             }
 
-            if (imageUploads == null || imageUploads.Count == 0)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("images");
-            }
+    //             var newCraftVillageMedia = new CraftVillageMedia
+    //             {
+    //                 FileName = imageUpload.FileName,
+    //                 FileType = imageUpload.ContentType,
+    //                 CraftVillageId = existingCraftVillage.Id,
+    //                 MediaUrl = imageUrls[i],
+    //                 SizeInBytes = imageUpload.Length,
+    //                 IsThumbnail = isThumbnail,
+    //                 CreatedBy = currentUserId,
+    //                 CreatedTime = _timeService.SystemTimeNow,
+    //                 LastUpdatedBy = currentUserId,
+    //             };
 
-            var allMedia = _unitOfWork.CraftVillageMediaRepository.Entities
-                .Where(dm => dm.CraftVillageId == existingCraftVillage.Id).ToList();
+    //             await _unitOfWork.CraftVillageMediaRepository.AddAsync(newCraftVillageMedia);
+    //             mediaResponses.Add(new MediaResponse
+    //             {
+    //                 MediaUrl = imageUrls[i],
+    //                 FileName = imageUpload.FileName,
+    //                 FileType = imageUpload.ContentType,
+    //                 IsThumbnail = isThumbnail,
+    //                 SizeInBytes = imageUpload.Length
+    //             });
 
-            // Nếu không có ảnh mới & không có thumbnailSelected => Chỉ cập nhật thông tin craftVillage
-            if ((imageUploads == null || imageUploads.Count == 0) && string.IsNullOrEmpty(thumbnailSelected))
-            {
-                await _unitOfWork.SaveAsync();
-                await transaction.CommitAsync(cancellationToken);
-                return new CraftVillageMediaResponse
-                {
-                    CraftVillageId = existingCraftVillage.Id,
-                    CraftVillageName = existingCraftVillage.Location?.Name,
-                    Media = new List<MediaResponse>()
-                };
-            }
+    //             // Nếu ảnh mới được chọn làm thumbnail -> Cập nhật tất cả ảnh cũ về IsThumbnail = false
+    //             if (isThumbnail)
+    //             {
+    //                 foreach (var media in allMedia)
+    //                 {
+    //                     media.IsThumbnail = false;
+    //                     _unitOfWork.CraftVillageMediaRepository.Update(media);
+    //                 }
+    //                 isThumbnailUpdated = true;
+    //             }
+    //         }
 
-            bool isThumbnailUpdated = false;
+    //         // Nếu chưa có ảnh nào được chọn làm thumbnail, đặt ảnh mới đầu tiên làm thumbnail
+    //         if (!isThumbnailUpdated && mediaResponses.Count > 0)
+    //         {
+    //             var firstMedia = mediaResponses.First();
+    //             var firstMediaEntity = await _unitOfWork.CraftVillageMediaRepository.ActiveEntities
+    //                 .FirstOrDefaultAsync(m => m.MediaUrl == firstMedia.MediaUrl);
 
-            // Nếu có thumbnailSelected và nó là link (ảnh cũ) -> Cập nhật ảnh cũ làm thumbnail
-            if (!string.IsNullOrEmpty(thumbnailSelected) && Helper.IsValidUrl(thumbnailSelected))
-            {
-                foreach (var media in allMedia)
-                {
-                    media.IsThumbnail = media.MediaUrl == thumbnailSelected;
-                    _unitOfWork.CraftVillageMediaRepository.Update(media);
-                }
-                isThumbnailUpdated = true; // Đánh dấu đã cập nhật thumbnail
-            }
+    //             if (firstMediaEntity != null)
+    //             {
+    //                 firstMediaEntity.IsThumbnail = true;
+    //                 _unitOfWork.CraftVillageMediaRepository.Update(firstMediaEntity);
+    //             }
+    //         }
 
-            // Nếu không có ảnh mới nhưng có thumbnailSelected là ảnh cũ -> Dừng ở đây
-            if (imageUploads == null || imageUploads.Count == 0)
-            {
-                await _unitOfWork.SaveAsync();
-                await transaction.CommitAsync(cancellationToken);
-                return new CraftVillageMediaResponse
-                {
-                    CraftVillageId = existingCraftVillage.Id,
-                    CraftVillageName = existingCraftVillage.Location?.Name,
-                    Media = new List<MediaResponse>()
-                };
-            }
+    //         await _unitOfWork.SaveAsync();
+    //         await transaction.CommitAsync(cancellationToken);
 
-            // Có ảnh mới -> Upload lên Cloudinary
-            var imageUrls = await _cloudinaryService.UploadImagesAsync(imageUploads);
-            var mediaResponses = new List<MediaResponse>();
-
-            for (int i = 0; i < imageUploads.Count; i++)
-            {
-                var imageUpload = imageUploads[i];
-                bool isThumbnail = false;
-
-                // Nếu thumbnailSelected là tên file -> Đặt ảnh mới làm thumbnail
-                if (!string.IsNullOrEmpty(thumbnailSelected) && !Helper.IsValidUrl(thumbnailSelected))
-                {
-                    isThumbnail = imageUpload.FileName == thumbnailSelected;
-                }
-
-                var newCraftVillageMedia = new CraftVillageMedia
-                {
-                    FileName = imageUpload.FileName,
-                    FileType = imageUpload.ContentType,
-                    CraftVillageId = existingCraftVillage.Id,
-                    MediaUrl = imageUrls[i],
-                    SizeInBytes = imageUpload.Length,
-                    IsThumbnail = isThumbnail,
-                    CreatedBy = currentUserId,
-                    CreatedTime = _timeService.SystemTimeNow,
-                    LastUpdatedBy = currentUserId,
-                };
-
-                await _unitOfWork.CraftVillageMediaRepository.AddAsync(newCraftVillageMedia);
-                mediaResponses.Add(new MediaResponse
-                {
-                    MediaUrl = imageUrls[i],
-                    FileName = imageUpload.FileName,
-                    FileType = imageUpload.ContentType,
-                    IsThumbnail = isThumbnail,
-                    SizeInBytes = imageUpload.Length
-                });
-
-                // Nếu ảnh mới được chọn làm thumbnail -> Cập nhật tất cả ảnh cũ về IsThumbnail = false
-                if (isThumbnail)
-                {
-                    foreach (var media in allMedia)
-                    {
-                        media.IsThumbnail = false;
-                        _unitOfWork.CraftVillageMediaRepository.Update(media);
-                    }
-                    isThumbnailUpdated = true;
-                }
-            }
-
-            // Nếu chưa có ảnh nào được chọn làm thumbnail, đặt ảnh mới đầu tiên làm thumbnail
-            if (!isThumbnailUpdated && mediaResponses.Count > 0)
-            {
-                var firstMedia = mediaResponses.First();
-                var firstMediaEntity = await _unitOfWork.CraftVillageMediaRepository.ActiveEntities
-                    .FirstOrDefaultAsync(m => m.MediaUrl == firstMedia.MediaUrl);
-
-                if (firstMediaEntity != null)
-                {
-                    firstMediaEntity.IsThumbnail = true;
-                    _unitOfWork.CraftVillageMediaRepository.Update(firstMediaEntity);
-                }
-            }
-
-            await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync(cancellationToken);
-
-            return new CraftVillageMediaResponse
-            {
-                CraftVillageId = existingCraftVillage.Id,
-                CraftVillageName = existingCraftVillage.Location?.Name,
-                Media = mediaResponses
-            };
-        }
-        catch (CustomException)
-        {
-            await _unitOfWork.RollBackAsync();
-            throw;
-        }
-        catch (Exception)
-        {
-            await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
-        }
-    }
-
-    // có add ảnh kèm theo
-    public async Task<CraftVillageMediaResponse> AddCraftVillageWithMediaAsync(CraftVillageCreateWithMediaFileModel craftVillageCreateModel, string? thumbnailSelected, CancellationToken cancellationToken)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-            var currentTime = _timeService.SystemTimeNow;
-
-            //var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), craftVillageCreateModel.DistrictId ?? Guid.Empty, cancellationToken);
-            //if (!checkRole)
-            //{
-            //    throw CustomExceptionFactory.CreateForbiddenError();
-            //}
-
-            var newCraftVillage = _mapper.Map<CraftVillage>(craftVillageCreateModel);
-            newCraftVillage.CreatedBy = currentUserId;
-            newCraftVillage.LastUpdatedBy = currentUserId;
-            newCraftVillage.CreatedTime = currentTime;
-            newCraftVillage.LastUpdatedTime = currentTime;
-
-            await _unitOfWork.CraftVillageRepository.AddAsync(newCraftVillage);
-            await _unitOfWork.SaveAsync();
-
-            var mediaResponses = new List<MediaResponse>();
-
-            if (craftVillageCreateModel.ImageUploads != null && craftVillageCreateModel.ImageUploads.Count > 0)
-            {
-                var imageUrls = await _cloudinaryService.UploadImagesAsync(craftVillageCreateModel.ImageUploads);
-
-                bool isAutoSelectThumbnail = string.IsNullOrEmpty(thumbnailSelected);
-                bool thumbnailSet = false;
-
-                for (int i = 0; i < craftVillageCreateModel.ImageUploads.Count; i++)
-                {
-                    var imageFile = craftVillageCreateModel.ImageUploads[i];
-                    var imageUrl = imageUrls[i];
-
-                    var newCraftVillageMedia = new CraftVillageMedia
-                    {
-                        FileName = imageFile.FileName,
-                        FileType = imageFile.ContentType,
-                        CraftVillageId = newCraftVillage.Id,
-                        MediaUrl = imageUrl,
-                        SizeInBytes = imageFile.Length,
-                        CreatedBy = currentUserId,
-                        CreatedTime = _timeService.SystemTimeNow,
-                        LastUpdatedBy = currentUserId,
-                    };
-
-                    // Chọn ảnh làm thumbnail
-                    if ((isAutoSelectThumbnail && i == 0) || (!isAutoSelectThumbnail && imageFile.FileName == thumbnailSelected))
-                    {
-                        newCraftVillageMedia.IsThumbnail = true;
-                        thumbnailSet = true;
-                    }
-
-                    await _unitOfWork.CraftVillageMediaRepository.AddAsync(newCraftVillageMedia);
-
-                    mediaResponses.Add(new MediaResponse
-                    {
-                        MediaUrl = imageUrl,
-                        FileName = imageFile.FileName,
-                        FileType = imageFile.ContentType,
-                        SizeInBytes = imageFile.Length
-                    });
-                }
-
-                // Trường hợp người dùng chọn ảnh thumbnail nhưng không tìm thấy ảnh khớp
-                if (!thumbnailSet && craftVillageCreateModel.ImageUploads.Count > 0)
-                {
-                    var firstMedia = mediaResponses.First();
-                    var firstCraftVillageMedia = await _unitOfWork.CraftVillageMediaRepository
-                        .GetFirstByCraftVillageIdAsync(newCraftVillage.Id);
-                    if (firstCraftVillageMedia != null)
-                    {
-                        firstCraftVillageMedia.IsThumbnail = true;
-                        _unitOfWork.CraftVillageMediaRepository.Update(firstCraftVillageMedia);
-                    }
-                }
-            }
-
-            await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync(cancellationToken);
-
-            return new CraftVillageMediaResponse
-            {
-                CraftVillageId = newCraftVillage.Id,
-                CraftVillageName = newCraftVillage.Location?.Name,
-                Media = mediaResponses
-            };
-        }
-        catch (CustomException)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw;
-        }
-        catch (Exception)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError();
-        }
-    }
-
-    // có update ảnh kèm theo
-    public async Task UpdateCraftVillageAsync(
-        Guid id,
-        CraftVillageUpdateWithMediaFileModel craftVillageUpdateModel,
-        string? thumbnailSelected,
-        CancellationToken cancellationToken)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-
-            //var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), craftVillageUpdateModel.DistrictId ?? Guid.Empty, cancellationToken);
-            //if (!checkRole)
-            //{
-            //    throw CustomExceptionFactory.CreateForbiddenError();
-            //}
-
-            var existingCraftVillage = await _unitOfWork.CraftVillageRepository.GetByIdAsync(id, cancellationToken);
-            if (existingCraftVillage == null || existingCraftVillage.IsDeleted)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("craftVillage");
-            }
-
-            _mapper.Map(craftVillageUpdateModel, existingCraftVillage);
-
-            existingCraftVillage.LastUpdatedBy = currentUserId;
-            existingCraftVillage.LastUpdatedTime = _timeService.SystemTimeNow;
-
-            _unitOfWork.CraftVillageRepository.Update(existingCraftVillage);
-
-            // xu ly anh
-            var imageUploads = craftVillageUpdateModel.ImageUploads;
-            var allMedia = _unitOfWork.CraftVillageMediaRepository.ActiveEntities
-                .Where(dm => dm.CraftVillageId == existingCraftVillage.Id).ToList();
-
-            // Nếu không có ảnh mới & không có thumbnailSelected => Chỉ cập nhật thông tin craftVillage
-            if ((imageUploads == null || imageUploads.Count == 0) && string.IsNullOrEmpty(thumbnailSelected))
-            {
-                await _unitOfWork.SaveAsync();
-                await transaction.CommitAsync(cancellationToken);
-                return;
-            }
-
-            bool isThumbnailUpdated = false;
-
-            // Nếu có thumbnailSelected và nó là link (ảnh cũ) -> Cập nhật ảnh cũ làm thumbnail
-            if (!string.IsNullOrEmpty(thumbnailSelected) && Helper.IsValidUrl(thumbnailSelected))
-            {
-                foreach (var media in allMedia)
-                {
-                    media.IsThumbnail = media.MediaUrl == thumbnailSelected;
-                    _unitOfWork.CraftVillageMediaRepository.Update(media);
-                }
-                isThumbnailUpdated = true; // Đánh dấu đã cập nhật thumbnail
-            }
-
-            // Nếu không có ảnh mới nhưng có thumbnailSelected là ảnh cũ -> Dừng ở đây
-            if (imageUploads == null || imageUploads.Count == 0)
-            {
-                await _unitOfWork.SaveAsync();
-                await transaction.CommitAsync(cancellationToken);
-                return;
-            }
-
-            // Có ảnh mới -> Upload lên Cloudinary
-            var imageUrls = await _cloudinaryService.UploadImagesAsync(imageUploads);
-            var mediaResponses = new List<MediaResponse>();
-
-            for (int i = 0; i < imageUploads.Count; i++)
-            {
-                var imageUpload = imageUploads[i];
-                bool isThumbnail = false;
-
-                // Nếu thumbnailSelected là tên file -> Đặt ảnh mới làm thumbnail
-                if (!string.IsNullOrEmpty(thumbnailSelected) && !Helper.IsValidUrl(thumbnailSelected))
-                {
-                    isThumbnail = imageUpload.FileName == thumbnailSelected;
-                }
-
-                var newCraftVillageMedia = new CraftVillageMedia
-                {
-                    FileName = imageUpload.FileName,
-                    FileType = imageUpload.ContentType,
-                    CraftVillageId = existingCraftVillage.Id,
-                    MediaUrl = imageUrls[i],
-                    SizeInBytes = imageUpload.Length,
-                    IsThumbnail = isThumbnail,
-                    CreatedBy = currentUserId,
-                    CreatedTime = _timeService.SystemTimeNow,
-                    LastUpdatedBy = currentUserId,
-                };
-
-                await _unitOfWork.CraftVillageMediaRepository.AddAsync(newCraftVillageMedia);
-                mediaResponses.Add(new MediaResponse
-                {
-                    MediaUrl = imageUrls[i],
-                    FileName = imageUpload.FileName,
-                    FileType = imageUpload.ContentType,
-                    IsThumbnail = isThumbnail,
-                    SizeInBytes = imageUpload.Length
-                });
-
-                // Nếu ảnh mới được chọn làm thumbnail -> Cập nhật tất cả ảnh cũ về IsThumbnail = false
-                if (isThumbnail)
-                {
-                    foreach (var media in allMedia)
-                    {
-                        media.IsThumbnail = false;
-                        _unitOfWork.CraftVillageMediaRepository.Update(media);
-                    }
-                    isThumbnailUpdated = true;
-                }
-            }
-
-            // Nếu chưa có ảnh nào được chọn làm thumbnail, đặt ảnh mới đầu tiên làm thumbnail
-            if (!isThumbnailUpdated && mediaResponses.Count > 0)
-            {
-                var firstMedia = mediaResponses.First();
-                var firstMediaEntity = await _unitOfWork.CraftVillageMediaRepository.ActiveEntities
-                    .FirstOrDefaultAsync(m => m.MediaUrl == firstMedia.MediaUrl);
-
-                if (firstMediaEntity != null)
-                {
-                    firstMediaEntity.IsThumbnail = true;
-                    _unitOfWork.CraftVillageMediaRepository.Update(firstMediaEntity);
-                }
-            }
-
-            await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync(cancellationToken);
-        }
-        catch (CustomException)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw;
-        }
-        catch (Exception)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError();
-        }
-    }
+    //         return new CraftVillageMediaResponse
+    //         {
+    //             CraftVillageId = existingCraftVillage.Id,
+    //             CraftVillageName = existingCraftVillage.Location?.Name,
+    //             Media = mediaResponses
+    //         };
+    //     }
+    //     catch (CustomException)
+    //     {
+    //         await _unitOfWork.RollBackAsync();
+    //         throw;
+    //     }
+    //     catch (Exception)
+    //     {
+    //         await _unitOfWork.RollBackAsync();
+    //         throw CustomExceptionFactory.CreateInternalServerError();
+    //     }
+    // }
 
     private async Task<List<MediaResponse>> GetMediaByIdAsync(Guid craftVillageId, CancellationToken cancellationToken)
     {
         try
         {
-            var craftVillageMedias = await _unitOfWork.CraftVillageMediaRepository
+            var existingCraftVillage = await _unitOfWork.CraftVillageRepository.GetByIdAsync(craftVillageId, cancellationToken);
+
+            var craftVillageMedias = await _unitOfWork.LocationMediaRepository
                 .ActiveEntities
-                .Where(em => em.CraftVillageId == craftVillageId)
+                .Where(em => em.LocationId == existingCraftVillage!.LocationId)
                 .ToListAsync(cancellationToken);
 
             return craftVillageMedias.Select(x => new MediaResponse
@@ -795,30 +519,4 @@ public class CraftVillageService : ICraftVillageService
             throw CustomExceptionFactory.CreateInternalServerError();
         }
     }
-
-    //public async Task<CraftVillageDataModel?> GetCraftVillageByNameAsync(string name, CancellationToken cancellationToken)
-    //{
-    //    try
-    //    {
-    //        var existingCraftVillage = await _unitOfWork.CraftVillageRepository.GetByNameAsync(name, cancellationToken);
-    //        if (existingCraftVillage == null || existingCraftVillage.IsDeleted)
-    //        {
-    //            throw CustomExceptionFactory.CreateNotFoundError("craftVillage");
-    //        }
-
-    //        return _mapper.Map<CraftVillageDataModel>(existingCraftVillage);
-    //    }
-    //    catch (CustomException)
-    //    {
-    //        throw;
-    //    }
-    //    catch (Exception)
-    //    {
-    //        throw CustomExceptionFactory.CreateInternalServerError();
-    //    }
-    //    finally
-    //    {
-    //       //  _unitOfWork.Dispose();
-    //    }
-    //}
 }

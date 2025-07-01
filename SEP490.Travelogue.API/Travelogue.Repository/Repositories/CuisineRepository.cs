@@ -10,7 +10,9 @@ public interface ICuisineRepository : IGenericRepository<Cuisine>
 {
     Task<List<Cuisine?>> GetByNameAsync(string name, CancellationToken cancellationToken);
     Task<PagedResult<Cuisine>> GetPageWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+    Task<Cuisine?> GetByLocationId(Guid locationId, CancellationToken cancellationToken);
 }
+
 public sealed class CuisineRepository : GenericRepository<Cuisine>, ICuisineRepository
 {
     private readonly ApplicationDbContext _context;
@@ -18,6 +20,24 @@ public sealed class CuisineRepository : GenericRepository<Cuisine>, ICuisineRepo
     public CuisineRepository(ApplicationDbContext dbContext) : base(dbContext)
     {
         _context = dbContext;
+    }
+
+    public async Task<Cuisine?> GetByLocationId(Guid locationId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var cuisine = await _context.Cuisines.Include(h => h.Location)
+                .FirstOrDefaultAsync(a => a.LocationId == locationId, cancellationToken);
+            return cuisine;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError();
+        }
     }
 
     public Task<List<Cuisine?>> GetByNameAsync(string name, CancellationToken cancellationToken)

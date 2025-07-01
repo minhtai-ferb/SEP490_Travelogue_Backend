@@ -12,13 +12,14 @@ namespace Travelogue.Service.Services;
 
 public interface ITourGuideService
 {
-    Task<TourGuideDetailResponse?> GetTourGuideByIdAsync(Guid id, CancellationToken cancellationToken);
+    Task<TourGuideDataModel?> GetTourGuideByIdAsync(Guid id, CancellationToken cancellationToken);
     Task<List<TourGuideDataModel>> GetAllTourGuidesAsync(CancellationToken cancellationToken);
     Task<TourGuideDataModel?> AssignToTourGuideAsync(List<string> emails, CancellationToken cancellationToken);
     // Task<TourGuideDataModel> AddTourGuideAsync(TourGuideCreateModel tourGuideCreateModel, CancellationToken cancellationToken);
     Task<TourGuideDataModel?> UpdateTourGuideAsync(Guid id, TourGuideUpdateModel tourGuideUpdateModel, CancellationToken cancellationToken);
     // Task DeleteTourGuideAsync(Guid id, CancellationToken cancellationToken);
     Task<PagedResult<TourGuideDataModel>> GetPagedTourGuideWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<List<TourGuideDataModel>> GetTourGuidesByFilterAsync(TourGuideFilterRequest request, CancellationToken cancellationToken);
 }
 
 public class TourGuideService : ITourGuideService
@@ -107,10 +108,10 @@ public class TourGuideService : ITourGuideService
             await _unitOfWork.RollBackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -118,7 +119,36 @@ public class TourGuideService : ITourGuideService
     {
         try
         {
-            // var existingTourGuide = await _unitOfWork.TourGuideRepository.GetAllAsync(cancellationToken);
+            var existingTourGuide = await _unitOfWork.TourGuideRepository.ActiveEntities
+                .Include(tg => tg.User)
+                .ToListAsync(cancellationToken);
+            if (existingTourGuide == null || existingTourGuide.Count == 0)
+            {
+                return new List<TourGuideDataModel>();
+            }
+
+            var dataModel = _mapper.Map<List<TourGuideDataModel>>(existingTourGuide);
+
+            return dataModel;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError();
+        }
+        finally
+        {
+            ////  _unitOfWork.Dispose();
+        }
+    }
+
+    public async Task<List<TourGuideDataModel>> GetTourGuidesByFilterAsync(TourGuideFilterRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
             var existingTourGuide = await _unitOfWork.TourGuideRepository.ActiveEntities
                 .Include(tg => tg.User)
                 .ToListAsync(cancellationToken);
@@ -127,9 +157,18 @@ public class TourGuideService : ITourGuideService
                 return new List<TourGuideDataModel>();
             }
 
-            var dataModel = _mapper.Map<List<TourGuideDataModel>>(existingTourGuide);
+            existingTourGuide = existingTourGuide
+                .Where(tg => string.IsNullOrEmpty(request.FullName) || tg.User.FullName.ToLower().Contains(request.FullName.ToLower()))
+                .Where(tg => !request.MinRating.HasValue || tg.Rating >= request.MinRating.Value)
+                .Where(tg => !request.MaxRating.HasValue || tg.Rating <= request.MaxRating.Value)
+                .Where(tg => !request.MinPrice.HasValue || tg.Price >= request.MinPrice.Value)
+                .Where(tg => !request.MaxPrice.HasValue || tg.Price <= request.MaxPrice.Value)
+                .Where(tg => !request.Gender.HasValue || tg.User.Sex == request.Gender.Value)
+                .ToList();
 
-            return dataModel;
+            var result = _mapper.Map<List<TourGuideDataModel>>(existingTourGuide);
+
+            return result;
         }
         catch (CustomException)
         {
@@ -185,7 +224,7 @@ public class TourGuideService : ITourGuideService
         }
     }
 
-    public async Task<TourGuideDetailResponse?> GetTourGuideByIdAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<TourGuideDataModel?> GetTourGuideByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
@@ -199,7 +238,7 @@ public class TourGuideService : ITourGuideService
                 return null; // Hoặc ném một ngoại lệ nếu cần
             }
 
-            var tourGuideDetailResponse = _mapper.Map<TourGuideDetailResponse>(tourGuide);
+            var tourGuideDetailResponse = _mapper.Map<TourGuideDataModel>(tourGuide);
 
             await transaction.CommitAsync(cancellationToken);
             return tourGuideDetailResponse;

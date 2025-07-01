@@ -1,4 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Travelogue.Repository.Bases.Responses;
+using Travelogue.Service.BusinessModels.TourGuideModels;
+using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 
 namespace Travelogue.API.Controllers;
@@ -23,12 +26,11 @@ public class TourGuideController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetTourGuideByIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        var tourGuide = await _tourGuideService.GetTourGuideByIdAsync(id, cancellationToken);
-        if (tourGuide == null)
-        {
-            return NotFound();
-        }
-        return Ok(tourGuide);
+        var result = await _tourGuideService.GetTourGuideByIdAsync(id, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "tour guide")
+        ));
     }
 
     /// <summary>
@@ -36,11 +38,24 @@ public class TourGuideController : ControllerBase
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    [HttpGet("all")]
+    [HttpGet()]
     public async Task<IActionResult> GetAllTourGuidesAsync(CancellationToken cancellationToken)
     {
-        var tourGuides = await _tourGuideService.GetAllTourGuidesAsync(cancellationToken);
-        return Ok(tourGuides);
+        var result = await _tourGuideService.GetAllTourGuidesAsync(cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "tour guides")
+        ));
+    }
+
+    [HttpGet("filter")]
+    public async Task<IActionResult> GetTourGuidesByFilterAsync([FromQuery] TourGuideFilterRequest filter, CancellationToken cancellationToken)
+    {
+        var result = await _tourGuideService.GetTourGuidesByFilterAsync(filter, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "tour guides")
+        ));
     }
 
     /// <summary>
@@ -53,10 +68,9 @@ public class TourGuideController : ControllerBase
     public async Task<IActionResult> AssignToTourGuideAsync([FromBody] List<string> emails, CancellationToken cancellationToken)
     {
         var result = await _tourGuideService.AssignToTourGuideAsync(emails, cancellationToken);
-        if (result == null)
-        {
-            return NotFound("No users found with the provided emails.");
-        }
-        return Ok(result);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+        ));
     }
 }

@@ -7,6 +7,7 @@ using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 
 namespace Travelogue.API.Controllers;
+
 [Route("api/[controller]")]
 [ApiController]
 public class UserController : ControllerBase
@@ -151,40 +152,4 @@ public class UserController : ControllerBase
             pageNumber: pageNumber
         ));
     }
-
-    /// <summary>
-    /// Lấy user theo email
-    /// </summary>
-    /// <param name="email"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    //[HttpPost("get-by-email")]
-    //public async Task<IActionResult> GetByEmail(string email, CancellationToken cancellationToken)
-    //{
-    //    var result = await _userService.GetByEmailAsync(email, cancellationToken);
-    //    return Ok(ResponseModel<UserResponseModel>.OkResponseModel(
-    //        data: result,
-    //        message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "user - role")
-    //    ));
-    //}
-
-    /// <summary>
-    /// Lấy danh sách user phân trang
-    /// </summary>
-    /// <param name="pageNumber">Số trang</param>
-    /// <param name="pageSize">Kích thước trang</param>
-    /// <returns>Trả về danh sách các user</returns>
-    //[HttpGet("get-paged")]
-    //[ProducesResponseType(StatusCodes.Status200OK)]
-    //public async Task<IActionResult> GetPagedUser(int pageNumber = 1, int pageSize = 10)
-    //{
-    //    var users = await _userService.GetPagedUsersAsync(pageNumber, pageSize, new CancellationToken());
-    //    return Ok(PagedResponseModel<object>.OkResponseModel(
-    //        data: users.Items,
-    //        message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "user"),
-    //        totalCount: users.TotalCount,
-    //        pageSize: pageSize,
-    //        pageNumber: pageNumber
-    //    ));
-    //}
 }

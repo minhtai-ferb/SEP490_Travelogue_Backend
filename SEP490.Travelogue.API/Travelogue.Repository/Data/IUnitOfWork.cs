@@ -22,11 +22,8 @@ public interface IUnitOfWork //: IDisposable
     ITypeEventRepository TypeEventRepository { get; }
     ITypeExperienceRepository TypeExperienceRepository { get; }
     ICraftVillageRepository CraftVillageRepository { get; }
-    ICraftVillageMediaRepository CraftVillageMediaRepository { get; }
     IHotelRepository HotelRepository { get; }
-    IHotelMediaRepository HotelMediaRepository { get; }
     ICuisineRepository CuisineRepository { get; }
-    ICuisineMediaRepository CuisineMediaRepository { get; }
     IMediaRepository MediaRepository { get; }
     IDistrictRepository DistrictRepository { get; }
     IDistrictMediaRepository DistrictMediaRepository { get; }
@@ -41,10 +38,14 @@ public interface IUnitOfWork //: IDisposable
     ITripPlanLocationRepository TripPlanLocationRepository { get; }
     ITourGuideRepository TourGuideRepository { get; }
     ITourRepository TourRepository { get; }
+    ITourPlanLocationRepository TourPlanLocationRepository { get; }
+    ITourPlanVersionRepository TourPlanVersionRepository { get; }
+    ITourTypeRepository TourTypeRepository { get; }
     IOrderRepository OrderRepository { get; }
     ITripPlanExchangeRepository TripPlanExchangeRepository { get; }
     ITripPlanExchangeSessionRepository TripPlanExchangeSessionRepository { get; }
     IHistoricalLocationRepository HistoricalLocationRepository { get; }
+    ITypeHistoricalLocationRepository TypeHistoricalLocationRepository { get; }
 
     IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity;
     void Save();

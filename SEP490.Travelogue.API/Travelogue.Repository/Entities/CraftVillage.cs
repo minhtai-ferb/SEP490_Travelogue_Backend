@@ -8,11 +8,11 @@ public sealed class CraftVillage : BaseEntity
     public string? Email { get; set; }
     public string? Website { get; set; }
 
-    public Guid? LocationId { get; set; }
+    public Guid LocationId { get; set; }
 
     public bool WorkshopsAvailable { get; set; } = false;
 
     // Navigation Properties
-    public Location? Location { get; set; } = null!;
+    public Location Location { get; set; } = null!;
     public ICollection<LocationCraftVillageSuggestion> LocationCraftVillageSuggestions { get; set; } = new List<LocationCraftVillageSuggestion>();
 }

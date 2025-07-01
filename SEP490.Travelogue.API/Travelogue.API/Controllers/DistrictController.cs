@@ -5,6 +5,7 @@ using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 
 namespace Travelogue.API.Controllers;
+
 [Route("api/[controller]")]
 [ApiController]
 public class DistrictController : ControllerBase
@@ -24,9 +25,9 @@ public class DistrictController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> AddDistrictWithRole([FromBody] DistrictCreateModel model)
     {
-        var ressult = await _districtService.AddDistrictWithRoleAsync(model, new CancellationToken());
+        var result = await _districtService.AddDistrictWithRoleAsync(model, new CancellationToken());
         return Ok(ResponseModel<object>.OkResponseModel(
-            data: ressult,
+            data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "district")
         ));
     }
