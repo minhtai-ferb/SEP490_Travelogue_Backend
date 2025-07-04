@@ -105,24 +105,22 @@ public class TourService : ITourService
         throw new NotImplementedException();
     }
 
-    public async Task<PagedResult<TourDataModel>> GetPagedTourWithSearchAsync(string? title, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<TourDataModel>> GetPagedTourWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
-            Guid userId = Guid.Parse(_userContextService.GetCurrentUserId());
+            var pagedResult = await _unitOfWork.TourRepository.GetPageWithSearchAsync(name, pageNumber, pageSize, cancellationToken);
 
-            var pagedResult = await _unitOfWork.TourRepository.GetPageWithSearchAsync(title, pageNumber, pageSize, cancellationToken);
+            var tourDataModels = _mapper.Map<List<TourDataModel>>(pagedResult.Items);
 
-            var newsDataModels = _mapper.Map<List<TourDataModel>>(pagedResult.Items);
-
-            // foreach (var tour in newsDataModels)
+            // foreach (var tour in tourDataModels)
             // {
             //     tour.OwnerName = await _unitOfWork.UserRepository.GetUserNameByIdAsync(tour.UserId) ?? string.Empty;
             // }
 
             var result = new PagedResult<TourDataModel>
             {
-                Items = newsDataModels,
+                Items = tourDataModels,
                 TotalCount = pagedResult.TotalCount,
                 PageNumber = pageNumber,
                 PageSize = pageSize
@@ -221,7 +219,8 @@ public class TourService : ITourService
             {
                 newVersion = new TourPlanVersion
                 {
-                    Price = tourUpdateModel.Price,
+                    AdultPrice = tourUpdateModel.AdultPrice,
+                    ChildrenPrice = tourUpdateModel.ChildrenPrice,
                     TourId = tour.Id,
                     VersionDate = _timeService.SystemTimeNow,
                     Description = "Cập nhật lịch trình",
@@ -321,7 +320,7 @@ public class TourService : ITourService
 
     public class TourItemScheduleDto
     {
-        public string ItemType { get; set; }
+        public string? ItemType { get; set; }
         public int DayOrder { get; set; } = 1;
         public TimeSpan StartTime { get; set; }
         public TimeSpan EndTime { get; set; }
@@ -551,7 +550,7 @@ public class TourService : ITourService
         var locationMedia = await _unitOfWork.LocationMediaRepository.ActiveEntities
             .FirstOrDefaultAsync(l => l.LocationId == locationId);
 
-        return locationMedia.MediaUrl ?? string.Empty;
+        return locationMedia != null ? locationMedia.MediaUrl ?? string.Empty : string.Empty;
     }
 
     private List<TourDayDetail> BuildDaySchedule(int totalDays, List<TourActivity> activities)
@@ -619,8 +618,8 @@ public class TourService : ITourService
         List<TourPlanLocationModel> locationModels)
     {
         var existingIds = locationModels
-            .Where(c => c.Id.HasValue)
-            .Select(c => c.Id.Value)
+            .Where(c => c.Id.HasValue && c.Id != null)
+            .Select(c => c.Id!.Value)
             .ToList();
 
         if (existingIds.Count != 0)
@@ -646,7 +645,6 @@ public class TourService : ITourService
                     existingLocation.StartTime = locationModel.StartTime ?? TimeSpan.Zero;
                     existingLocation.EndTime = locationModel.EndTime ?? TimeSpan.Zero;
                     existingLocation.DayOrder = locationModel.DayOrder;
-
                     // existingLocation.Notes = locationModel.Notes;
                 }
             }

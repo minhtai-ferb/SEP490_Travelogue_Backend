@@ -11,7 +11,9 @@ public class TourUpdateModel
     public string? Description { get; set; }
 
     [Range(0, double.MaxValue)]
-    public decimal Price { get; set; }
+    public decimal AdultPrice { get; set; }
+    [Range(0, double.MaxValue)]
+    public decimal ChildrenPrice { get; set; }
 
     public int TotalDays { get; set; }
 

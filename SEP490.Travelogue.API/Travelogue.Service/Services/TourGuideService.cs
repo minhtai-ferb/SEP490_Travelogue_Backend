@@ -190,11 +190,17 @@ public class TourGuideService : ITourGuideService
         {
             var tourGuide = _unitOfWork.TourGuideRepository.ActiveEntities
                 .Include(tg => tg.User)
-                .Where(tg => tg.User.FullName.ToLower().Contains(name.ToLower()));
+                .Where(tg => string.IsNullOrEmpty(name) || tg.User.FullName.ToLower().Contains(name.ToLower()));
 
             if (tourGuide == null)
             {
-                return null; // Hoặc ném một ngoại lệ nếu cần
+                return new PagedResult<TourGuideDataModel>
+                {
+                    Items = new List<TourGuideDataModel>(),
+                    TotalCount = 0,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize
+                };
             }
 
             var tourGuideDetailResponse = _mapper.Map<TourGuideDataModel>(tourGuide);

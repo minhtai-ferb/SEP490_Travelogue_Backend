@@ -65,8 +65,9 @@ public class LocationService : ILocationService
     private readonly ICloudinaryService _cloudinaryService;
     private readonly IEnumService _enumService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IMediaService _mediaService;
 
-    public LocationService(IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService, ICloudinaryService cloudinaryService, IEnumService enumService, IHttpContextAccessor httpContextAccessor)
+    public LocationService(IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService, ICloudinaryService cloudinaryService, IEnumService enumService, IHttpContextAccessor httpContextAccessor, IMediaService mediaService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -75,6 +76,7 @@ public class LocationService : ILocationService
         _cloudinaryService = cloudinaryService;
         _enumService = enumService;
         _httpContextAccessor = httpContextAccessor;
+        _mediaService = mediaService;
     }
 
     // public async Task<LocationDataModel> AddLocationAsync(LocationCreateModel locationCreateModel, CancellationToken cancellationToken)
@@ -1788,51 +1790,6 @@ public class LocationService : ILocationService
         }
     }
 
-    public async Task<MediaResponse> UploadImageAsync(IFormFile image)
-    {
-        try
-        {
-            if (image == null || image.Length == 0)
-                throw CustomExceptionFactory.CreateNotFoundError("images");
-
-            var folderPath = Path.Combine(Directory.GetCurrentDirectory(), "UploadedImages");
-            if (!Directory.Exists(folderPath))
-                Directory.CreateDirectory(folderPath);
-
-            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(image.FileName);
-            var filePath = Path.Combine(folderPath, fileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await image.CopyToAsync(stream);
-            }
-
-            // Url
-            var request = _httpContextAccessor.HttpContext?.Request;
-            var imageUrl = request != null
-                ? $"{request.Scheme}://{request.Host}/UploadedImages/{fileName}"
-                : $"/UploadedImages/{fileName}";
-
-            return new MediaResponse
-            {
-                FileName = fileName,
-                MediaUrl = imageUrl,
-                FileType = image.ContentType,
-                SizeInBytes = image.Length,
-                IsThumbnail = false,
-                CreatedTime = _timeService.SystemTimeNow
-            };
-        }
-        catch (CustomException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
     public async Task<LocationMediaResponse> UploadMediaAsync(
         Guid id,
         List<IFormFile>? imageUploads,
@@ -1897,7 +1854,8 @@ public class LocationService : ILocationService
             }
 
             // Có ảnh mới -> Upload lên Cloudinary
-            var imageUrls = await _cloudinaryService.UploadImagesAsync(imageUploads);
+            // var imageUrls = await _cloudinaryService.UploadImagesAsync(imageUploads);
+            var imageUrls = await _mediaService.UploadMultipleImagesAsync(imageUploads);
             var mediaResponses = new List<MediaResponse>();
 
             for (int i = 0; i < imageUploads.Count; i++)
@@ -2117,7 +2075,62 @@ public class LocationService : ILocationService
         }
     }
 
-    // ----------------- private methods -----------------
+    public async Task<bool> DeleteMediaAsync(Guid id, List<string> deletedImages, CancellationToken cancellationToken)
+    {
+        _unitOfWork.BeginTransaction();
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var existingLocation = await _unitOfWork.LocationRepository.GetByIdAsync(id, cancellationToken);
+            if (existingLocation == null || existingLocation.IsDeleted)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("location");
+            }
+
+            if (deletedImages == null || deletedImages.Count == 0)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("images");
+            }
+
+            var imageUrlsDeleted = await _mediaService.DeleteImagesAsync(deletedImages);
+
+            if (!imageUrlsDeleted)
+            {
+                return false;
+            }
+
+            foreach (var imageUpload in deletedImages)
+            {
+                var locationMedia = await _unitOfWork.LocationMediaRepository
+                    .Entities
+                    .FirstOrDefaultAsync(m => m.LocationId == id && m.MediaUrl == imageUpload && !m.IsDeleted, cancellationToken);
+
+                if (locationMedia != null)
+                {
+                    locationMedia.IsDeleted = true;
+                    locationMedia.DeletedTime = DateTime.UtcNow;
+                }
+            }
+
+            await _unitOfWork.SaveAsync();
+            _unitOfWork.CommitTransaction();
+
+            return true;
+        }
+        catch (CustomException)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw;
+        }
+        catch (Exception)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError();
+        }
+    }
+
+
+    #region private methods 
 
     private static bool IsValidUrl(string url)
     {
@@ -2173,60 +2186,6 @@ public class LocationService : ILocationService
         }).ToList();
     }
 
-    public async Task<bool> DeleteMediaAsync(Guid id, List<string> deletedImages, CancellationToken cancellationToken)
-    {
-        _unitOfWork.BeginTransaction();
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-            var existingLocation = await _unitOfWork.LocationRepository.GetByIdAsync(id, cancellationToken);
-            if (existingLocation == null || existingLocation.IsDeleted)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("location");
-            }
-
-            if (deletedImages == null || deletedImages.Count == 0)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("images");
-            }
-
-            var imageUrlsDeleted = await _cloudinaryService.DeleteImagesAsync(deletedImages);
-
-            if (!imageUrlsDeleted)
-            {
-                return false;
-            }
-
-            foreach (var imageUpload in deletedImages)
-            {
-                var locationMedia = await _unitOfWork.LocationMediaRepository
-                    .Entities
-                    .FirstOrDefaultAsync(m => m.LocationId == id && m.MediaUrl == imageUpload && !m.IsDeleted, cancellationToken);
-
-                if (locationMedia != null)
-                {
-                    locationMedia.IsDeleted = true;
-                    locationMedia.DeletedTime = DateTime.UtcNow;
-                }
-            }
-
-            await _unitOfWork.SaveAsync();
-            _unitOfWork.CommitTransaction();
-
-            return true;
-        }
-        catch (CustomException)
-        {
-            await _unitOfWork.RollBackAsync();
-            throw;
-        }
-        catch (Exception)
-        {
-            await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
-        }
-    }
-
     private async Task EnrichLocationDataModelsAsync(List<LocationDataModel> locationDataModels, CancellationToken cancellationToken)
     {
         var locationIds = locationDataModels.Select(x => x.Id).ToList();
@@ -2255,7 +2214,7 @@ public class LocationService : ILocationService
 
             location.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(location.Id);
 
-            location.HeritageRankName = _enumService.GetEnumDisplayName(location.HeritageRank);
+            // location.HeritageRankName = _enumService.GetEnumDisplayName(location.HeritageRank);
         }
     }
 
@@ -2431,4 +2390,6 @@ public class LocationService : ILocationService
     //        throw CustomExceptionFactory.CreateInternalServerError();
     //    }
     //}
+
+    #endregion
 }

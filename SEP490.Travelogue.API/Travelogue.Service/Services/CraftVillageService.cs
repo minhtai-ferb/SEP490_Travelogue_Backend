@@ -5,7 +5,12 @@ using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
+using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.CraftVillageModels;
+using Travelogue.Service.BusinessModels.CuisineModels;
+using Travelogue.Service.BusinessModels.HistoricalLocationModels;
+using Travelogue.Service.BusinessModels.HotelModels;
+using Travelogue.Service.BusinessModels.LocationModels;
 using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.Commons.Helpers;
 using Travelogue.Service.Commons.Implementations;
@@ -15,15 +20,15 @@ namespace Travelogue.Service.Services;
 
 public interface ICraftVillageService
 {
-    Task<CraftVillageDataModel?> GetCraftVillageByIdAsync(Guid id, CancellationToken cancellationToken);
-    Task<List<CraftVillageDataModel>> GetAllCraftVillagesAsync(CancellationToken cancellationToken);
+    Task<LocationDataDetailModel?> GetCraftVillageByLocationIdAsync(Guid id, CancellationToken cancellationToken);
+    Task<List<LocationDataModel>> GetAllCraftVillagesAsync(CancellationToken cancellationToken);
+    Task<PagedResult<LocationDataModel>> GetPagedCraftVillagesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task AddCraftVillageAsync(CraftVillageCreateModel craftVillageCreateModel, CancellationToken cancellationToken);
     Task UpdateCraftVillageAsync(Guid id, CraftVillageUpdateModel craftVillageUpdateModel, CancellationToken cancellationToken);
     Task DeleteCraftVillageAsync(Guid id, CancellationToken cancellationToken);
     // Task<CraftVillageMediaResponse> AddCraftVillageWithMediaAsync(CraftVillageCreateWithMediaFileModel craftVillageCreateModel, string? thumbnailSelected, CancellationToken cancellationToken);
     // Task UpdateCraftVillageAsync(Guid id, CraftVillageUpdateWithMediaFileModel craftVillageUpdateModel, string? thumbnailSelected, CancellationToken cancellationToken);
     Task<PagedResult<CraftVillageDataModel>> GetPagedCraftVillagesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
-    Task<PagedResult<CraftVillageDataModel>> GetPagedCraftVillagesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
     // Task<CraftVillageMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
     // Task<CraftVillageMediaResponse> UploadMediaAsync(
     //     Guid id,
@@ -134,66 +139,31 @@ public class CraftVillageService : ICraftVillageService
         }
     }
 
-    public async Task<List<CraftVillageDataModel>> GetAllCraftVillagesAsync(CancellationToken cancellationToken)
+    public async Task<List<LocationDataModel>> GetAllCraftVillagesAsync(CancellationToken cancellationToken)
     {
         try
         {
-            var existingCraftVillages = await _unitOfWork.CraftVillageRepository
-                .ActiveEntities
-                .Include(cv => cv.Location)
+            var existingLocations = await _unitOfWork.LocationRepository.ActiveEntities
+                .Include(l => l.LocationTypes)
+                .Where(l => l.LocationTypes.Any(lt => lt.Type == LocationType.CraftVillage))
                 .ToListAsync(cancellationToken);
 
-            if (existingCraftVillages == null || !existingCraftVillages.Any())
+            if (existingLocations == null || !existingLocations.Any())
+                throw CustomExceptionFactory.CreateNotFoundError("hotel");
+
+            // Ánh xạ dữ liệu sang LocationDataModel
+            var locationDataModels = _mapper.Map<List<LocationDataModel>>(existingLocations);
+
+            // Lấy thông tin bổ sung cho từng location
+            foreach (var locationData in locationDataModels)
             {
-                return new List<CraftVillageDataModel>();
+                locationData.Medias = await GetMediaWithoutVideoByIdAsync(locationData.Id, cancellationToken);
+                locationData.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationData.DistrictId ?? Guid.Empty);
+                locationData.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationData.Id);
+                //locationData.HeritageRankName = _enumService.GetEnumDisplayName(locationData.HeritageRank);
             }
 
-            var craftVillageDataModels = _mapper.Map<List<CraftVillageDataModel>>(existingCraftVillages);
-
-            // Lấy danh sách LocationId tương ứng
-            var locationIds = existingCraftVillages
-                .Select(cv => cv.LocationId)
-                .Distinct()
-                .ToList();
-
-            // Lấy danh sách media theo LocationId
-            var locationMedias = await _unitOfWork.LocationMediaRepository
-                .ActiveEntities
-                .Where(m => m.LocationId != null && locationIds.Contains(m.LocationId))
-                .Select(m => new
-                {
-                    LocationId = m.LocationId,
-                    Media = new MediaResponse
-                    {
-                        MediaUrl = m.MediaUrl,
-                        FileName = m.FileName ?? string.Empty,
-                        FileType = m.FileType,
-                        SizeInBytes = m.SizeInBytes,
-                        CreatedTime = m.CreatedTime
-                    }
-                })
-                .ToListAsync(cancellationToken);
-
-            var mediaLookup = locationMedias.ToLookup(m => m.LocationId, m => m.Media);
-
-            // Gán thêm thông tin location và media vào từng craft village
-            foreach (var craftVillageData in craftVillageDataModels)
-            {
-                var craftVillage = existingCraftVillages.FirstOrDefault(cv => cv.Id == craftVillageData.Id);
-                if (craftVillage?.Location != null)
-                {
-                    craftVillageData.LocationName = craftVillage.Location.Name;
-                    craftVillageData.Description = craftVillage.Location.Description;
-                    craftVillageData.Address = craftVillage.Location.Address;
-                    craftVillageData.Latitude = craftVillage.Location.Latitude;
-                    craftVillageData.Longitude = craftVillage.Location.Longitude;
-                    craftVillageData.DistrictId = craftVillage.Location.DistrictId;
-                    craftVillageData.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(craftVillage.LocationId, cancellationToken);
-                    craftVillageData.Medias = mediaLookup[craftVillage.LocationId].ToList();
-                }
-            }
-
-            return craftVillageDataModels;
+            return locationDataModels;
         }
         catch (CustomException)
         {
@@ -206,20 +176,54 @@ public class CraftVillageService : ICraftVillageService
     }
 
 
-    public async Task<CraftVillageDataModel?> GetCraftVillageByIdAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<LocationDataDetailModel?> GetCraftVillageByLocationIdAsync(Guid id, CancellationToken cancellationToken)
     {
         try
         {
-            var existingCraftVillage = await _unitOfWork.CraftVillageRepository.GetByIdAsync(id, cancellationToken);
-            if (existingCraftVillage == null || existingCraftVillage.IsDeleted)
+            var existingLocation = await _unitOfWork.LocationRepository.GetWithIncludeAsync(id, include => include
+                .Include(l => l.LocationTypes)
+            );
+
+            if (existingLocation == null || existingLocation.IsDeleted)
+                throw CustomExceptionFactory.CreateNotFoundError("location");
+
+            var locationTypes = existingLocation.LocationTypes.Select(t => t.Type).ToHashSet();
+
+            if (!locationTypes.Contains(LocationType.HistoricalSite))
+                throw CustomExceptionFactory.CreateNotFoundError("historicalLocation");
+
+            var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
+
+            // Chỉ lấy dữ liệu nếu Location có type tương ứng
+            if (locationTypes.Contains(LocationType.Hotel))
             {
-                throw CustomExceptionFactory.CreateNotFoundError("craftVillage");
+                var hotel = await _unitOfWork.HotelRepository.GetByLocationId(existingLocation.Id, cancellationToken);
+                locationDataModel.Hotel = hotel != null ? _mapper.Map<HotelDataModel>(hotel) : null;
             }
 
-            var craftVillageDataModel = _mapper.Map<CraftVillageDataModel>(existingCraftVillage);
-            craftVillageDataModel.Medias = await GetMediaByIdAsync(id, cancellationToken);
+            if (locationTypes.Contains(LocationType.Cuisine))
+            {
+                var cuisine = await _unitOfWork.CuisineRepository.GetByLocationId(existingLocation.Id, cancellationToken);
+                locationDataModel.Cuisine = cuisine != null ? _mapper.Map<CuisineDataModel>(cuisine) : null;
+            }
 
-            return craftVillageDataModel;
+            if (locationTypes.Contains(LocationType.CraftVillage))
+            {
+                var craftVillage = await _unitOfWork.CraftVillageRepository.GetByLocationId(existingLocation.Id, cancellationToken);
+                locationDataModel.CraftVillage = craftVillage != null ? _mapper.Map<CraftVillageDataModel>(craftVillage) : null;
+            }
+
+            if (locationTypes.Contains(LocationType.HistoricalSite))
+            {
+                var historicalLocation = await _unitOfWork.HistoricalLocationRepository.GetByLocationId(existingLocation.Id, cancellationToken);
+                locationDataModel.HistoricalLocation = historicalLocation != null ? _mapper.Map<HistoricalLocationDataModel>(historicalLocation) : null;
+            }
+
+            locationDataModel.Medias = await GetMediaWithoutVideoByIdAsync(id, cancellationToken);
+            locationDataModel.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationDataModel.DistrictId);
+            locationDataModel.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationDataModel.Id, cancellationToken);
+
+            return locationDataModel;
         }
         catch (CustomException)
         {
@@ -270,22 +274,24 @@ public class CraftVillageService : ICraftVillageService
         }
     }
 
-    public async Task<PagedResult<CraftVillageDataModel>> GetPagedCraftVillagesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<LocationDataModel>> GetPagedCraftVillagesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
-            var pagedResult = await _unitOfWork.CraftVillageRepository.GetPageWithSearchAsync(name, pageNumber, pageSize, cancellationToken);
+            var pagedResult = await _unitOfWork.LocationRepository.GetPageWithSearchAsync(name, pageNumber, pageSize, cancellationToken, LocationType.Hotel);
 
-            var craftVillageDataModels = _mapper.Map<List<CraftVillageDataModel>>(pagedResult.Items);
+            var locationDataModels = _mapper.Map<List<LocationDataModel>>(pagedResult.Items);
 
-            foreach (var craftVillage in craftVillageDataModels)
+            foreach (var locationData in locationDataModels)
             {
-                craftVillage.Medias = await GetMediaByIdAsync(craftVillage.Id, cancellationToken);
+                locationData.Medias = await GetMediaWithoutVideoByIdAsync(locationData.Id, cancellationToken);
+                locationData.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationData.DistrictId ?? Guid.Empty);
+                locationData.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationData.Id);
             }
 
-            return new PagedResult<CraftVillageDataModel>
+            return new PagedResult<LocationDataModel>
             {
-                Items = craftVillageDataModels,
+                Items = locationDataModels,
                 TotalCount = pagedResult.TotalCount,
                 PageNumber = pageNumber,
                 PageSize = pageSize
@@ -518,5 +524,24 @@ public class CraftVillageService : ICraftVillageService
         {
             throw CustomExceptionFactory.CreateInternalServerError();
         }
+    }
+
+    private async Task<List<MediaResponse>> GetMediaWithoutVideoByIdAsync(Guid locationId, CancellationToken cancellationToken)
+    {
+        var locationMedias = await _unitOfWork.LocationMediaRepository
+            .ActiveEntities
+            .Where(em => em.LocationId == locationId)
+            .Where(em => !EF.Functions.Like(em.FileType, "%video%"))
+            .ToListAsync(cancellationToken);
+
+        return locationMedias.Select(x => new MediaResponse
+        {
+            MediaUrl = x.MediaUrl,
+            FileName = x.FileName ?? string.Empty,
+            FileType = x.FileType,
+            IsThumbnail = x.IsThumbnail,
+            SizeInBytes = x.SizeInBytes,
+            CreatedTime = x.CreatedTime
+        }).ToList();
     }
 }

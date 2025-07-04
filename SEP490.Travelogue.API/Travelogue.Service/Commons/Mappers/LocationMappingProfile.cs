@@ -20,7 +20,7 @@ public class LocationMappingProfile : Profile
             .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
         CreateMap<LocationUpdateWithMediaFileModel, Location>()
             .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
-        CreateMap<HistoricalLocation, LocationDataModel>()
+        CreateMap<HistoricalLocation, HistoricalLocationDataModel>()
             .ForMember(dest => dest.HeritageRankName, opt =>
                 opt.MapFrom<HeritageRankDisplayNameResolver>());
 
@@ -43,7 +43,7 @@ public class LocationMappingProfile : Profile
     }
 }
 
-public class HeritageRankDisplayNameResolver : IValueResolver<HistoricalLocation, LocationDataModel, string>
+public class HeritageRankDisplayNameResolver : IValueResolver<HistoricalLocation, HistoricalLocationDataModel, string>
 {
     private readonly IEnumService _enumService;
 
@@ -52,7 +52,7 @@ public class HeritageRankDisplayNameResolver : IValueResolver<HistoricalLocation
         _enumService = enumService;
     }
 
-    public string Resolve(HistoricalLocation source, LocationDataModel destination, string destMember, ResolutionContext context)
+    public string Resolve(HistoricalLocation source, HistoricalLocationDataModel destination, string destMember, ResolutionContext context)
     {
         return _enumService.GetEnumDisplayName(source.HeritageRank);
     }

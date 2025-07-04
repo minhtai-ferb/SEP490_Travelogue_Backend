@@ -5,7 +5,12 @@ using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
+using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.CraftVillageModels;
 using Travelogue.Service.BusinessModels.CuisineModels;
+using Travelogue.Service.BusinessModels.HistoricalLocationModels;
+using Travelogue.Service.BusinessModels.HotelModels;
+using Travelogue.Service.BusinessModels.LocationModels;
 using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.Commons.Helpers;
 using Travelogue.Service.Commons.Implementations;
@@ -15,17 +20,17 @@ namespace Travelogue.Service.Services;
 
 public interface ICuisineService
 {
-    Task<CuisineDataModel?> GetCuisineByIdAsync(Guid id, CancellationToken cancellationToken);
-    Task<List<CuisineDataModel>> GetAllCuisinesAsync(CancellationToken cancellationToken);
-    Task AddCuisineAsync(CuisineCreateModel cuisineCreateModel, CancellationToken cancellationToken);
-    Task UpdateCuisineAsync(Guid id, CuisineUpdateModel cuisineUpdateModel, CancellationToken cancellationToken);
-    Task DeleteCuisineAsync(Guid id, CancellationToken cancellationToken);
-    // Task<CuisineMediaResponse> AddCuisineWithMediaAsync(CuisineCreateWithMediaFileModel cuisineCreateModel, string? thumbnailSelected, CancellationToken cancellationToken);
-    // Task UpdateCuisineAsync(Guid id, CuisineUpdateWithMediaFileModel cuisineUpdateModel, string? thumbnailSelected, CancellationToken cancellationToken);
-    Task<PagedResult<CuisineDataModel>> GetPagedCuisinesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
-    Task<PagedResult<CuisineDataModel>> GetPagedCuisinesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<LocationDataDetailModel?> GetCuisineByLocationIdAsync(Guid id, CancellationToken cancellationToken);
+    Task<List<LocationDataModel>> GetAllCuisinesAsync(CancellationToken cancellationToken);
+    Task<PagedResult<LocationDataModel>> GetPagedCuisinesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    // Task AddCuisineAsync(CuisineCreateModel cuisineCreateModel, CancellationToken cancellationToken);
+    // Task UpdateCuisineAsync(Guid id, CuisineUpdateModel cuisineUpdateModel, CancellationToken cancellationToken);
+    // Task DeleteCuisineAsync(Guid id, CancellationToken cancellationToken);
+    // Task<PagedResult<CuisineDataModel>> GetPagedCuisinesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
     // Task<CuisineMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
     Task<bool> DeleteMediaAsync(Guid id, List<string> deletedImages, CancellationToken cancellationToken);
+    // Task<CuisineMediaResponse> AddCuisineWithMediaAsync(CuisineCreateWithMediaFileModel cuisineCreateModel, string? thumbnailSelected, CancellationToken cancellationToken);
+    // Task UpdateCuisineAsync(Guid id, CuisineUpdateWithMediaFileModel cuisineUpdateModel, string? thumbnailSelected, CancellationToken cancellationToken);
 }
 
 public class CuisineService : ICuisineService
@@ -130,24 +135,31 @@ public class CuisineService : ICuisineService
         }
     }
 
-    public async Task<List<CuisineDataModel>> GetAllCuisinesAsync(CancellationToken cancellationToken)
+    public async Task<List<LocationDataModel>> GetAllCuisinesAsync(CancellationToken cancellationToken)
     {
         try
         {
-            var existingCuisine = await _unitOfWork.CuisineRepository.GetAllAsync(cancellationToken);
-            if (existingCuisine == null || existingCuisine.Count() == 0)
+            var existingLocations = await _unitOfWork.LocationRepository.ActiveEntities
+                .Include(l => l.LocationTypes)
+                .Where(l => l.LocationTypes.Any(lt => lt.Type == LocationType.Cuisine))
+                .ToListAsync(cancellationToken);
+
+            if (existingLocations == null || !existingLocations.Any())
+                throw CustomExceptionFactory.CreateNotFoundError("hotel");
+
+            // Ánh xạ dữ liệu sang LocationDataModel
+            var locationDataModels = _mapper.Map<List<LocationDataModel>>(existingLocations);
+
+            // Lấy thông tin bổ sung cho từng location
+            foreach (var locationData in locationDataModels)
             {
-                return new List<CuisineDataModel>();
+                locationData.Medias = await GetMediaWithoutVideoByIdAsync(locationData.Id, cancellationToken);
+                locationData.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationData.DistrictId ?? Guid.Empty);
+                locationData.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationData.Id);
+                //locationData.HeritageRankName = _enumService.GetEnumDisplayName(locationData.HeritageRank);
             }
 
-            var cuisineDataModels = _mapper.Map<List<CuisineDataModel>>(existingCuisine);
-
-            foreach (var cuisineData in cuisineDataModels)
-            {
-                cuisineData.Medias = await GetMediaByIdAsync(cuisineData.Id, cancellationToken);
-            }
-
-            return cuisineDataModels;
+            return locationDataModels;
         }
         catch (CustomException)
         {
@@ -163,20 +175,54 @@ public class CuisineService : ICuisineService
         }
     }
 
-    public async Task<CuisineDataModel?> GetCuisineByIdAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<LocationDataDetailModel?> GetCuisineByLocationIdAsync(Guid id, CancellationToken cancellationToken)
     {
         try
         {
-            var existingCuisine = await _unitOfWork.CuisineRepository.GetByIdAsync(id, cancellationToken);
-            if (existingCuisine == null || existingCuisine.IsDeleted)
+            var existingLocation = await _unitOfWork.LocationRepository.GetWithIncludeAsync(id, include => include
+                .Include(l => l.LocationTypes)
+            );
+
+            if (existingLocation == null || existingLocation.IsDeleted)
+                throw CustomExceptionFactory.CreateNotFoundError("location");
+
+            var locationTypes = existingLocation.LocationTypes.Select(t => t.Type).ToHashSet();
+
+            if (!locationTypes.Contains(LocationType.HistoricalSite))
+                throw CustomExceptionFactory.CreateNotFoundError("historicalLocation");
+
+            var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
+
+            // Chỉ lấy dữ liệu nếu Location có type tương ứng
+            if (locationTypes.Contains(LocationType.Hotel))
             {
-                throw CustomExceptionFactory.CreateNotFoundError("cuisine");
+                var hotel = await _unitOfWork.HotelRepository.GetByLocationId(existingLocation.Id, cancellationToken);
+                locationDataModel.Hotel = hotel != null ? _mapper.Map<HotelDataModel>(hotel) : null;
             }
 
-            var cuisineDataModel = _mapper.Map<CuisineDataModel>(existingCuisine);
-            cuisineDataModel.Medias = await GetMediaByIdAsync(id, cancellationToken);
+            if (locationTypes.Contains(LocationType.Cuisine))
+            {
+                var cuisine = await _unitOfWork.CuisineRepository.GetByLocationId(existingLocation.Id, cancellationToken);
+                locationDataModel.Cuisine = cuisine != null ? _mapper.Map<CuisineDataModel>(cuisine) : null;
+            }
 
-            return cuisineDataModel;
+            if (locationTypes.Contains(LocationType.CraftVillage))
+            {
+                var craftVillage = await _unitOfWork.CraftVillageRepository.GetByLocationId(existingLocation.Id, cancellationToken);
+                locationDataModel.CraftVillage = craftVillage != null ? _mapper.Map<CraftVillageDataModel>(craftVillage) : null;
+            }
+
+            if (locationTypes.Contains(LocationType.HistoricalSite))
+            {
+                var historicalLocation = await _unitOfWork.HistoricalLocationRepository.GetByLocationId(existingLocation.Id, cancellationToken);
+                locationDataModel.HistoricalLocation = historicalLocation != null ? _mapper.Map<HistoricalLocationDataModel>(historicalLocation) : null;
+            }
+
+            locationDataModel.Medias = await GetMediaWithoutVideoByIdAsync(id, cancellationToken);
+            locationDataModel.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationDataModel.DistrictId);
+            locationDataModel.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationDataModel.Id, cancellationToken);
+
+            return locationDataModel;
         }
         catch (CustomException)
         {
@@ -227,27 +273,24 @@ public class CuisineService : ICuisineService
         }
     }
 
-    public async Task<PagedResult<CuisineDataModel>> GetPagedCuisinesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<LocationDataModel>> GetPagedCuisinesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
-            var pagedResult = await _unitOfWork.CuisineRepository.GetPageWithSearchAsync(name, pageNumber, pageSize, cancellationToken);
+            var pagedResult = await _unitOfWork.LocationRepository.GetPageWithSearchAsync(name, pageNumber, pageSize, cancellationToken, LocationType.Cuisine);
 
-            var cuisineDataModels = _mapper.Map<List<CuisineDataModel>>(pagedResult.Items);
+            var locationDataModels = _mapper.Map<List<LocationDataModel>>(pagedResult.Items);
 
-            foreach (var cuisine in cuisineDataModels)
+            foreach (var locationData in locationDataModels)
             {
-                cuisine.Medias = await GetMediaByIdAsync(cuisine.Id, cancellationToken);
-                cuisine.LocationName = await _unitOfWork.LocationRepository
-                    .ActiveEntities
-                    .Where(l => l.Id == cuisine.LocationId && !l.IsDeleted)
-                    .Select(l => l.Name)
-                    .FirstOrDefaultAsync(cancellationToken);
+                locationData.Medias = await GetMediaWithoutVideoByIdAsync(locationData.Id, cancellationToken);
+                locationData.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationData.DistrictId ?? Guid.Empty);
+                locationData.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationData.Id);
             }
 
-            return new PagedResult<CuisineDataModel>
+            return new PagedResult<LocationDataModel>
             {
-                Items = cuisineDataModels,
+                Items = locationDataModels,
                 TotalCount = pagedResult.TotalCount,
                 PageNumber = pageNumber,
                 PageSize = pageSize
@@ -456,5 +499,24 @@ public class CuisineService : ICuisineService
             await _unitOfWork.RollBackAsync();
             throw CustomExceptionFactory.CreateInternalServerError();
         }
+    }
+
+    private async Task<List<MediaResponse>> GetMediaWithoutVideoByIdAsync(Guid locationId, CancellationToken cancellationToken)
+    {
+        var locationMedias = await _unitOfWork.LocationMediaRepository
+            .ActiveEntities
+            .Where(em => em.LocationId == locationId)
+            .Where(em => !EF.Functions.Like(em.FileType, "%video%"))
+            .ToListAsync(cancellationToken);
+
+        return locationMedias.Select(x => new MediaResponse
+        {
+            MediaUrl = x.MediaUrl,
+            FileName = x.FileName ?? string.Empty,
+            FileType = x.FileType,
+            IsThumbnail = x.IsThumbnail,
+            SizeInBytes = x.SizeInBytes,
+            CreatedTime = x.CreatedTime
+        }).ToList();
     }
 }

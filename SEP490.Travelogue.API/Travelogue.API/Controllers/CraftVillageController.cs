@@ -69,7 +69,7 @@ public class CraftVillageController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetCraftVillageById(Guid id)
     {
-        var craftVillage = await _craftVillageService.GetCraftVillageByIdAsync(id, new CancellationToken());
+        var craftVillage = await _craftVillageService.GetCraftVillageByLocationIdAsync(id, new CancellationToken());
         return Ok(ResponseModel<CraftVillageDataModel>.OkResponseModel(
             data: craftVillage,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "craftVillage")

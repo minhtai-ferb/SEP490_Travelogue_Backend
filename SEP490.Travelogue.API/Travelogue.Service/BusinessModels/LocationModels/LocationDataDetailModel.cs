@@ -15,6 +15,8 @@ public class LocationDataDetailModel
     public double Latitude { get; set; }
     public double Longitude { get; set; }
     public double Rating { get; set; } = 0;
+    public TimeSpan? OpenTime { get; set; }
+    public TimeSpan? CloseTime { get; set; }
     public List<string>? Categories { get; set; }
     public Guid? DistrictId { get; set; }
     public string? DistrictName { get; set; }

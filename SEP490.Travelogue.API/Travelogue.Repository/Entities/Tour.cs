@@ -23,10 +23,15 @@ public sealed class Tour : BaseEntity
     [ForeignKey(nameof(CurrentVersionId))]
     public TourPlanVersion? CurrentVersion { get; set; }
 
+    public Guid TourGuideId { get; set; }
+
     public TourType TourType { get; set; } = default!;
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
     public ICollection<TourGroup> TourGroups { get; set; } = new List<TourGroup>();
     public ICollection<TourSchedule> TourSchedules { get; set; } = new List<TourSchedule>();
     // public ICollection<TourPlanLocation> TourPlanLocations { get; set; } = new List<TourPlanLocation>();
     public ICollection<TourPlanVersion> TourPlanVersions { get; set; } = new List<TourPlanVersion>();
+
+    [ForeignKey(nameof(TourGuideId))]
+    public TourGuide? TourGuide { get; set; }
 }

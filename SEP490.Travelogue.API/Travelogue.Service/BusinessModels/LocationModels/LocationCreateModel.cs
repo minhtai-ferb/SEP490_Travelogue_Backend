@@ -18,13 +18,9 @@ public class LocationCreateModel
     [Range(-180, 180)]
     public double Longitude { get; set; }
 
-    [Range(0, 5)]
-    public double Rating { get; set; } = 0;
-
     [Required]
     public List<LocationType> Types { get; set; } = new();
     public Guid? DistrictId { get; set; }
-    public HeritageRank HeritageRank { get; set; }
     public HotelCreateModel? Hotel { get; set; }
     public CuisineCreateModel? Cuisine { get; set; }
     public CraftVillageCreateModel? CraftVillage { get; set; }

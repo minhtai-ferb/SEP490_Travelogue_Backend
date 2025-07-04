@@ -9,7 +9,15 @@ public sealed class TourPlanVersion : BaseEntity
     public Tour? Tour { get; set; }
 
     [Range(0, double.MaxValue)]
-    public decimal Price { get; set; }
+    public decimal AdultPrice { get; set; }
+    [Range(0, double.MaxValue)]
+    public decimal ChildrenPrice { get; set; }
+
+    public string? Content { get; set; }
+    public int TotalDays { get; set; }
+    public Guid TourTypeId { get; set; }
+    public string? TourTypeText { get; set; }
+    public Guid? CurrentVersionId { get; set; }
 
     public DateTimeOffset VersionDate { get; set; } = DateTime.UtcNow;
     public string Description { get; set; } = string.Empty;

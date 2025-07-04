@@ -69,7 +69,7 @@ public class CuisineController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetCuisineById(Guid id)
     {
-        var cuisine = await _cuisineService.GetCuisineByIdAsync(id, new CancellationToken());
+        var cuisine = await _cuisineService.GetCuisineByLocationIdAsync(id, new CancellationToken());
         return Ok(ResponseModel<CuisineDataModel>.OkResponseModel(
             data: cuisine,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "cuisine")

@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using Travelogue.Repository.Bases.BaseEntities;
+﻿using Travelogue.Repository.Bases.BaseEntities;
 
 namespace Travelogue.Repository.Entities;
 

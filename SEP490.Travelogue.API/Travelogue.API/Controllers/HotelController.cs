@@ -47,34 +47,34 @@ public class HotelController : ControllerBase
         ));
     }
 
-    /// <summary>
-    /// Lấy tất cả hotel
-    /// </summary>
-    /// <returns></returns>
-    [HttpGet]
-    public async Task<IActionResult> GetAllHotels()
-    {
-        var hotels = await _hotelService.GetAllHotelsAsync(new CancellationToken());
-        return Ok(ResponseModel<List<HotelDetailDataModel>>.OkResponseModel(
-            data: hotels,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "hotel")
-        ));
-    }
+    // /// <summary>
+    // /// Lấy tất cả hotel
+    // /// </summary>
+    // /// <returns></returns>
+    // [HttpGet]
+    // public async Task<IActionResult> GetAllHotels()
+    // {
+    //     var hotels = await _hotelService.GetAllHotelsAsync(new CancellationToken());
+    //     return Ok(ResponseModel<List<HotelDetailDataModel>>.OkResponseModel(
+    //         data: hotels,
+    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "hotel")
+    //     ));
+    // }
 
-    /// <summary>
-    /// Lấy hotel theo id
-    /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetHotelById(Guid id)
-    {
-        var hotel = await _hotelService.GetHotelByIdAsync(id, new CancellationToken());
-        return Ok(ResponseModel<HotelDetailDataModel>.OkResponseModel(
-            data: hotel,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "hotel")
-        ));
-    }
+    // /// <summary>
+    // /// Lấy hotel theo id
+    // /// </summary>
+    // /// <param name="id"></param>
+    // /// <returns></returns>
+    // [HttpGet("{id}")]
+    // public async Task<IActionResult> GetHotelById(Guid id)
+    // {
+    //     var hotel = await _hotelService.GetHotelByLocationIdAsync(id, new CancellationToken());
+    //     return Ok(ResponseModel<HotelDetailDataModel>.OkResponseModel(
+    //         data: hotel,
+    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "hotel")
+    //     ));
+    // }
     /// <summary>
     /// Cập nhật hotel
     /// </summary>

@@ -420,11 +420,19 @@ public class TripPlanService : ITripPlanService
 
     private async Task<string> GetLocationImageUrl(Guid locationId)
     {
-        // Note: Nếu có isThumbnail thì lấy ảnh thumbnail, nếu không thì lấy ảnh đầu tiên
-        var locationMedia = await _unitOfWork.LocationMediaRepository.ActiveEntities
-            .FirstOrDefaultAsync(l => l.LocationId == locationId);
+        try
+        {
 
-        return locationMedia.MediaUrl ?? string.Empty;
+            // Note: Nếu có isThumbnail thì lấy ảnh thumbnail, nếu không thì lấy ảnh đầu tiên
+            var locationMedia = await _unitOfWork.LocationMediaRepository.ActiveEntities
+                .FirstOrDefaultAsync(l => l.LocationId == locationId);
+
+            return locationMedia?.MediaUrl ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError($"Lỗi khi lấy ảnh địa điểm: {ex.Message}");
+        }
     }
 
     private List<TripDayDetail> BuildDaySchedule(DateTime startDate, DateTime endDate, List<TripActivity> activities)
@@ -693,13 +701,13 @@ public class TripPlanService : ITripPlanService
     {
         var existingIds = locationModels
             .Where(c => c.Id.HasValue)
-            .Select(c => c.Id.Value)
+            .Select(c => c.Id!.Value)
             .ToList();
 
         if (existingIds.Count != 0)
         {
             // Loại bỏ các món không còn tồn tại trong input
-            var locationsToRemove = tripPlanVersion.TripPlanLocations
+            var locationsToRemove = (tripPlanVersion.TripPlanLocations ?? new List<TripPlanLocation>())
                 .Where(c => !existingIds.Contains(c.Id))
                 .ToList();
 
@@ -710,7 +718,7 @@ public class TripPlanService : ITripPlanService
         {
             if (locationModel.Id.HasValue)
             {
-                var existingLocation = tripPlanVersion.TripPlanLocations
+                var existingLocation = (tripPlanVersion.TripPlanLocations ?? new List<TripPlanLocation>())
                     .FirstOrDefault(c => c.Id == locationModel.Id.Value);
 
                 if (existingLocation != null)
@@ -780,7 +788,7 @@ public class TripPlanService : ITripPlanService
 
     public class TripPlanItemSchedule
     {
-        public string ItemType { get; set; }
+        public string? ItemType { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public Guid? ItemId { get; set; }
@@ -964,7 +972,7 @@ public class TripPlanService : ITripPlanService
         try
         {
             // var currentUserId = _userContextService.GetCurrentUserId();
-            var currentUserId = "example-user-id";
+            var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
 
             // Lấy phiên bản TripPlan hiện tại từ tripPlanId
