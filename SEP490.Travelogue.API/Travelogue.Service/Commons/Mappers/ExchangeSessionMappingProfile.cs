@@ -2,7 +2,6 @@
 using Travelogue.Repository.Entities;
 using Travelogue.Service.BusinessModels.ExchangeModels;
 using Travelogue.Service.BusinessModels.ExchangeSessionModels;
-using Travelogue.Service.BusinessModels.HotelModels;
 
 namespace Travelogue.Service.Commons.Mappers;
 

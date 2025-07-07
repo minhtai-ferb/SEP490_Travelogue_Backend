@@ -12,4 +12,5 @@ public class TourGuideDataModel
     public int Rating { get; set; }
     public decimal Price { get; set; }
     public string? Introduction { get; set; }
+    public string? AvatarUrl { get; set; }
 }

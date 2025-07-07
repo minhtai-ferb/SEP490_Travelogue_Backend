@@ -4,11 +4,11 @@ using Travelogue.Repository.Bases.BaseEntities;
 
 namespace Travelogue.Repository.Entities;
 
-public sealed class OrderWithdrawal : BaseEntity
+public sealed class BookingWithdrawal : BaseEntity
 {
 
     [Required]
-    public Guid OrderId { get; set; }
+    public Guid BookingId { get; set; }
 
     [Required]
     public Guid WithdrawalRequestId { get; set; }
@@ -19,6 +19,6 @@ public sealed class OrderWithdrawal : BaseEntity
     [ForeignKey("WithdrawalRequestId")]
     public WithdrawalRequest WithdrawalRequest { get; set; } = null!;
 
-    [ForeignKey("OrderId")]
-    public Order Order { get; set; } = null!;
+    [ForeignKey("BookingId")]
+    public Booking Booking { get; set; } = null!;
 }

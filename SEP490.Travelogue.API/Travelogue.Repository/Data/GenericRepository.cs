@@ -44,8 +44,28 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class, IBase
     public async Task<T?> GetByIdAsync(object id, CancellationToken cancellationToken = default)
     {
         return await _dbSet
-     .AsNoTracking()
-     .FirstOrDefaultAsync(e => e.Id == (Guid)id, cancellationToken);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Id == (Guid)id, cancellationToken);
+    }
+
+    public async Task<T?> GetAsync(
+        Expression<Func<T, bool>> predicate,
+        Func<IQueryable<T>, IQueryable<T>>? include = null,
+        CancellationToken cancellationToken = default)
+    {
+        IQueryable<T> query = _context.Set<T>();
+        if (include != null)
+            query = include(query);
+        return await query.FirstOrDefaultAsync(predicate, cancellationToken);
+    }
+
+    public async Task<IEnumerable<T>> FindAsync(
+        Expression<Func<T, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.Set<T>()
+            .Where(predicate)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<IEnumerable<T>> AddRangeAsync(IEnumerable<T> entities)

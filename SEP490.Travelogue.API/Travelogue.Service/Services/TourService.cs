@@ -6,6 +6,7 @@ using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.TourGuideModels;
 using Travelogue.Service.BusinessModels.TourModels;
 using Travelogue.Service.Commons.Interfaces;
 
@@ -161,7 +162,90 @@ public class TourService : ITourService
                 Id = tour.Id,
                 Name = tour.Name,
                 Description = tour.Description,
+                Content = tour.Content,
                 TotalDays = tour.TotalDays,
+                TotalDaysText = $"{tour.TotalDays} ngày {tour.TotalDays - 1} đêm",
+                AdultPrice = tour.CurrentVersion?.AdultPrice ?? 0,
+                ChildrenPrice = tour.CurrentVersion?.ChildrenPrice ?? 0,
+                FinalPrice = tour.CurrentVersion?.AdultPrice ?? 0,
+                IsDiscount = false, // TODO: Implement discount logic
+                TourTypeId = tour.TourTypeId,
+                TourTypeText = tour.TourType?.Name ?? string.Empty,
+                CurrentVersionId = tour.CurrentVersionId ?? Guid.Empty,
+                TourGuide = tour.TourGuideMappings
+                    .Select(tgm => new TourGuideDataModel
+                    {
+                        Id = tgm.GuideId,
+                        UserName = tgm.TourGuide?.User.FullName ?? string.Empty,
+                        AvatarUrl = tgm.TourGuide?.User.AvatarUrl ?? string.Empty
+                    })
+                    .FirstOrDefault(),
+                Days = BuildDaySchedule(tour.TotalDays, activities)
+            };
+
+            return result;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+        finally
+        {
+            ////  _unitOfWork.Dispose();
+        }
+    }
+
+    public async Task<TourDetailResponse?> GetTourByVersionIdAsync(Guid versionId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var version = await _unitOfWork.TourPlanVersionRepository.ActiveEntities
+                .Include(v => v.Tour)
+                .ThenInclude(t => t.TourType)
+                .Include(v => v.TourPlanLocations)
+                .FirstOrDefaultAsync(v => v.Id == versionId);
+
+            Tour? tour = null;
+            if (version != null)
+            {
+                tour = await _unitOfWork.TourRepository.ActiveEntities
+                    .FirstOrDefaultAsync(tp => tp.Id == version.TourId);
+            }
+
+            if (tour == null || tour.IsDeleted)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("Tour");
+            }
+
+            var activities = await GetAllActivitiesByVersionId(versionId);
+
+            var result = new TourDetailResponse
+            {
+                Id = tour.Id,
+                Name = tour.Name,
+                Description = tour.Description,
+                Content = tour.Content,
+                TotalDays = tour.TotalDays,
+                TotalDaysText = $"{tour.TotalDays} ngày {tour.TotalDays - 1} đêm",
+                AdultPrice = tour.CurrentVersion?.AdultPrice ?? 0,
+                ChildrenPrice = tour.CurrentVersion?.ChildrenPrice ?? 0,
+                FinalPrice = tour.CurrentVersion?.AdultPrice ?? 0,
+                IsDiscount = false, // TODO: Implement discount logic
+                TourTypeId = tour.TourTypeId,
+                TourTypeText = tour.TourType?.Name ?? string.Empty,
+                CurrentVersionId = tour.CurrentVersionId ?? Guid.Empty,
+                TourGuide = tour.TourGuideMappings
+                    .Select(tgm => new TourGuideDataModel
+                    {
+                        Id = tgm.GuideId,
+                        UserName = tgm.TourGuide?.User.FullName ?? string.Empty,
+                        AvatarUrl = tgm.TourGuide?.User.AvatarUrl ?? string.Empty
+                    })
+                    .FirstOrDefault(),
                 Days = BuildDaySchedule(tour.TotalDays, activities)
             };
 
@@ -188,9 +272,7 @@ public class TourService : ITourService
     {
         var validationResult = ValidateTourSchedule(tourUpdateModel);
         if (!validationResult)
-        {
-            throw CustomExceptionFactory.CreateBadRequestError("Lỗi validation lịch trình:");
-        }
+            throw CustomExceptionFactory.CreateBadRequestError("Lỗi validation lịch trình");
 
         using var transaction = await _unitOfWork.BeginTransactionAsync();
 
@@ -198,82 +280,87 @@ public class TourService : ITourService
         {
             var tour = await _unitOfWork.TourRepository
                 .ActiveEntities
-                    .Include(v => v.TourPlanVersions)
-                        .ThenInclude(v => v.TourPlanLocations)
-                    .Include(v => v.TourPlanVersions)
-                        .ThenInclude(v => v.Orders)
-                .FirstOrDefaultAsync(tp => tp.Id == id, cancellationToken)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Tour plan");
-
-            var currentUserId = _userContextService.GetCurrentUserId();
-            var userRoles = await _userContextService.GetCurrentUserRolesAsync();
+                .Include(t => t.TourPlanVersions)
+                    .ThenInclude(v => v.Bookings)
+                .Include(t => t.TourPlanVersions)
+                    .ThenInclude(v => v.TourPlanLocations)
+                .FirstOrDefaultAsync(t => t.Id == id, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Tour không tồn tại");
 
             var latestVersion = tour.TourPlanVersions
                 .OrderByDescending(v => v.VersionNumber)
                 .FirstOrDefault();
 
-            bool shouldCreateNewVersion = latestVersion == null || latestVersion.Orders.Any();
-            TourPlanVersion? newVersion = null;
+            bool shouldCreateNewVersion = latestVersion == null || latestVersion.Bookings.Any();
+
+            TourPlanVersion newVersion;
 
             if (shouldCreateNewVersion)
             {
                 newVersion = new TourPlanVersion
                 {
+                    TourId = tour.Id,
                     AdultPrice = tourUpdateModel.AdultPrice,
                     ChildrenPrice = tourUpdateModel.ChildrenPrice,
-                    TourId = tour.Id,
-                    VersionDate = _timeService.SystemTimeNow,
                     Description = "Cập nhật lịch trình",
-                    VersionNumber = latestVersion?.VersionNumber + 1 ?? 1,
-                    // Status = "Draft",
-                    // IsFromTourGuide = isTourGuide
+                    VersionDate = _timeService.SystemTimeNow,
+                    VersionNumber = (latestVersion?.VersionNumber ?? 0) + 1
                 };
 
-                await _unitOfWork.TourPlanVersionRepository.AddAsync(newVersion);
-                await _unitOfWork.SaveAsync();
-
-                // Update vào version con
-                if (tourUpdateModel.Locations == null)
+                if (tourUpdateModel.Locations != null)
                 {
-                    tourUpdateModel.Locations = new List<TourPlanLocationModel>();
+                    newVersion.TourPlanLocations = _mapper.Map<List<TourPlanLocation>>(tourUpdateModel.Locations);
                 }
 
-                await UpdateTourPlanLocationsAsync(newVersion, tourUpdateModel.Locations);
+                await _unitOfWork.TourPlanVersionRepository.AddAsync(newVersion);
+                tour.CurrentVersionId = newVersion.Id;
             }
             else
             {
-                newVersion = latestVersion;
-                newVersion!.VersionDate = _timeService.SystemTimeNow;
-                newVersion.Description = "Cập nhật lịch trình";
+                newVersion = latestVersion!;
+                _mapper.Map(tourUpdateModel, tour);
+
+                if (tourUpdateModel.Locations != null)
+                {
+                    newVersion.TourPlanLocations.Clear();
+                    newVersion.TourPlanLocations = _mapper.Map<List<TourPlanLocation>>(tourUpdateModel.Locations);
+                }
+
+                newVersion.AdultPrice = tourUpdateModel.AdultPrice;
+                newVersion.ChildrenPrice = tourUpdateModel.ChildrenPrice;
+                newVersion.VersionDate = _timeService.SystemTimeNow;
             }
 
+            if (tourUpdateModel.TourSchedules != null)
+            {
+                // Xóa lịch cũ nếu đang update bản cũ
+                newVersion.TourSchedules.Clear();
 
-            _mapper.Map(tourUpdateModel, tour);
+                foreach (var scheduleModel in tourUpdateModel.TourSchedules)
+                {
+                    var schedule = new TourSchedule
+                    {
+                        DepartureDate = scheduleModel.DepartureDate,
+                        MaxParticipant = scheduleModel.MaxParticipants,
+                        TotalDays = tourUpdateModel.TotalDays,
+                        TourPlanVersion = newVersion
+                    };
 
-            var tourVersion = tour.TourPlanVersions
-                .FirstOrDefault(v => v.Id == newVersion.Id)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Tour version");
-
-            tourVersion.TourPlanLocations = _mapper.Map<List<TourPlanLocation>>(tourUpdateModel.Locations);
-
-            tour.CurrentVersionId = newVersion.Id;
+                    newVersion.TourSchedules.Add(schedule);
+                }
+            }
 
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);
 
             var result = _mapper.Map<TourDataModel>(tour);
-
-            result.CurrentVersionId = newVersion != null ? newVersion.Id : (tour.CurrentVersionId ?? Guid.Empty);
-            // result.IsFromTourGuide = isTourGuide;
-
+            result.CurrentVersionId = tour.CurrentVersionId ?? Guid.Empty;
             return result;
         }
-        catch (CustomException)
-        {
-            throw;
-        }
+        catch (CustomException) { throw; }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync(cancellationToken);
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
@@ -523,8 +610,61 @@ public class TourService : ITourService
                     StartTimeFormatted = tpl.StartTime.ToString(@"hh\:mm"),
                     EndTimeFormatted = tpl.EndTime.ToString(@"hh\:mm"),
                     Duration = $"{(tpl.EndTime - tpl.StartTime).TotalMinutes} phút",
-                    // Notes = tpl.Notes,
-                    ImageUrl = string.Empty
+                    Notes = tpl.Notes,
+                    ImageUrl = await GetLocationImageUrl(tpl.Id) ?? string.Empty
+                });
+            }
+
+            return activities.OrderBy(x => x.StartTime).ToList();
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+        finally
+        {
+            // _unitOfWork.Dispose();
+        }
+    }
+
+    private async Task<List<TourActivity>> GetAllActivitiesByVersionId(Guid versionId)
+    {
+        try
+        {
+
+            var activities = new List<TourActivity>();
+
+            var version = await _unitOfWork.TourPlanVersionRepository
+                .ActiveEntities
+                .Include(x => x.TourPlanLocations)
+                .FirstOrDefaultAsync(x => x.Id == versionId)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Tour version");
+
+            // Locations
+            foreach (var tpl in version.TourPlanLocations ?? new List<TourPlanLocation>())
+            {
+                var location = await _unitOfWork.LocationRepository.GetByIdAsync(tpl.LocationId, cancellationToken: CancellationToken.None);
+                if (location == null) continue;
+
+                activities.Add(new TourActivity
+                {
+                    Id = tpl.Id,
+                    Type = TripActivityTypeEnum.Location.ToString(),
+                    DayOrder = tpl.DayOrder,
+                    Name = location.Name,
+                    Description = location.Description,
+                    Address = location.Address ?? string.Empty,
+                    StartTime = tpl.StartTime,
+                    EndTime = tpl.EndTime,
+                    StartTimeFormatted = tpl.StartTime.ToString(@"hh\:mm"),
+                    EndTimeFormatted = tpl.EndTime.ToString(@"hh\:mm"),
+                    Duration = $"{(tpl.EndTime - tpl.StartTime).TotalMinutes} phút",
+                    Notes = tpl.Notes,
+                    ImageUrl = await GetLocationImageUrl(tpl.Id) ?? string.Empty
                 });
             }
 

@@ -1,4 +1,3 @@
-using System.Configuration;
 using FirebaseAdmin;
 using FirebaseAdmin.Auth;
 using Google.Apis.Auth.OAuth2;

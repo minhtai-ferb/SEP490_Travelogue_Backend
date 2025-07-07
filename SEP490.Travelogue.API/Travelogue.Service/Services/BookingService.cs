@@ -50,18 +50,18 @@ public class BookingService : IBookingService
             var version = await _unitOfWork.TripPlanVersionRepository.ActiveEntities
                 .FirstOrDefaultAsync(v => v.Id == bookingCreateModel.VersionId, cancellationToken) ?? throw CustomExceptionFactory.CreateNotFoundError("tour version");
 
-            var newBooking = _mapper.Map<Order>(bookingCreateModel);
+            var newBooking = _mapper.Map<Booking>(bookingCreateModel);
 
             newBooking.CreatedBy = currentUserId;
             newBooking.LastUpdatedBy = currentUserId;
             newBooking.CreatedTime = currentTime;
             newBooking.LastUpdatedTime = currentTime;
 
-            await _unitOfWork.OrderRepository.AddAsync(newBooking);
+            await _unitOfWork.BookingRepository.AddAsync(newBooking);
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);
 
-            var result = _unitOfWork.OrderRepository.ActiveEntities
+            var result = _unitOfWork.BookingRepository.ActiveEntities
                 .FirstOrDefault(tp => tp.Id == newBooking.Id);
 
             return _mapper.Map<BookingDataModel>(result);
@@ -300,13 +300,13 @@ public class BookingService : IBookingService
 
             bookingRequest.Status = ExchangeSessionStatus.AcceptedByUser;
 
-            var newBooking = _mapper.Map<Order>(bookingRequest);
+            var newBooking = _mapper.Map<Booking>(bookingRequest);
             newBooking.TripPlanVersionId = bookingRequest.SuggestedTripPlanVersionId ?? bookingRequest.TripPlanVersionId;
-            newBooking.OrderDate = currentTime;
+            newBooking.BookingDate = currentTime;
             newBooking.CreatedBy = currentUserId;
             newBooking.LastUpdatedBy = currentUserId;
-            newBooking.ScheduledStartDate = bookingRequest.TripPlan.StartDate;
-            newBooking.ScheduledEndDate = bookingRequest.TripPlan.EndDate;
+            // newBooking.ScheduledStartDate = bookingRequest.TripPlan.StartDate;
+            // newBooking.ScheduledEndDate = bookingRequest.TripPlan.EndDate;
 
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync();
@@ -315,14 +315,16 @@ public class BookingService : IBookingService
             {
                 BookingId = newBooking.Id,
                 UserId = newBooking.UserId,
-                TourId = newBooking.TourId,
+                // TourId = newBooking.TourId,
                 TourGuideId = newBooking.TourGuideId,
                 VersionId = newBooking.TripPlanVersionId,
-                OrderDate = newBooking.OrderDate,
-                ScheduledStartDate = newBooking.ScheduledStartDate,
-                ScheduledEndDate = newBooking.ScheduledEndDate,
+                OrderDate = newBooking.BookingDate,
+                // ScheduledStartDate = newBooking.ScheduledStartDate,
+                // ScheduledEndDate = newBooking.ScheduledEndDate,
                 Status = newBooking.Status,
-                TotalPaid = newBooking.TotalPaid
+                OriginalPrice = newBooking.OriginalPrice,
+                DiscountAmount = newBooking.DiscountAmount,
+                FinalPrice = newBooking.FinalPrice
             };
         }
         catch (CustomException)

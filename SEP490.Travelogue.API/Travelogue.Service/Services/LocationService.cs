@@ -11,7 +11,6 @@ using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.CraftVillageModels;
 using Travelogue.Service.BusinessModels.CuisineModels;
 using Travelogue.Service.BusinessModels.HistoricalLocationModels;
-using Travelogue.Service.BusinessModels.HotelModels;
 using Travelogue.Service.BusinessModels.LocationModels;
 using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.Commons.Implementations;
@@ -54,6 +53,11 @@ public interface ILocationService
 
     Task<List<LocationDataModel>> GetAllLocationAdminAsync();
     Task<LocationDataDetailModel?> GetLocationByIdWithVideosAsync(Guid id, CancellationToken cancellationToken);
+
+    Task<LocationDataModel> CreateBasicLocationAsync(LocationCreateModel model, CancellationToken cancellationToken);
+    Task<bool> AddCuisineDataAsync(Guid locationId, CuisineCreateModel? model, CancellationToken cancellationToken);
+    Task<bool> AddCraftVillageDataAsync(Guid locationId, CraftVillageCreateModel? model, CancellationToken cancellationToken);
+    Task<bool> AddHistoricalLocationDataAsync(Guid locationId, HistoricalLocationCreateModel? model, CancellationToken cancellationToken);
 }
 
 public class LocationService : ILocationService
@@ -139,99 +143,83 @@ public class LocationService : ILocationService
             }
 
             // Danh sách type hợp lệ
-            var typeSet = locationCreateModel.Types.ToHashSet();
+            // var typeSet = locationCreateModel.Types.ToHashSet();
 
-            // Danh sách lỗi không đồng bộ
-            var errors = new List<string>();
+            // // Danh sách lỗi không đồng bộ
+            // var errors = new List<string>();
 
-            // Kiểm tra từng loại dữ liệu có đồng bộ với type
-            if (locationCreateModel.Hotel != null && !typeSet.Contains(LocationType.Hotel))
-                errors.Add("Hotel data is provided but 'Hotel' type is missing.");
+            // // Kiểm tra từng loại dữ liệu có đồng bộ với type
 
-            if (locationCreateModel.Cuisine != null && !typeSet.Contains(LocationType.Cuisine))
-                errors.Add("Cuisine data is provided but 'Cuisine' type is missing.");
+            // if (locationCreateModel.Cuisine != null && !typeSet.Contains(LocationType.Cuisine))
+            //     errors.Add("Cuisine data is provided but 'Cuisine' type is missing.");
 
-            if (locationCreateModel.CraftVillage != null && !typeSet.Contains(LocationType.CraftVillage))
-                errors.Add("CraftVillage data is provided but 'CraftVillage' type is missing.");
+            // if (locationCreateModel.CraftVillage != null && !typeSet.Contains(LocationType.CraftVillage))
+            //     errors.Add("CraftVillage data is provided but 'CraftVillage' type is missing.");
 
-            if (locationCreateModel.HistoricalLocation != null && !typeSet.Contains(LocationType.HistoricalSite))
-                errors.Add("HistoricalLocation data is provided but 'HistoricalSite' type is missing.");
+            // if (locationCreateModel.HistoricalLocation != null && !typeSet.Contains(LocationType.HistoricalSite))
+            //     errors.Add("HistoricalLocation data is provided but 'HistoricalSite' type is missing.");
 
-            // nếu type có nhưng không có dữ liệu
-            if (typeSet.Contains(LocationType.Hotel) && locationCreateModel.Hotel == null)
-                errors.Add("Type 'Hotel' is specified but Hotel data is missing.");
+            // // nếu type có nhưng không có dữ liệu
+            // if (typeSet.Contains(LocationType.Cuisine) && locationCreateModel.Cuisine == null)
+            //     errors.Add("Type 'Cuisine' is specified but Cuisine data is missing.");
 
-            if (typeSet.Contains(LocationType.Cuisine) && locationCreateModel.Cuisine == null)
-                errors.Add("Type 'Cuisine' is specified but Cuisine data is missing.");
+            // if (typeSet.Contains(LocationType.CraftVillage) && locationCreateModel.CraftVillage == null)
+            //     errors.Add("Type 'CraftVillage' is specified but CraftVillage data is missing.");
 
-            if (typeSet.Contains(LocationType.CraftVillage) && locationCreateModel.CraftVillage == null)
-                errors.Add("Type 'CraftVillage' is specified but CraftVillage data is missing.");
+            // if (typeSet.Contains(LocationType.HistoricalSite) && locationCreateModel.HistoricalLocation == null)
+            //     errors.Add("Type 'HistoricalSite' is specified but HistoricalLocation data is missing.");
 
-            if (typeSet.Contains(LocationType.HistoricalSite) && locationCreateModel.HistoricalLocation == null)
-                errors.Add("Type 'HistoricalSite' is specified but HistoricalLocation data is missing.");
-
-            if (errors.Count > 0)
-                throw new InvalidOperationException(string.Join(" | ", errors));
+            // if (errors.Count > 0)
+            //     throw new InvalidOperationException(string.Join(" | ", errors));
 
             var newLocation = _mapper.Map<Location>(locationCreateModel);
-            newLocation.CreatedBy = currentUserId;
-            newLocation.LastUpdatedBy = currentUserId;
-            newLocation.CreatedTime = currentTime;
-            newLocation.LastUpdatedTime = currentTime;
+            // newLocation.CreatedBy = currentUserId;
+            // newLocation.LastUpdatedBy = currentUserId;
+            // newLocation.CreatedTime = currentTime;
+            // newLocation.LastUpdatedTime = currentTime;
 
-            newLocation.LocationTypes = typeSet.Select(type => new LocationTypeMapping
-            {
-                Type = type,
-                LocationId = newLocation.Id
-            }).ToList();
+            // newLocation.LocationTypes = typeSet.Select(type => new LocationTypeMapping
+            // {
+            //     Type = type,
+            //     LocationId = newLocation.Id
+            // }).ToList();
 
-            // Gán dữ liệu phụ nếu có
-            if (locationCreateModel.Hotel != null)
-            {
-                newLocation.Hotel = new Hotel
-                {
-                    PhoneNumber = locationCreateModel.Hotel.PhoneNumber,
-                    Email = locationCreateModel.Hotel.Email,
-                    Website = locationCreateModel.Hotel.Website,
-                    PricePerNight = locationCreateModel.Hotel.PricePerNight,
-                    LocationId = newLocation.Id
-                };
-            }
+            // // Gán dữ liệu phụ nếu có
 
-            if (locationCreateModel.CraftVillage != null)
-            {
-                newLocation.CraftVillage = new CraftVillage
-                {
-                    PhoneNumber = locationCreateModel.CraftVillage.PhoneNumber,
-                    Email = locationCreateModel.CraftVillage.Email,
-                    Website = locationCreateModel.CraftVillage.Website,
-                    WorkshopsAvailable = locationCreateModel.CraftVillage.WorkshopsAvailable,
-                    LocationId = newLocation.Id
-                };
-            }
+            // if (locationCreateModel.CraftVillage != null)
+            // {
+            //     newLocation.CraftVillage = new CraftVillage
+            //     {
+            //         PhoneNumber = locationCreateModel.CraftVillage.PhoneNumber,
+            //         Email = locationCreateModel.CraftVillage.Email,
+            //         Website = locationCreateModel.CraftVillage.Website,
+            //         WorkshopsAvailable = locationCreateModel.CraftVillage.WorkshopsAvailable,
+            //         LocationId = newLocation.Id
+            //     };
+            // }
 
-            if (locationCreateModel.Cuisine != null)
-            {
-                newLocation.Cuisine = new Cuisine
-                {
-                    PhoneNumber = locationCreateModel.Cuisine.PhoneNumber,
-                    Email = locationCreateModel.Cuisine.Email,
-                    Website = locationCreateModel.Cuisine.Website,
-                    CuisineType = locationCreateModel.Cuisine.CuisineType,
-                    LocationId = newLocation.Id
-                };
-            }
+            // if (locationCreateModel.Cuisine != null)
+            // {
+            //     newLocation.Cuisine = new Cuisine
+            //     {
+            //         PhoneNumber = locationCreateModel.Cuisine.PhoneNumber,
+            //         Email = locationCreateModel.Cuisine.Email,
+            //         Website = locationCreateModel.Cuisine.Website,
+            //         CuisineType = locationCreateModel.Cuisine.CuisineType,
+            //         LocationId = newLocation.Id
+            //     };
+            // }
 
-            if (locationCreateModel.HistoricalLocation != null)
-            {
-                newLocation.HistoricalLocation = new HistoricalLocation
-                {
-                    HeritageRank = locationCreateModel.HistoricalLocation.HeritageRank,
-                    EstablishedDate = locationCreateModel.HistoricalLocation.EstablishedDate,
-                    LocationId = newLocation.Id,
-                    TypeHistoricalLocationId = locationCreateModel.HistoricalLocation.TypeHistoricalLocationId,
-                };
-            }
+            // if (locationCreateModel.HistoricalLocation != null)
+            // {
+            //     newLocation.HistoricalLocation = new HistoricalLocation
+            //     {
+            //         HeritageRank = locationCreateModel.HistoricalLocation.HeritageRank,
+            //         EstablishedDate = locationCreateModel.HistoricalLocation.EstablishedDate,
+            //         LocationId = newLocation.Id,
+            //         TypeHistoricalLocationId = locationCreateModel.HistoricalLocation.TypeHistoricalLocationId,
+            //     };
+            // }
 
             await _unitOfWork.LocationRepository.AddAsync(newLocation);
             await _unitOfWork.SaveAsync();
@@ -255,6 +243,207 @@ public class LocationService : ILocationService
         finally
         {
             //  _unitOfWork.Dispose();
+        }
+    }
+
+    public async Task<LocationDataModel> CreateBasicLocationAsync(LocationCreateModel model, CancellationToken cancellationToken)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            // Validate user role
+            var currentUserId = _userContextService.GetCurrentUserId();
+            // var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(
+            //     Guid.Parse(currentUserId),
+            //     model.DistrictId ?? Guid.Empty,
+            //     cancellationToken);
+
+            // if (!checkRole)
+            // {
+            //     throw CustomExceptionFactory.CreateForbiddenError();
+            // }
+
+            // Map and set common fields
+            var currentTime = _timeService.SystemTimeNow;
+            var newLocation = _mapper.Map<Location>(model);
+            newLocation.CreatedBy = currentUserId;
+            newLocation.LastUpdatedBy = currentUserId;
+            newLocation.CreatedTime = currentTime;
+            newLocation.LastUpdatedTime = currentTime;
+
+            // Add LocationTypeMapping
+            // var typeSet = model.Types.ToHashSet();
+            // newLocation.LocationTypes = typeSet.Select(type => new LocationTypeMapping
+            // {
+            //     Type = type,
+            //     LocationId = newLocation.Id
+            // }).ToList();
+
+            await _unitOfWork.LocationRepository.AddAsync(newLocation);
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+            var response = _mapper.Map<LocationDataModel>(newLocation);
+            return response;
+        }
+        catch (CustomException)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+        finally
+        {
+            //  _unitOfWork.Dispose();
+        }
+    }
+
+    public async Task<bool> AddCuisineDataAsync(Guid locationId, CuisineCreateModel? model, CancellationToken cancellationToken)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            if (model == null)
+            {
+                throw new InvalidOperationException("Cuisine data is missing for type 'Cuisine'.");
+            }
+
+            var location = await _unitOfWork.LocationRepository.GetByIdAsync(locationId, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("location");
+
+            // Add Cuisine data
+            var cuisine = new Cuisine
+            {
+                PhoneNumber = model.PhoneNumber,
+                Email = model.Email,
+                Website = model.Website,
+                CuisineType = model.CuisineType,
+                LocationId = location.Id
+            };
+            await _unitOfWork.CuisineRepository.AddAsync(cuisine);
+
+            // Add LocationTypeMapping
+            var typeMapping = new LocationTypeMapping
+            {
+                LocationId = location.Id,
+                Type = LocationType.Cuisine
+            };
+            await _unitOfWork.LocationTypeMappingRepository.AddAsync(typeMapping);
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+            return true;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError();
+        }
+        finally
+        {
+            // _unitOfWork.Dispose();
+        }
+    }
+
+    public async Task<bool> AddCraftVillageDataAsync(Guid locationId, CraftVillageCreateModel? model, CancellationToken cancellationToken)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            if (model == null)
+            {
+                throw new InvalidOperationException("CraftVillage data is missing for type 'CraftVillage'.");
+            }
+
+            var location = await _unitOfWork.LocationRepository.GetByIdAsync(locationId, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("location");
+
+            // Add CraftVillage data
+            var craftVillage = new CraftVillage
+            {
+                PhoneNumber = model.PhoneNumber,
+                Email = model.Email,
+                Website = model.Website,
+                WorkshopsAvailable = model.WorkshopsAvailable,
+                LocationId = location.Id
+            };
+            await _unitOfWork.CraftVillageRepository.AddAsync(craftVillage);
+
+            // Add LocationTypeMapping
+            var typeMapping = new LocationTypeMapping
+            {
+                LocationId = location.Id,
+                Type = LocationType.CraftVillage
+            };
+            await _unitOfWork.LocationTypeMappingRepository.AddAsync(typeMapping);
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+            return true;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError();
+        }
+        finally
+        {
+            // _unitOfWork.Dispose();
+        }
+    }
+
+    public async Task<bool> AddHistoricalLocationDataAsync(Guid locationId, HistoricalLocationCreateModel? model, CancellationToken cancellationToken)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            if (model == null)
+            {
+                throw new InvalidOperationException("HistoricalLocation data is missing for type 'HistoricalSite'.");
+            }
+
+            var location = await _unitOfWork.LocationRepository.GetByIdAsync(locationId, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("location");
+
+            // Add HistoricalLocation data
+            var historicalLocation = new HistoricalLocation
+            {
+                HeritageRank = model.HeritageRank,
+                EstablishedDate = model.EstablishedDate,
+                LocationId = locationId,
+                TypeHistoricalLocationId = model.TypeHistoricalLocationId
+            };
+            await _unitOfWork.HistoricalLocationRepository.AddAsync(historicalLocation);
+
+            // Add LocationTypeMapping
+            var typeMapping = new LocationTypeMapping
+            {
+                LocationId = locationId,
+                Type = LocationType.HistoricalSite
+            };
+            await _unitOfWork.LocationTypeMappingRepository.AddAsync(typeMapping);
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+            return true;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError();
+        }
+        finally
+        {
+            // _unitOfWork.Dispose();
         }
     }
 
@@ -373,14 +562,12 @@ public class LocationService : ILocationService
                 throw CustomExceptionFactory.CreateNotFoundError("location");
             }
 
-            var hotel = await _unitOfWork.HotelRepository.GetByLocationId(existingLocation.Id, cancellationToken);
             var cuisine = await _unitOfWork.CuisineRepository.GetByLocationId(existingLocation.Id, cancellationToken);
             var craftVillage = await _unitOfWork.CraftVillageRepository.GetByLocationId(existingLocation.Id, cancellationToken);
             var historicalLocation = await _unitOfWork.HistoricalLocationRepository.GetByLocationId(existingLocation.Id, cancellationToken);
 
             var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
 
-            locationDataModel.Hotel = hotel != null ? _mapper.Map<HotelDataModel>(hotel) : null;
             locationDataModel.Cuisine = cuisine != null ? _mapper.Map<CuisineDataModel>(cuisine) : null;
             locationDataModel.CraftVillage = craftVillage != null ? _mapper.Map<CraftVillageDataModel>(craftVillage) : null;
             locationDataModel.HistoricalLocation = historicalLocation != null ? _mapper.Map<HistoricalLocationDataModel>(historicalLocation) : null;
@@ -415,14 +602,12 @@ public class LocationService : ILocationService
                 throw CustomExceptionFactory.CreateNotFoundError("location");
             }
 
-            var hotel = await _unitOfWork.HotelRepository.GetByLocationId(existingLocation.Id, cancellationToken);
             var cuisine = await _unitOfWork.CuisineRepository.GetByLocationId(existingLocation.Id, cancellationToken);
             var craftVillage = await _unitOfWork.CraftVillageRepository.GetByLocationId(existingLocation.Id, cancellationToken);
             var historicalLocation = await _unitOfWork.HistoricalLocationRepository.GetByLocationId(existingLocation.Id, cancellationToken);
 
             var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
 
-            locationDataModel.Hotel = hotel != null ? _mapper.Map<HotelDataModel>(hotel) : null;
             locationDataModel.Cuisine = cuisine != null ? _mapper.Map<CuisineDataModel>(cuisine) : null;
             locationDataModel.CraftVillage = craftVillage != null ? _mapper.Map<CraftVillageDataModel>(craftVillage) : null;
             locationDataModel.HistoricalLocation = historicalLocation != null ? _mapper.Map<HistoricalLocationDataModel>(historicalLocation) : null;
@@ -470,8 +655,6 @@ public class LocationService : ILocationService
             var typeSet = locationUpdateModel.Types.ToHashSet();
             var errors = new List<string>();
 
-            if (locationUpdateModel.Hotel != null && !typeSet.Contains(LocationType.Hotel))
-                errors.Add("Hotel data is provided but 'Hotel' type is missing.");
             if (locationUpdateModel.Cuisine != null && !typeSet.Contains(LocationType.Cuisine))
                 errors.Add("Cuisine data is provided but 'Cuisine' type is missing.");
             if (locationUpdateModel.CraftVillage != null && !typeSet.Contains(LocationType.CraftVillage))
@@ -479,8 +662,6 @@ public class LocationService : ILocationService
             if (locationUpdateModel.HistoricalLocation != null && !typeSet.Contains(LocationType.HistoricalSite))
                 errors.Add("HistoricalLocation data is provided but 'HistoricalSite' type is missing.");
 
-            if (typeSet.Contains(LocationType.Hotel) && locationUpdateModel.Hotel == null)
-                errors.Add("Type 'Hotel' is specified but Hotel data is missing.");
             if (typeSet.Contains(LocationType.Cuisine) && locationUpdateModel.Cuisine == null)
                 errors.Add("Type 'Cuisine' is specified but Cuisine data is missing.");
             if (typeSet.Contains(LocationType.CraftVillage) && locationUpdateModel.CraftVillage == null)
@@ -507,21 +688,6 @@ public class LocationService : ILocationService
             }
 
             // Cập nhật dữ liệu phụ
-            if (locationUpdateModel.Hotel != null)
-            {
-                if (existingLocation.Hotel == null)
-                    existingLocation.Hotel = new Hotel { LocationId = existingLocation.Id };
-
-                existingLocation.Hotel.PhoneNumber = locationUpdateModel.Hotel.PhoneNumber;
-                existingLocation.Hotel.Email = locationUpdateModel.Hotel.Email;
-                existingLocation.Hotel.Website = locationUpdateModel.Hotel.Website;
-                existingLocation.Hotel.PricePerNight = locationUpdateModel.Hotel.PricePerNight;
-            }
-            else
-            {
-                existingLocation.Hotel = null;
-            }
-
             if (locationUpdateModel.CraftVillage != null)
             {
                 if (existingLocation.CraftVillage == null)
@@ -1009,7 +1175,6 @@ public class LocationService : ILocationService
             throw CustomExceptionFactory.CreateInternalServerError();
         }
     }
-
 
     public async Task<bool> AddRecommendedCraftVillagesAsync(Guid locationId, List<Guid> craftVillageIds, CancellationToken cancellationToken)
     {
@@ -2128,7 +2293,6 @@ public class LocationService : ILocationService
             throw CustomExceptionFactory.CreateInternalServerError();
         }
     }
-
 
     #region private methods 
 

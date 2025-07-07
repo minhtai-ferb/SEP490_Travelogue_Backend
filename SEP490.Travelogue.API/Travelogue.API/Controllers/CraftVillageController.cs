@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Travelogue.Repository.Bases.Responses;
 using Travelogue.Service.BusinessModels.CraftVillageModels;
+using Travelogue.Service.BusinessModels.LocationModels;
 using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 
@@ -55,7 +56,7 @@ public class CraftVillageController : ControllerBase
     public async Task<IActionResult> GetAllCraftVillages()
     {
         var craftVillages = await _craftVillageService.GetAllCraftVillagesAsync(new CancellationToken());
-        return Ok(ResponseModel<List<CraftVillageDataModel>>.OkResponseModel(
+        return Ok(ResponseModel<List<LocationDataModel>>.OkResponseModel(
             data: craftVillages,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "craftVillage")
         ));
@@ -70,7 +71,7 @@ public class CraftVillageController : ControllerBase
     public async Task<IActionResult> GetCraftVillageById(Guid id)
     {
         var craftVillage = await _craftVillageService.GetCraftVillageByLocationIdAsync(id, new CancellationToken());
-        return Ok(ResponseModel<CraftVillageDataModel>.OkResponseModel(
+        return Ok(ResponseModel<LocationDataDetailModel>.OkResponseModel(
             data: craftVillage,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "craftVillage")
         ));

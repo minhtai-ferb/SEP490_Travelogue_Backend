@@ -8,7 +8,6 @@ using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.CraftVillageModels;
 using Travelogue.Service.BusinessModels.CuisineModels;
 using Travelogue.Service.BusinessModels.HistoricalLocationModels;
-using Travelogue.Service.BusinessModels.HotelModels;
 using Travelogue.Service.BusinessModels.LocationModels;
 using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.Commons.Implementations;
@@ -97,13 +96,6 @@ public class HistoricalLocationService : IHistoricalLocationService
                 throw CustomExceptionFactory.CreateNotFoundError("historicalLocation");
 
             var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
-
-            // Chỉ lấy dữ liệu nếu Location có type tương ứng
-            if (locationTypes.Contains(LocationType.Hotel))
-            {
-                var hotel = await _unitOfWork.HotelRepository.GetByLocationId(existingLocation.Id, cancellationToken);
-                locationDataModel.Hotel = hotel != null ? _mapper.Map<HotelDataModel>(hotel) : null;
-            }
 
             if (locationTypes.Contains(LocationType.Cuisine))
             {
@@ -318,7 +310,6 @@ public class HistoricalLocationService : IHistoricalLocationService
             //  _unitOfWork.Dispose();
         }
     }
-
 
     // public async Task<HistoricalLocationMediaResponse> UploadMediaAsync(
     //     Guid id,

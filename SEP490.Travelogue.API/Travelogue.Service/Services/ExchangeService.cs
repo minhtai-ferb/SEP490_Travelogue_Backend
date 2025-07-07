@@ -1,14 +1,9 @@
 ﻿using AutoMapper;
-using Microsoft.EntityFrameworkCore;
-using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
-using Travelogue.Repository.Bases.Responses;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.ExchangeModels;
-using Travelogue.Service.BusinessModels.ExchangeSessionModels;
-using Travelogue.Service.Commons.Helpers;
 using Travelogue.Service.Commons.Interfaces;
 
 namespace Travelogue.Service.Services;

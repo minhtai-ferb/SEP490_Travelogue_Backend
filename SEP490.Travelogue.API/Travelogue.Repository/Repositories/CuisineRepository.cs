@@ -8,7 +8,7 @@ namespace Travelogue.Repository.Repositories;
 
 public interface ICuisineRepository : IGenericRepository<Cuisine>
 {
-    Task<List<Cuisine?>> GetByNameAsync(string name, CancellationToken cancellationToken);
+    Task<List<Cuisine>> GetByNameAsync(string name, CancellationToken cancellationToken);
     Task<PagedResult<Cuisine>> GetPageWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
     Task<Cuisine?> GetByLocationId(Guid locationId, CancellationToken cancellationToken);
 }
@@ -40,14 +40,14 @@ public sealed class CuisineRepository : GenericRepository<Cuisine>, ICuisineRepo
         }
     }
 
-    public Task<List<Cuisine?>> GetByNameAsync(string name, CancellationToken cancellationToken)
+    public Task<List<Cuisine>> GetByNameAsync(string name, CancellationToken cancellationToken)
     {
         try
         {
             var cuisines = _context.Cuisines
-            .Include(c => c.Location)
-            .Where(c => c.Location.Name.ToLower().Contains(name.ToLower()))
-            .ToListAsync(cancellationToken);
+                .Include(c => c.Location)
+                .Where(c => c.Location.Name.ToLower().Contains(name.ToLower()))
+                .ToListAsync(cancellationToken);
             return cuisines;
         }
         catch (CustomException)

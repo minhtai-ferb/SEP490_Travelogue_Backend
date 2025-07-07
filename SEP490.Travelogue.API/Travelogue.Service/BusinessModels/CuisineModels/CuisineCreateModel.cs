@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace Travelogue.Service.BusinessModels.CuisineModels;
+﻿namespace Travelogue.Service.BusinessModels.CuisineModels;
 
 public class CuisineCreateModel
 {

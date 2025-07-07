@@ -5,27 +5,27 @@ using Travelogue.Repository.Entities;
 
 namespace Travelogue.Repository.Repositories;
 
-public interface IOrderRepository : IGenericRepository<Order>
+public interface ITourScheduleRepository : IGenericRepository<TourSchedule>
 {
-    Task<PagedResult<Order>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default);
-    // Task<PagedResult<Order>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default);
-    Task<PagedResult<Order>> GetPageWithSearchAsync(
+    Task<PagedResult<TourSchedule>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default);
+    // Task<PagedResult<TourSchedule>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default);
+    Task<PagedResult<TourSchedule>> GetPageWithSearchAsync(
         string? title,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken = default);
 }
 
-public sealed class OrderRepository : GenericRepository<Order>, IOrderRepository
+public sealed class TourScheduleRepository : GenericRepository<TourSchedule>, ITourScheduleRepository
 {
     private readonly ApplicationDbContext _context;
 
-    public OrderRepository(ApplicationDbContext dbContext) : base(dbContext)
+    public TourScheduleRepository(ApplicationDbContext dbContext) : base(dbContext)
     {
         _context = dbContext;
     }
 
-    public async Task<PagedResult<Order>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default)
+    public async Task<PagedResult<TourSchedule>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default)
     {
         if (pageNumber < 1 || pageSize < 1)
         {
@@ -39,7 +39,7 @@ public sealed class OrderRepository : GenericRepository<Order>, IOrderRepository
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        return new PagedResult<Order>
+        return new PagedResult<TourSchedule>
         {
             Items = items,
             TotalCount = totalItems,
@@ -48,7 +48,7 @@ public sealed class OrderRepository : GenericRepository<Order>, IOrderRepository
         };
     }
 
-    public async Task<PagedResult<Order>> GetPageWithSearchAsync(
+    public async Task<PagedResult<TourSchedule>> GetPageWithSearchAsync(
         string? title,
         int pageNumber,
         int pageSize,
@@ -73,7 +73,7 @@ public sealed class OrderRepository : GenericRepository<Order>, IOrderRepository
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        return new PagedResult<Order>
+        return new PagedResult<TourSchedule>
         {
             Items = items,
             TotalCount = totalItems,

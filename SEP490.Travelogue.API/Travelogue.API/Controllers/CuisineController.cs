@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Travelogue.Repository.Bases.Responses;
 using Travelogue.Service.BusinessModels.CuisineModels;
+using Travelogue.Service.BusinessModels.LocationModels;
 using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 
@@ -55,7 +56,7 @@ public class CuisineController : ControllerBase
     public async Task<IActionResult> GetAllCuisines()
     {
         var cuisines = await _cuisineService.GetAllCuisinesAsync(new CancellationToken());
-        return Ok(ResponseModel<List<CuisineDataModel>>.OkResponseModel(
+        return Ok(ResponseModel<List<LocationDataModel>>.OkResponseModel(
             data: cuisines,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "cuisine")
         ));
@@ -70,7 +71,7 @@ public class CuisineController : ControllerBase
     public async Task<IActionResult> GetCuisineById(Guid id)
     {
         var cuisine = await _cuisineService.GetCuisineByLocationIdAsync(id, new CancellationToken());
-        return Ok(ResponseModel<CuisineDataModel>.OkResponseModel(
+        return Ok(ResponseModel<LocationDataDetailModel>.OkResponseModel(
             data: cuisine,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "cuisine")
         ));

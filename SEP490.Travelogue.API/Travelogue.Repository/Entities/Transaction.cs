@@ -7,7 +7,7 @@ namespace Travelogue.Repository.Entities;
 public sealed class Transaction : BaseEntity
 {
     [Required]
-    public Guid OrderId { get; set; }
+    public Guid BookingId { get; set; }
 
     [Range(0, double.MaxValue)]
     public decimal Amount { get; set; }
@@ -19,5 +19,5 @@ public sealed class Transaction : BaseEntity
     [EnumDataType(typeof(TransactionStatus))]
     public TransactionStatus Status { get; set; }
 
-    public Order? Order { get; set; }
+    public Booking? Booking { get; set; }
 }

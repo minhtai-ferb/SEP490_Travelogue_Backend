@@ -12,7 +12,7 @@ public class TourDetailResponse
     public string? TotalDaysText { get; set; }
     public decimal AdultPrice { get; set; }
     public decimal ChildrenPrice { get; set; }
-    public decimal PriceFinal { get; set; }
+    public decimal FinalPrice { get; set; }
     public bool IsDiscount { get; set; }
     public Guid TourTypeId { get; set; }
     public string? TourTypeText { get; set; }

@@ -1,12 +1,13 @@
 ﻿using Travelogue.Service.BusinessModels.MediaModel;
 
 namespace Travelogue.Service.BusinessModels.CuisineModels;
+
 public class CuisineDataModel : BaseDataModel
 {
     public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string? Description { get; set; }
-    public string? Content { get; set; }
+    // public string Name { get; set; } = string.Empty;
+    // public string? Description { get; set; }
+    // public string? Content { get; set; }
     public Guid LocationId { get; set; }
     public string? LocationName { get; set; } = string.Empty;
     public string? Address { get; set; }

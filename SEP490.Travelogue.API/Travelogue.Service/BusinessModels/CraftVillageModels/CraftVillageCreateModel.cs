@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace Travelogue.Service.BusinessModels.CraftVillageModels;
+﻿namespace Travelogue.Service.BusinessModels.CraftVillageModels;
 
 public class CraftVillageCreateModel
 {

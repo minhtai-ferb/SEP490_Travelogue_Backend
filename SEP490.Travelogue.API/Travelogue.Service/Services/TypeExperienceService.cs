@@ -91,7 +91,7 @@ public class TypeExperienceService : ITypeExperienceService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -136,7 +136,7 @@ public class TypeExperienceService : ITypeExperienceService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -162,7 +162,7 @@ public class TypeExperienceService : ITypeExperienceService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -188,7 +188,7 @@ public class TypeExperienceService : ITypeExperienceService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -214,7 +214,7 @@ public class TypeExperienceService : ITypeExperienceService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -244,7 +244,7 @@ public class TypeExperienceService : ITypeExperienceService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -274,7 +274,7 @@ public class TypeExperienceService : ITypeExperienceService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -322,7 +322,7 @@ public class TypeExperienceService : ITypeExperienceService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 }

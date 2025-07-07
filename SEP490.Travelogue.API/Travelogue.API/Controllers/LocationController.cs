@@ -2,6 +2,9 @@
 using Travelogue.Repository.Bases.Responses;
 using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels;
+using Travelogue.Service.BusinessModels.CraftVillageModels;
+using Travelogue.Service.BusinessModels.CuisineModels;
+using Travelogue.Service.BusinessModels.HistoricalLocationModels;
 using Travelogue.Service.BusinessModels.LocationModels;
 using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
@@ -15,16 +18,14 @@ public class LocationController : ControllerBase
     private readonly ILocationService _locationService;
     private readonly IEnumService _enumService;
     private readonly IHistoricalLocationService _historicalLocationService;
-    private readonly IHotelService _hotelService;
     private readonly ICraftVillageService _craftVillageService;
     private readonly ICuisineService _cuisineService;
 
-    public LocationController(ILocationService locationService, IEnumService enumService, IHistoricalLocationService historicalLocationService, IHotelService hotelService, ICraftVillageService craftVillageService, ICuisineService cuisineService)
+    public LocationController(ILocationService locationService, IEnumService enumService, IHistoricalLocationService historicalLocationService, ICraftVillageService craftVillageService, ICuisineService cuisineService)
     {
         _locationService = locationService;
         _enumService = enumService;
         _historicalLocationService = historicalLocationService;
-        _hotelService = hotelService;
         _craftVillageService = craftVillageService;
         _cuisineService = cuisineService;
     }
@@ -37,10 +38,58 @@ public class LocationController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateLocation([FromBody] LocationCreateModel model)
     {
-        var result = await _locationService.AddLocationAsync(model, new CancellationToken());
+        var result = await _locationService.CreateBasicLocationAsync(model, new CancellationToken());
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "location")
+        ));
+    }
+
+    /// <summary>
+    /// Adds cuisine data to an existing location.
+    /// </summary>
+    /// <param name="locationId">The ID of the location.</param>
+    /// <param name="model">The cuisine data.</param>
+    /// <returns>Success status.</returns>
+    [HttpPost("{locationId}/cuisine")]
+    public async Task<IActionResult> AddCuisineData(Guid locationId, [FromBody] CuisineCreateModel model)
+    {
+        var result = await _locationService.AddCuisineDataAsync(locationId, model, CancellationToken.None);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "cuisine data")
+        ));
+    }
+
+    /// <summary>
+    /// Adds craft village data to an existing location.
+    /// </summary>
+    /// <param name="locationId">The ID of the location.</param>
+    /// <param name="model">The craft village data.</param>
+    /// <returns>Success status.</returns>
+    [HttpPost("{locationId}/craft-village")]
+    public async Task<IActionResult> AddCraftVillageData(Guid locationId, [FromBody] CraftVillageCreateModel model)
+    {
+        var result = await _locationService.AddCraftVillageDataAsync(locationId, model, CancellationToken.None);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "craft village data")
+        ));
+    }
+
+    /// <summary>
+    /// Adds historical location data to an existing location.
+    /// </summary>
+    /// <param name="locationId">The ID of the location.</param>
+    /// <param name="model">The historical location data.</param>
+    /// <returns>Success status.</returns>
+    [HttpPost("{locationId}/historical-location")]
+    public async Task<IActionResult> AddHistoricalLocationData(Guid locationId, [FromBody] HistoricalLocationCreateModel model)
+    {
+        var result = await _locationService.AddHistoricalLocationDataAsync(locationId, model, CancellationToken.None);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "historical location data")
         ));
     }
 
@@ -381,48 +430,7 @@ public class LocationController : ControllerBase
     }
 
     /// <summary>
-    /// Lấy tất cả hotel
-    /// </summary>
-    /// <returns></returns>
-    [HttpGet("hotel")]
-    public async Task<IActionResult> GetAllHotels()
-    {
-        var historicalLocations = await _hotelService.GetAllHotelsAsync(new CancellationToken());
-        return Ok(ResponseModel<List<LocationDataModel>>.OkResponseModel(
-            data: historicalLocations,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "historicalLocation")
-        ));
-    }
-
-    /// <summary>
-    /// Lấy danh sách hotel phân trang theo tên, loại hotel, địa điểm, quận, tháng, năm
-    /// </summary>
-    /// <param name="name">Tên historicalLocation</param>
-    /// <param name="pageNumber"></param>
-    /// <param name="pageSize"></param>
-    /// <returns></returns>
-    [HttpGet("hotel/filter-paged")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetPagedHotelWithFilter(
-        string? name = null,
-        int pageNumber = 1,
-        int pageSize = 10)
-    {
-        var historicalLocations = await _hotelService.GetPagedHotelsWithSearchAsync(
-            name, pageNumber, pageSize, new CancellationToken()
-        );
-
-        return Ok(PagedResponseModel<object>.OkResponseModel(
-            data: historicalLocations.Items,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "historicalLocation"),
-            totalCount: historicalLocations.TotalCount,
-            pageSize: pageSize,
-            pageNumber: pageNumber
-        ));
-    }
-
-    /// <summary>
-    /// Lấy tất cả hotel
+    /// Lấy tất cả làng nghề
     /// </summary>
     /// <returns></returns>
     [HttpGet("craft-villages")]

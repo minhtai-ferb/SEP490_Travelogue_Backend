@@ -1,6 +1,10 @@
-﻿namespace Travelogue.Service.BusinessModels.RoleModels.Requests;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Travelogue.Service.BusinessModels.RoleModels.Requests;
+
 public class RoleRequestModel
 {
-    public string Name { get; set; }
+    [Required, StringLength(100)]
+    public required string Name { get; set; }
     public Guid? DistrictId { get; set; }
 }

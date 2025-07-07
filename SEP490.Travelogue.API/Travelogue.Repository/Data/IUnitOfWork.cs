@@ -13,7 +13,6 @@ public interface IUnitOfWork //: IDisposable
     IPasswordResetTokenRepository PasswordResetTokenRepository { get; }
     ILocationRepository LocationRepository { get; }
     IFavoriteLocationRepository FavoriteLocationRepository { get; }
-    ILocationHotelSuggestionRepository LocationHotelSuggestionRepository { get; }
     ILocationCraftVillageSuggestionRepository LocationCraftVillageSuggestionRepository { get; }
     ILocationCuisineSuggestionRepository LocationCuisineSuggestionRepository { get; }
     ITypeLocationRepository TypeLocationRepository { get; }
@@ -22,7 +21,6 @@ public interface IUnitOfWork //: IDisposable
     ITypeEventRepository TypeEventRepository { get; }
     ITypeExperienceRepository TypeExperienceRepository { get; }
     ICraftVillageRepository CraftVillageRepository { get; }
-    IHotelRepository HotelRepository { get; }
     ICuisineRepository CuisineRepository { get; }
     IMediaRepository MediaRepository { get; }
     IDistrictRepository DistrictRepository { get; }
@@ -41,11 +39,14 @@ public interface IUnitOfWork //: IDisposable
     ITourPlanLocationRepository TourPlanLocationRepository { get; }
     ITourPlanVersionRepository TourPlanVersionRepository { get; }
     ITourTypeRepository TourTypeRepository { get; }
-    IOrderRepository OrderRepository { get; }
+    IBookingRepository BookingRepository { get; }
     ITripPlanExchangeRepository TripPlanExchangeRepository { get; }
     ITripPlanExchangeSessionRepository TripPlanExchangeSessionRepository { get; }
     IHistoricalLocationRepository HistoricalLocationRepository { get; }
     ITypeHistoricalLocationRepository TypeHistoricalLocationRepository { get; }
+    ITourGuideScheduleRepository TourGuideScheduleRepository { get; }
+    ITourScheduleRepository TourScheduleRepository { get; }
+    ILocationTypeMappingRepository LocationTypeMappingRepository { get; }
 
     IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity;
     void Save();

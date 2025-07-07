@@ -4,13 +4,13 @@ using Travelogue.Service.BusinessModels.OrderModels;
 
 namespace Travelogue.Service.Commons.Mappers;
 
-public class OrderMappingProfile : Profile
+public class BookingMappingProfile : Profile
 {
-    public OrderMappingProfile()
+    public BookingMappingProfile()
     {
-        CreateMap<TripPlanExchange, Order>().ReverseMap();
+        CreateMap<TripPlanExchange, Booking>().ReverseMap();
         // CreateMap<OrderUpdateModel, Order>()
         //     .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
-        CreateMap<OrderDataModel, Order>().ReverseMap();
+        CreateMap<BookingDataModel, Booking>().ReverseMap();
     }
 }

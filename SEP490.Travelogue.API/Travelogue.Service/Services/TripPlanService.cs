@@ -98,7 +98,6 @@ public class TripPlanService : ITripPlanService
             var tripPlanVersion = await _unitOfWork.TripPlanVersionRepository.GetByIdAsync(request.TripPlanVersionId, cancellationToken)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Trip plan version");
 
-
             var newSession = new TripPlanExchangeSession
             {
                 // TourGuideId = tourGuide.Id,
@@ -239,7 +238,6 @@ public class TripPlanService : ITripPlanService
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
-
 
     public async Task DeleteTripPlanAsync(Guid id, CancellationToken cancellationToken)
     {

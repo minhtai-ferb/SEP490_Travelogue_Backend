@@ -3,7 +3,6 @@ using Travelogue.Repository.Entities;
 using Travelogue.Service.BusinessModels.CraftVillageModels;
 using Travelogue.Service.BusinessModels.CuisineModels;
 using Travelogue.Service.BusinessModels.HistoricalLocationModels;
-using Travelogue.Service.BusinessModels.HotelModels;
 using Travelogue.Service.BusinessModels.LocationModels;
 using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.Services;
@@ -25,9 +24,6 @@ public class LocationMappingProfile : Profile
                 opt.MapFrom<HeritageRankDisplayNameResolver>());
 
         CreateMap<Location, LocationDataModel>().ReverseMap();
-        CreateMap<Location, HotelCreateModel>()
-            .ReverseMap()
-            .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
 
         CreateMap<Location, LocationDataDetailModel>().ReverseMap();
 
@@ -36,9 +32,7 @@ public class LocationMappingProfile : Profile
         CreateMap<HistoricalLocationDataModel, HistoricalLocation>().ReverseMap();
         CreateMap<HistoricalLocationCreateModel, HistoricalLocation>();
         CreateMap<CraftVillageCreateModel, CraftVillage>();
-        CreateMap<HotelCreateModel, Hotel>();
         CreateMap<CuisineCreateModel, Cuisine>();
-
 
     }
 }

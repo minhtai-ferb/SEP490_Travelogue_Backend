@@ -6,13 +6,14 @@ using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 
 namespace Travelogue.Repository.Repositories;
+
 public interface IRoleRepository : IGenericRepository<Role>
 {
     Task UpdateAsync(Role Role);
     Task UpdateRoleAsync(Role Role);
     Task<List<Role>> GetAllRoleAsync(string? search = null);
     Task<PagedResult<Role>> GetPageRoleAsync(int pageNumber, int pageSize, string search, CancellationToken cancellationToken);
-    Task<Role> GetByNameAsync(string name);
+    Task<Role?> GetByNameAsync(string name);
     Task<bool> CheckUserRoleForDistrict(Guid userId, Guid districtId, CancellationToken cancellationToken);
     Task<List<Role>> GetByNamesAsync(List<string> listName);
 }
@@ -73,7 +74,7 @@ public class RoleRepository : GenericRepository<Role>, IRoleRepository
         };
     }
 
-    public async Task<Role> GetByNameAsync(string name)
+    public async Task<Role?> GetByNameAsync(string name)
     {
         try
         {

@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Net.payOS;
 using Travelogue.Service;
 using Travelogue.Service.Commons.Implementations;
 
@@ -15,6 +16,14 @@ public static class ConfigureService
 
         services.Configure<CloudinarySettings>(configuration.GetSection("Cloudinary"));
         services.AddScoped<ICloudinaryService, CloudinaryService>();
+
+
+        PayOS payOS = new PayOS(configuration["Environment:PAYOS_CLIENT_ID"] ?? throw new Exception("Cannot find environment"),
+                            configuration["Environment:PAYOS_API_KEY"] ?? throw new Exception("Cannot find environment"),
+                            configuration["Environment:PAYOS_CHECKSUM_KEY"] ?? throw new Exception("Cannot find environment"));
+        //configuration["Environment:PAYOS_PARTNER_CODE"] ?? throw new Exception("Cannot find environment"));
+
+        services.AddSingleton(payOS);
 
         return services;
     }

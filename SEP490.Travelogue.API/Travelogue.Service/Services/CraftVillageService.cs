@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
@@ -9,10 +8,8 @@ using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.CraftVillageModels;
 using Travelogue.Service.BusinessModels.CuisineModels;
 using Travelogue.Service.BusinessModels.HistoricalLocationModels;
-using Travelogue.Service.BusinessModels.HotelModels;
 using Travelogue.Service.BusinessModels.LocationModels;
 using Travelogue.Service.BusinessModels.MediaModel;
-using Travelogue.Service.Commons.Helpers;
 using Travelogue.Service.Commons.Implementations;
 using Travelogue.Service.Commons.Interfaces;
 
@@ -149,7 +146,7 @@ public class CraftVillageService : ICraftVillageService
                 .ToListAsync(cancellationToken);
 
             if (existingLocations == null || !existingLocations.Any())
-                throw CustomExceptionFactory.CreateNotFoundError("hotel");
+                throw CustomExceptionFactory.CreateNotFoundError("craft village");
 
             // Ánh xạ dữ liệu sang LocationDataModel
             var locationDataModels = _mapper.Map<List<LocationDataModel>>(existingLocations);
@@ -175,7 +172,6 @@ public class CraftVillageService : ICraftVillageService
         }
     }
 
-
     public async Task<LocationDataDetailModel?> GetCraftVillageByLocationIdAsync(Guid id, CancellationToken cancellationToken)
     {
         try
@@ -193,13 +189,6 @@ public class CraftVillageService : ICraftVillageService
                 throw CustomExceptionFactory.CreateNotFoundError("historicalLocation");
 
             var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
-
-            // Chỉ lấy dữ liệu nếu Location có type tương ứng
-            if (locationTypes.Contains(LocationType.Hotel))
-            {
-                var hotel = await _unitOfWork.HotelRepository.GetByLocationId(existingLocation.Id, cancellationToken);
-                locationDataModel.Hotel = hotel != null ? _mapper.Map<HotelDataModel>(hotel) : null;
-            }
 
             if (locationTypes.Contains(LocationType.Cuisine))
             {
@@ -278,7 +267,7 @@ public class CraftVillageService : ICraftVillageService
     {
         try
         {
-            var pagedResult = await _unitOfWork.LocationRepository.GetPageWithSearchAsync(name, pageNumber, pageSize, cancellationToken, LocationType.Hotel);
+            var pagedResult = await _unitOfWork.LocationRepository.GetPageWithSearchAsync(name, pageNumber, pageSize, cancellationToken, LocationType.CraftVillage);
 
             var locationDataModels = _mapper.Map<List<LocationDataModel>>(pagedResult.Items);
 

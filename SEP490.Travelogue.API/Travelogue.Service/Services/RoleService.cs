@@ -112,8 +112,16 @@ public sealed class RoleService : IRoleService
 
             foreach (var role in roleDataModels)
             {
-                role.DistrictId = await _unitOfWork.RoleDistrictRepository.GetDistrictIdByRoleId(role.Id);
-                role.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(role.DistrictId);
+                if (role.Id != null)
+                {
+                    role.DistrictId = await _unitOfWork.RoleDistrictRepository.GetDistrictIdByRoleId(role.Id);
+                    role.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(role.DistrictId);
+                }
+                else
+                {
+                    role.DistrictId = Guid.Empty;
+                    role.DistrictName = null;
+                }
             }
 
             return new PagedResult<RoleResponseModel>
@@ -134,7 +142,7 @@ public sealed class RoleService : IRoleService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 }

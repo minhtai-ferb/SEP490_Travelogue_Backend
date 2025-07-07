@@ -2,10 +2,10 @@ using Travelogue.Repository.Bases.BaseEntities;
 
 namespace Travelogue.Repository.Entities;
 
-public class TripPlanVersion : BaseEntity
+public sealed class TripPlanVersion : BaseEntity
 {
     public Guid TripPlanId { get; set; }
-    public TripPlan? TripPlan { get; set; }
+    public TripPlan TripPlan { get; set; } = null!;
 
     public DateTimeOffset VersionDate { get; set; } = DateTime.UtcNow;
     public string Description { get; set; } = string.Empty;

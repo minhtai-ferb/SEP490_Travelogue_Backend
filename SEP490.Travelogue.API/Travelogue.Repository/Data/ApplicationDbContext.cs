@@ -24,7 +24,6 @@ public class ApplicationDbContext : DbContext
     public DbSet<FavoriteLocation> FavoriteLocations { get; set; }
     public DbSet<LocationCraftVillageSuggestion> LocationCraftVillageSuggestions { get; set; }
     public DbSet<LocationCuisineSuggestion> LocationCuisineSuggestions { get; set; }
-    public DbSet<LocationHotelSuggestion> LocationHotelSuggestions { get; set; }
     public DbSet<LocationCategory> LocationCategories { get; set; }
     public DbSet<HistoricalLocation> HistoricalLocations { get; set; }
     public DbSet<TypeHistoricalLocation> TypeHistoricalLocations { get; set; }
@@ -37,9 +36,6 @@ public class ApplicationDbContext : DbContext
     public DbSet<Cuisine> Cuisines { get; set; }
     public DbSet<CuisineInterest> CuisineInterests { get; set; }
 
-    // Hotel Management
-    public DbSet<Hotel> Hotels { get; set; }
-
     // Tour Management
     public DbSet<Tour> Tours { get; set; }
     public DbSet<TourType> TourTypes { get; set; }
@@ -48,7 +44,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<TourSchedule> TourSchedules { get; set; }
     public DbSet<TourPlanLocation> TourPlanLocations { get; set; }
     public DbSet<TourGuide> TourGuides { get; set; }
-    public DbSet<TourGuideSchedules> TourGuideSchedules { get; set; }
+    public DbSet<TourGuideSchedule> TourGuideSchedules { get; set; }
     public DbSet<TourGroup> TourGroups { get; set; }
     public DbSet<TourGroupMember> TourGroupMembers { get; set; }
     public DbSet<TourJoinRequest> TourJoinRequests { get; set; }
@@ -80,11 +76,11 @@ public class ApplicationDbContext : DbContext
     public DbSet<Announcement> Announcements { get; set; }
 
     // Financial and Transaction Management
-    public DbSet<Order> Orders { get; set; }
+    public DbSet<Booking> Bookings { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
-    public DbSet<Voucher> Vouchers { get; set; }
+    public DbSet<Promotion> Promotions { get; set; }
     public DbSet<WithdrawalRequest> WithdrawalRequests { get; set; }
-    public DbSet<OrderWithdrawal> OrderWithdrawals { get; set; }
+    public DbSet<BookingWithdrawal> BookingWithdrawals { get; set; }
     public DbSet<RefundRequest> RefundRequests { get; set; }
 
     // Feedback and Reporting

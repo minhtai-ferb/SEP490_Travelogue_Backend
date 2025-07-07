@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
@@ -9,10 +8,8 @@ using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.CraftVillageModels;
 using Travelogue.Service.BusinessModels.CuisineModels;
 using Travelogue.Service.BusinessModels.HistoricalLocationModels;
-using Travelogue.Service.BusinessModels.HotelModels;
 using Travelogue.Service.BusinessModels.LocationModels;
 using Travelogue.Service.BusinessModels.MediaModel;
-using Travelogue.Service.Commons.Helpers;
 using Travelogue.Service.Commons.Implementations;
 using Travelogue.Service.Commons.Interfaces;
 
@@ -23,9 +20,9 @@ public interface ICuisineService
     Task<LocationDataDetailModel?> GetCuisineByLocationIdAsync(Guid id, CancellationToken cancellationToken);
     Task<List<LocationDataModel>> GetAllCuisinesAsync(CancellationToken cancellationToken);
     Task<PagedResult<LocationDataModel>> GetPagedCuisinesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
-    // Task AddCuisineAsync(CuisineCreateModel cuisineCreateModel, CancellationToken cancellationToken);
-    // Task UpdateCuisineAsync(Guid id, CuisineUpdateModel cuisineUpdateModel, CancellationToken cancellationToken);
-    // Task DeleteCuisineAsync(Guid id, CancellationToken cancellationToken);
+    Task AddCuisineAsync(CuisineCreateModel cuisineCreateModel, CancellationToken cancellationToken);
+    Task UpdateCuisineAsync(Guid id, CuisineUpdateModel cuisineUpdateModel, CancellationToken cancellationToken);
+    Task DeleteCuisineAsync(Guid id, CancellationToken cancellationToken);
     // Task<PagedResult<CuisineDataModel>> GetPagedCuisinesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
     // Task<CuisineMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
     Task<bool> DeleteMediaAsync(Guid id, List<string> deletedImages, CancellationToken cancellationToken);
@@ -145,7 +142,7 @@ public class CuisineService : ICuisineService
                 .ToListAsync(cancellationToken);
 
             if (existingLocations == null || !existingLocations.Any())
-                throw CustomExceptionFactory.CreateNotFoundError("hotel");
+                throw CustomExceptionFactory.CreateNotFoundError("cuisine");
 
             // Ánh xạ dữ liệu sang LocationDataModel
             var locationDataModels = _mapper.Map<List<LocationDataModel>>(existingLocations);
@@ -192,13 +189,6 @@ public class CuisineService : ICuisineService
                 throw CustomExceptionFactory.CreateNotFoundError("historicalLocation");
 
             var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
-
-            // Chỉ lấy dữ liệu nếu Location có type tương ứng
-            if (locationTypes.Contains(LocationType.Hotel))
-            {
-                var hotel = await _unitOfWork.HotelRepository.GetByLocationId(existingLocation.Id, cancellationToken);
-                locationDataModel.Hotel = hotel != null ? _mapper.Map<HotelDataModel>(hotel) : null;
-            }
 
             if (locationTypes.Contains(LocationType.Cuisine))
             {

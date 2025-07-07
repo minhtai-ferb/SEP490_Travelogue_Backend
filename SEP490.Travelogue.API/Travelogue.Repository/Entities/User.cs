@@ -19,6 +19,7 @@ public sealed class User : BaseEntity
     public required string FullName { get; set; } = string.Empty;
     public string? ProfilePictureUrl { get; set; }
     public string? EmailCode { get; set; }
+    public string? AvatarUrl { get; set; }
 
     public Gender Sex { get; set; }
 
@@ -81,7 +82,7 @@ public sealed class User : BaseEntity
     // Navigation properties
 
     public ICollection<TripPlan> TripPlans { get; set; } = new List<TripPlan>();
-    public ICollection<Order> Orders { get; set; } = new List<Order>();
+    public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     public ICollection<Report> Reports { get; set; } = new List<Report>();
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
     public ICollection<TourGroupMember> TourGroupMembers { get; set; } = new List<TourGroupMember>();

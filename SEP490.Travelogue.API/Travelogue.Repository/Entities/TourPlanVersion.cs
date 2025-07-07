@@ -27,5 +27,6 @@ public sealed class TourPlanVersion : BaseEntity
     // public string Status { get; set; } = "Draft";
 
     public ICollection<TourPlanLocation> TourPlanLocations { get; set; } = new List<TourPlanLocation>();
-    public ICollection<Order> Orders { get; set; } = new List<Order>();
+    public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
+    public ICollection<TourSchedule> TourSchedules { get; set; } = new List<TourSchedule>();
 }

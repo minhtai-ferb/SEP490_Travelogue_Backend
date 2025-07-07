@@ -2,7 +2,6 @@
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
-using Travelogue.Repository.Bases.Responses;
 using Travelogue.Repository.Caching;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;

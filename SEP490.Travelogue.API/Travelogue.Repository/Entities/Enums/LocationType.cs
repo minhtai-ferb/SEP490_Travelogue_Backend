@@ -13,12 +13,9 @@ public enum LocationType
     [Display(Name = "Ẩm thực")]
     Cuisine = 3,
 
-    [Display(Name = "Khách sạn")]
-    Hotel = 4,
-
     [Display(Name = "Danh lam thắng cảnh")]
-    ScenicSpot = 5,
+    ScenicSpot = 4,
 
     [Display(Name = "Khác")]
-    Other = 6
+    Other = 0
 }
