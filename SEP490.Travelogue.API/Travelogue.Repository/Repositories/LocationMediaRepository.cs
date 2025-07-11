@@ -6,7 +6,7 @@ namespace Travelogue.Repository.Repositories;
 
 public interface ILocationMediaRepository : IGenericRepository<LocationMedia>
 {
-    Task<LocationMedia> GetFirstByLocationIdAsync(Guid id);
+    Task<LocationMedia?> GetFirstByLocationIdAsync(Guid id);
 }
 public sealed class LocationMediaRepository : GenericRepository<LocationMedia>, ILocationMediaRepository
 {

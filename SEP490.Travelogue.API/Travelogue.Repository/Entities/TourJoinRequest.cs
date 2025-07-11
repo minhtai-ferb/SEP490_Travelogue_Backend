@@ -8,10 +8,10 @@ public sealed class TourJoinRequest : BaseEntity
 {
 
     [Required]
-    public Guid FromOrderId { get; set; }
+    public Guid FromBookingId { get; set; }
 
     [Required]
-    public Guid ToOrderId { get; set; }
+    public Guid ToBookingId { get; set; }
 
     public string? RequestNote { get; set; }
     public string? ResponseNote { get; set; }
@@ -23,9 +23,9 @@ public sealed class TourJoinRequest : BaseEntity
     public DateTime? RespondedAt { get; set; }
     public DateTime? ExpiresAt { get; set; }
 
-    [ForeignKey("FromOrderId")]
-    public Order FromOrder { get; set; } = null!;
+    [ForeignKey("FromBookingId")]
+    public Booking FromBooking { get; set; } = null!;
 
-    [ForeignKey("ToOrderId")]
-    public Order ToOrder { get; set; } = null!;
+    [ForeignKey("ToBookingId")]
+    public Booking ToBooking { get; set; } = null!;
 }

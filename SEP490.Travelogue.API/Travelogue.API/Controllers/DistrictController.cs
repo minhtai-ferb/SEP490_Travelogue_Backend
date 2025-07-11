@@ -146,47 +146,4 @@ public class DistrictController : ControllerBase
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPLOAD_SUCCESS, "media")
         ));
     }
-
-    //[HttpGet("get-paged")]
-    //[ProducesResponseType(StatusCodes.Status200OK)]
-    //public async Task<IActionResult> GetPagedDistrict(int pageNumber = 1, int pageSize = 10)
-    //{
-    //    var districts = await _districtService.GetPagedDistrictsAsync(pageNumber, pageSize, new CancellationToken());
-    //    return Ok(PagedResponseModel<object>.OkResponseModel(
-    //        data: districts.Items,
-    //        message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "district"),
-    //        pageSize: pageSize,
-    //        pageNumber: pageNumber
-    //    ));
-    //}
-
-    /// <summary>
-    /// Tạo mới District
-    /// </summary>
-    /// <param name="model"></param>
-    /// <returns></returns>
-    //[HttpPost]
-    //public async Task<IActionResult> CreateDistrict([FromBody] DistrictCreateModel model)
-    //{
-    //    await _districtService.AddDistrictAsync(model, new CancellationToken());
-    //    return Ok(ResponseModel<object>.OkResponseModel(
-    //        data: true,
-    //        message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "district")
-    //    ));
-    //}
-
-    /// <summary>
-    /// Lấy tên DistrictAdmin theo District (dùng để test cách hệ thống cấu hình lại tên role theo District)
-    /// </summary>
-    /// <param name="model"></param>
-    /// <returns></returns>
-    //[HttpPost("district_admin_name")]
-    //public async Task<IActionResult> GetDistrictAdminName([FromBody] DistrictCreateModel model)
-    //{
-    //    var newName = await _districtService.GetDistrictRoleNameAsync(model, new CancellationToken());
-    //    return Ok(ResponseModel<object>.OkResponseModel(
-    //        data: newName,
-    //        message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "district")
-    //    ));
-    //}
 }

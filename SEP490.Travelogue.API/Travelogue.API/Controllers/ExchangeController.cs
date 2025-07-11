@@ -19,6 +19,7 @@ namespace Travelogue.API.Controllers
             _exchangeService = exchangeService;
         }
 
+        // tour guide gửi lại cho người dùng
         [HttpPost]
         public async Task<IActionResult> SuggestedTripPlan(UpdateUserResponseModel updateUserResponseModel, CancellationToken cancellationToken)
         {

@@ -5,17 +5,17 @@ namespace Travelogue.Repository.Entities.Enums;
 public enum LocationType
 {
     [Display(Name = "Làng nghề")]
-    CraftVillage,
+    CraftVillage = 1,
 
     [Display(Name = "Địa điểm lịch sử")]
-    HistoricalSite,
+    HistoricalSite = 2,
 
     [Display(Name = "Ẩm thực")]
-    Cuisine,
+    Cuisine = 3,
 
-    [Display(Name = "Khách sạn")]
-    Hotel,
+    [Display(Name = "Danh lam thắng cảnh")]
+    ScenicSpot = 4,
 
     [Display(Name = "Khác")]
-    Other = 5
+    Other = 0
 }

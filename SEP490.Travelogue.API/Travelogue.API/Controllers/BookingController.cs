@@ -15,6 +15,7 @@ namespace Travelogue.API.Controllers
         {
             _bookingService = bookingService;
         }
+
         [HttpPost("create-booking")]
         public async Task<IActionResult> AddBookingAsync([FromBody] BookingCreateModel model, CancellationToken cancellationToken)
         {

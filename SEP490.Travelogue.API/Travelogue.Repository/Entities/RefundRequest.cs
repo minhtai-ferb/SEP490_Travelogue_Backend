@@ -10,7 +10,7 @@ public sealed class RefundRequest : BaseEntity
     public Guid UserId { get; set; }
 
     [Required]
-    public Guid OrderId { get; set; }
+    public Guid BookingId { get; set; }
 
     public DateTime RequestDate { get; set; }
 
@@ -23,6 +23,6 @@ public sealed class RefundRequest : BaseEntity
 
     [Column(TypeName = "decimal(18,2)")]
     public decimal? RefundAmount { get; set; }
-    public Order Order { get; set; } = null!;
+    public Booking Booking { get; set; } = null!;
     public User User { get; set; } = null!;
 }

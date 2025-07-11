@@ -6,7 +6,7 @@ namespace Travelogue.Repository.Entities;
 public sealed class TourPlanLocation : BaseEntity
 {
     [Required]
-    public Guid TourPlanVersionId { get; set; }
+    public Guid TourId { get; set; }
 
     [Required]
     public Guid LocationId { get; set; }
@@ -20,6 +20,6 @@ public sealed class TourPlanLocation : BaseEntity
     public TimeSpan EndTime { get; set; }
     public string? Notes { get; set; }
 
-    public TourPlanVersion TourPlanVersion { get; set; } = null!;
+    public Tour Tour { get; set; } = null!;
     public Location Location { get; set; } = null!;
 }

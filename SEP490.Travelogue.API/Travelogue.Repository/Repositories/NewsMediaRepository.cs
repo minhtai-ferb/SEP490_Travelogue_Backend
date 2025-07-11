@@ -9,7 +9,7 @@ namespace Travelogue.Repository.Repositories;
 public interface INewsMediaRepository : IGenericRepository<NewsMedia>
 {
     Task<NewsMedia?> GetByNameAsync(string title, CancellationToken cancellationToken);
-    Task<NewsMedia> GetFirstByNewsIdAsync(Guid id);
+    Task<NewsMedia?> GetFirstByNewsIdAsync(Guid id);
     Task<PagedResult<NewsMedia>> GetPageWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
 }
 public sealed class NewsMediaRepository : GenericRepository<NewsMedia>, INewsMediaRepository
@@ -33,7 +33,11 @@ public sealed class NewsMediaRepository : GenericRepository<NewsMedia>, INewsMed
     {
         try
         {
-            var events = _context.NewsMedias.FirstOrDefaultAsync(a => a.FileName.Contains(title), cancellationToken);
+            if (title == null)
+            {
+                return Task.FromResult<NewsMedia?>(null);
+            }
+            var events = _context.NewsMedias.FirstOrDefaultAsync(a => a.FileName != null && a.FileName.Contains(title), cancellationToken);
             return events;
         }
         catch (CustomException)
@@ -57,7 +61,7 @@ public sealed class NewsMediaRepository : GenericRepository<NewsMedia>, INewsMed
 
         if (!string.IsNullOrEmpty(name))
         {
-            query = query.Where(a => a.FileName.Contains(name));
+            query = query.Where(a => a.FileName != null && a.FileName.Contains(name));
         }
 
         var totalItems = await query.CountAsync(cancellationToken);

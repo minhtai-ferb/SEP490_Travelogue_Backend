@@ -27,7 +27,6 @@ public sealed class Location : BaseEntity
     public CraftVillage? CraftVillage { get; set; }
     public HistoricalLocation? HistoricalLocation { get; set; }
     public Cuisine? Cuisine { get; set; }
-    public Hotel? Hotel { get; set; }
     public District? District { get; set; }
     public ICollection<LocationTypeMapping> LocationTypes { get; set; } = new List<LocationTypeMapping>();
     public ICollection<Experience> Experiences { get; set; } = new List<Experience>();

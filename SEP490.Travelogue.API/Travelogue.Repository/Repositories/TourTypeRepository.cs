@@ -71,8 +71,8 @@ public sealed class TourTypeRepository : GenericRepository<TourType>, ITourTypeR
         try
         {
             var query = ActiveEntities.AsQueryable();
-            var nameEvents = query.FirstOrDefaultAsync(x => x.Id == typeEventId);
-            var result = nameEvents.Result?.Name;
+            var nameEvents = await query.FirstOrDefaultAsync(x => x.Id == typeEventId);
+            var result = nameEvents?.Name;
             return result;
         }
         catch (CustomException)
