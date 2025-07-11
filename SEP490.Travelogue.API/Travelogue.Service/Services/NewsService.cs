@@ -86,7 +86,7 @@ public class NewsService : INewsService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -124,7 +124,7 @@ public class NewsService : INewsService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -172,7 +172,7 @@ public class NewsService : INewsService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -300,7 +300,7 @@ public class NewsService : INewsService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -326,7 +326,7 @@ public class NewsService : INewsService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -377,7 +377,7 @@ public class NewsService : INewsService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -407,7 +407,7 @@ public class NewsService : INewsService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -458,7 +458,7 @@ public class NewsService : INewsService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 
@@ -493,7 +493,7 @@ public class NewsService : INewsService
         }
         finally
         {
-           //  _unitOfWork.Dispose();
+            //  _unitOfWork.Dispose();
         }
     }
 

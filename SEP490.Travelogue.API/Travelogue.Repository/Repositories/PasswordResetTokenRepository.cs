@@ -7,7 +7,7 @@ namespace Travelogue.Repository.Repositories;
 
 public interface IPasswordResetTokenRepository : IGenericRepository<PasswordResetToken>
 {
-    Task<PasswordResetToken> GetValidTokenAsync(string email, string token);
+    Task<PasswordResetToken?> GetValidTokenAsync(string email, string token);
 }
 
 public class PasswordResetTokenRepository : GenericRepository<PasswordResetToken>, IPasswordResetTokenRepository
@@ -19,7 +19,7 @@ public class PasswordResetTokenRepository : GenericRepository<PasswordResetToken
         _context = dbContext;
     }
 
-    public async Task<PasswordResetToken> GetValidTokenAsync(string email, string token)
+    public async Task<PasswordResetToken?> GetValidTokenAsync(string email, string token)
     {
         try
         {

@@ -3,7 +3,7 @@ using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Repository.Entities;
 
-public class TripPlanShare : BaseEntity
+public sealed class TripPlanShare : BaseEntity
 {
     public Guid TripPlanId { get; set; }
     public Guid UserId { get; set; }

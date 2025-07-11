@@ -1,11 +1,24 @@
-﻿namespace Travelogue.Service.BusinessModels.TourModels;
+﻿using Travelogue.Service.BusinessModels.TourGuideModels;
+
+namespace Travelogue.Service.BusinessModels.TourModels;
 
 public class TourDetailResponse
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public string? Content { get; set; }
     public int TotalDays { get; set; }
+    public string? TotalDaysText { get; set; }
+    public decimal AdultPrice { get; set; }
+    public decimal ChildrenPrice { get; set; }
+    public decimal FinalPrice { get; set; }
+    public bool IsDiscount { get; set; }
+    public Guid TourTypeId { get; set; }
+    public string? TourTypeText { get; set; }
+    public List<PromotionDto>? Promotions { get; set; } = new List<PromotionDto>();
+    public Guid? CurrentVersionId { get; set; }
+    public TourGuideDataModel? TourGuide { get; set; }
     public List<TourDayDetail> Days { get; set; } = new List<TourDayDetail>();
 }
 
@@ -31,4 +44,15 @@ public class TourActivity
     public string? Notes { get; set; }
     public string? ImageUrl { get; set; }
     // public decimal? Rating { get; set; }
+}
+
+public class PromotionDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public decimal DiscountPercentage { get; set; } = 0;
+    public decimal DiscountAmount { get; set; } = 0;
+    public DateTimeOffset StartDate { get; set; }
+    public DateTimeOffset EndDate { get; set; }
 }

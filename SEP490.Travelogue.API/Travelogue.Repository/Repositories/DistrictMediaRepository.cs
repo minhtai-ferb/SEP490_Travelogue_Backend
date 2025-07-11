@@ -24,7 +24,7 @@ public sealed class DistrictMediaRepository : GenericRepository<DistrictMedia>, 
     {
         try
         {
-            var events = _context.DistrictMedias.FirstOrDefaultAsync(a => a.FileName.Contains(title), cancellationToken);
+            var events = _context.DistrictMedias.FirstOrDefaultAsync(a => a.FileName != null && a.FileName.Contains(title), cancellationToken);
             return events;
         }
         catch (CustomException)
@@ -48,7 +48,7 @@ public sealed class DistrictMediaRepository : GenericRepository<DistrictMedia>, 
 
         if (!string.IsNullOrEmpty(name))
         {
-            query = query.Where(a => a.FileName.Contains(name));
+            query = query.Where(a => a.FileName != null && a.FileName.Contains(name));
         }
 
         var totalItems = await query.CountAsync(cancellationToken);

@@ -24,8 +24,6 @@ public class UnitOfWork : IUnitOfWork
     public IEventRepository EventRepository { get; }
     public ITypeEventRepository TypeEventRepository { get; }
     public ITypeExperienceRepository TypeExperienceRepository { get; }
-    public IHotelRepository HotelRepository { get; }
-    public ILocationHotelSuggestionRepository LocationHotelSuggestionRepository { get; }
     public ICraftVillageRepository CraftVillageRepository { get; }
     public ICuisineRepository CuisineRepository { get; }
     public IMediaRepository MediaRepository { get; }
@@ -42,14 +40,20 @@ public class UnitOfWork : IUnitOfWork
     public ITripPlanLocationRepository TripPlanLocationRepository { get; }
     public ITourGuideRepository TourGuideRepository { get; }
     public ITourRepository TourRepository { get; }
-    public IOrderRepository OrderRepository { get; }
+    public IBookingRepository BookingRepository { get; }
     public ITripPlanExchangeRepository TripPlanExchangeRepository { get; }
     public ITripPlanExchangeSessionRepository TripPlanExchangeSessionRepository { get; }
     public IHistoricalLocationRepository HistoricalLocationRepository { get; }
     public ITypeHistoricalLocationRepository TypeHistoricalLocationRepository { get; }
     public ITourPlanLocationRepository TourPlanLocationRepository { get; }
-    public ITourPlanVersionRepository TourPlanVersionRepository { get; }
     public ITourTypeRepository TourTypeRepository { get; }
+    public ITourGuideScheduleRepository TourGuideScheduleRepository { get; }
+    public ITourScheduleRepository TourScheduleRepository { get; }
+    public ILocationTypeMappingRepository LocationTypeMappingRepository { get; }
+    public IWorkshopRepository WorkshopRepository { get; }
+    public IWorkshopActivityRepository WorkshopActivityRepository { get; }
+    public IWorkshopScheduleRepository WorkshopScheduleRepository { get; }
+    public ITourGuideMappingRepository TourGuideMappingRepository { get; }
 
     public UnitOfWork(ApplicationDbContext dbContext)
     {
@@ -68,8 +72,6 @@ public class UnitOfWork : IUnitOfWork
         EventRepository = new EventRepository(_dbContext);
         TypeEventRepository = new TypeEventRepository(_dbContext);
         TypeExperienceRepository = new TypeExperienceRepository(_dbContext);
-        HotelRepository = new HotelRepository(_dbContext);
-        LocationHotelSuggestionRepository = new LocationHotelSuggestionRepository(_dbContext);
         CraftVillageRepository = new CraftVillageRepository(_dbContext);
         CuisineRepository = new CuisineRepository(_dbContext);
         MediaRepository = new MediaRepository(_dbContext);
@@ -86,14 +88,20 @@ public class UnitOfWork : IUnitOfWork
         TripPlanLocationRepository = new TripPlanLocationRepository(_dbContext);
         TourGuideRepository = new TourGuideRepository(_dbContext);
         TourRepository = new TourRepository(_dbContext);
-        OrderRepository = new OrderRepository(_dbContext);
+        BookingRepository = new BookingRepository(_dbContext);
         TripPlanExchangeRepository = new TripPlanExchangeRepository(_dbContext);
         TripPlanExchangeSessionRepository = new TripPlanExchangeSessionRepository(_dbContext);
         HistoricalLocationRepository = new HistoricalLocationRepository(_dbContext);
         TypeHistoricalLocationRepository = new TypeHistoricalLocationRepository(_dbContext);
         TourPlanLocationRepository = new TourPlanLocationRepository(_dbContext);
-        TourPlanVersionRepository = new TourPlanVersionRepository(_dbContext);
         TourTypeRepository = new TourTypeRepository(_dbContext);
+        TourGuideScheduleRepository = new TourGuideScheduleRepository(_dbContext);
+        TourScheduleRepository = new TourScheduleRepository(_dbContext);
+        LocationTypeMappingRepository = new LocationTypeMappingRepository(_dbContext);
+        WorkshopRepository = new WorkshopRepository(_dbContext);
+        WorkshopActivityRepository = new WorkshopActivityRepository(_dbContext);
+        WorkshopScheduleRepository = new WorkshopScheduleRepository(_dbContext);
+        TourGuideMappingRepository = new TourGuideMappingRepository(_dbContext);
     }
 
     public IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity
@@ -175,7 +183,6 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-
     public async Task CommitTransactionAsync()
     {
         try
@@ -218,9 +225,6 @@ public class UnitOfWork : IUnitOfWork
     // private IEventRepository _activityRepository = null!;
     // private ITypeEventRepository _typeEventRepository = null!;
     // private ITypeExperienceRepository _typeExperienceRepository = null!;
-    // private IHotelRepository _hotelRepository = null!;
-    // private IHotelMediaRepository _hotelMediaRepository = null!;
-    // private ILocationHotelSuggestionRepository _locationHotelSuggestionRepository = null!;
     // private ICraftVillageRepository _craftVillageRepository = null!;
     // private ICraftVillageMediaRepository _craftVillageMediaRepository = null!;
     // private ICuisineRepository _cuisineRepository = null!;
@@ -440,8 +444,6 @@ public class UnitOfWork : IUnitOfWork
     // }
 
     #endregion Repositories
-
-
 
     //public async ValueTask DisposeAsync()
     //{

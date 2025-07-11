@@ -1,6 +1,6 @@
 ﻿namespace Travelogue.Repository.Entities.Enums;
 
-public enum OrderStatus
+public enum BookingStatus
 {
     Pending = 0,          // Đang chờ xác nhận
     Confirmed = 1,        // Đã xác nhận bởi tour guide

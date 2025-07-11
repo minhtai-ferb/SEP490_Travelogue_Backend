@@ -58,6 +58,21 @@ public class TourGuideService : ITourGuideService
 
             var roleTourGuide = await _unitOfWork.RoleRepository.GetByNameAsync(AppRole.TOUR_GUIDE);
 
+            if (roleTourGuide == null)
+            {
+
+                roleTourGuide = new Role(AppRole.TOUR_GUIDE, true);
+                // Thêm mới role tour guide
+                roleTourGuide.Description = "Tour Guide Role";
+                roleTourGuide.CreatedBy = currentUserId;
+                roleTourGuide.LastUpdatedBy = currentUserId;
+                roleTourGuide.CreatedTime = currentTime;
+                roleTourGuide.LastUpdatedTime = currentTime;
+
+                await _unitOfWork.RoleRepository.AddAsync(roleTourGuide);
+                await _unitOfWork.SaveAsync();
+            }
+
             var tourGuides = new List<TourGuide>();
             foreach (var user in users)
             {
@@ -151,6 +166,7 @@ public class TourGuideService : ITourGuideService
         {
             var existingTourGuide = await _unitOfWork.TourGuideRepository.ActiveEntities
                 .Include(tg => tg.User)
+                .Include(tg => tg.TourGuideSchedules)
                 .ToListAsync(cancellationToken);
             if (existingTourGuide == null || existingTourGuide.Count() == 0)
             {
@@ -164,6 +180,8 @@ public class TourGuideService : ITourGuideService
                 .Where(tg => !request.MinPrice.HasValue || tg.Price >= request.MinPrice.Value)
                 .Where(tg => !request.MaxPrice.HasValue || tg.Price <= request.MaxPrice.Value)
                 .Where(tg => !request.Gender.HasValue || tg.User.Sex == request.Gender.Value)
+                .Where(tg => !request.StartDate.HasValue || !request.EndDate.HasValue ||
+                     !tg.TourGuideSchedules.Any(s => s.Date >= request.StartDate.Value && s.Date <= request.EndDate.Value))
                 .ToList();
 
             var result = _mapper.Map<List<TourGuideDataModel>>(existingTourGuide);
@@ -190,11 +208,17 @@ public class TourGuideService : ITourGuideService
         {
             var tourGuide = _unitOfWork.TourGuideRepository.ActiveEntities
                 .Include(tg => tg.User)
-                .Where(tg => tg.User.FullName.ToLower().Contains(name.ToLower()));
+                .Where(tg => string.IsNullOrEmpty(name) || tg.User.FullName.ToLower().Contains(name.ToLower()));
 
             if (tourGuide == null)
             {
-                return null; // Hoặc ném một ngoại lệ nếu cần
+                return new PagedResult<TourGuideDataModel>
+                {
+                    Items = new List<TourGuideDataModel>(),
+                    TotalCount = 0,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize
+                };
             }
 
             var tourGuideDetailResponse = _mapper.Map<TourGuideDataModel>(tourGuide);

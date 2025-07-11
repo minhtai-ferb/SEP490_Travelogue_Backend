@@ -10,4 +10,3 @@ public sealed class CuisineInterest : BaseEntity
     public Interest? Interest { get; set; }
     public Cuisine? Cuisine { get; set; }
 }
-

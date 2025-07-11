@@ -10,9 +10,6 @@ public class TourUpdateModel
     [MaxLength(500)]
     public string? Description { get; set; }
 
-    [Range(0, double.MaxValue)]
-    public decimal Price { get; set; }
-
     public int TotalDays { get; set; }
 
     public List<TourPlanLocationModel>? Locations { get; set; } = new List<TourPlanLocationModel>();
@@ -23,6 +20,11 @@ public class TourScheduleModel
 {
     public DateTime DepartureDate { get; set; }
     public int MaxParticipants { get; set; }
+
+    [Range(0, double.MaxValue)]
+    public decimal AdultPrice { get; set; }
+    [Range(0, double.MaxValue)]
+    public decimal ChildrenPrice { get; set; }
 }
 
 public class TourPlanLocationModel

@@ -25,5 +25,5 @@ public sealed class TripPlan : BaseEntity
     public User? User { get; set; }
     public ICollection<TripPlanVersion> TripPlanVersions { get; set; } = new List<TripPlanVersion>();
     public ICollection<TripPlanShare> Shares { get; set; } = new List<TripPlanShare>();
-    public ICollection<Order> Orders { get; set; } = new List<Order>();
+    public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 }

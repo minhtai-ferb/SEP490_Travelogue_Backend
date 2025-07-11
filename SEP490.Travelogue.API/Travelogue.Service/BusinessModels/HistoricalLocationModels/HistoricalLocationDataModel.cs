@@ -5,9 +5,9 @@ namespace Travelogue.Service.BusinessModels.HistoricalLocationModels;
 
 public class HistoricalLocationDataModel
 {
-    public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string? Description { get; set; }
+    public Guid HistoricalLocationId { get; set; }
+    // public string Name { get; set; } = string.Empty;
+    // public string? Description { get; set; }
     public DateTime? EstablishedDate { get; set; }
     public HeritageRank HeritageRank { get; set; }
     public string HeritageRankName { get; set; } = string.Empty;

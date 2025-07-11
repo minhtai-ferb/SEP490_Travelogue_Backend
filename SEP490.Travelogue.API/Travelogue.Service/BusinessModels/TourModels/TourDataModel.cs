@@ -9,8 +9,13 @@ public class TourDataModel : BaseDataModel
     public string? Content { get; set; }
 
     public int TotalDays { get; set; }
+    public decimal AdultPrice { get; set; }
+    public decimal ChildrenPrice { get; set; }
+    public decimal PriceFinal { get; set; }
+    public bool IsDiscount { get; set; }
 
     public Guid TourTypeId { get; set; }
+    public string? TourTypeText { get; set; }
 
     public Guid? CurrentVersionId { get; set; }
 }

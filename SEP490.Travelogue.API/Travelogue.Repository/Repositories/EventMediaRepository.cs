@@ -6,7 +6,7 @@ namespace Travelogue.Repository.Repositories;
 
 public interface IEventMediaRepository : IGenericRepository<EventMedia>
 {
-    Task<EventMedia> GetFirstByEventIdAsync(Guid id);
+    Task<EventMedia?> GetFirstByEventIdAsync(Guid id);
 }
 public sealed class EventMediaRepository : GenericRepository<EventMedia>, IEventMediaRepository
 {

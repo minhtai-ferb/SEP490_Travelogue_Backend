@@ -3,7 +3,6 @@ using Travelogue.Repository.Entities;
 using Travelogue.Service.BusinessModels.CraftVillageModels;
 using Travelogue.Service.BusinessModels.CuisineModels;
 using Travelogue.Service.BusinessModels.HistoricalLocationModels;
-using Travelogue.Service.BusinessModels.HotelModels;
 using Travelogue.Service.BusinessModels.LocationModels;
 using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.Services;
@@ -20,14 +19,11 @@ public class LocationMappingProfile : Profile
             .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
         CreateMap<LocationUpdateWithMediaFileModel, Location>()
             .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
-        CreateMap<HistoricalLocation, LocationDataModel>()
+        CreateMap<HistoricalLocation, HistoricalLocationDataModel>()
             .ForMember(dest => dest.HeritageRankName, opt =>
                 opt.MapFrom<HeritageRankDisplayNameResolver>());
 
         CreateMap<Location, LocationDataModel>().ReverseMap();
-        CreateMap<Location, HotelCreateModel>()
-            .ReverseMap()
-            .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
 
         CreateMap<Location, LocationDataDetailModel>().ReverseMap();
 
@@ -36,14 +32,12 @@ public class LocationMappingProfile : Profile
         CreateMap<HistoricalLocationDataModel, HistoricalLocation>().ReverseMap();
         CreateMap<HistoricalLocationCreateModel, HistoricalLocation>();
         CreateMap<CraftVillageCreateModel, CraftVillage>();
-        CreateMap<HotelCreateModel, Hotel>();
         CreateMap<CuisineCreateModel, Cuisine>();
-
 
     }
 }
 
-public class HeritageRankDisplayNameResolver : IValueResolver<HistoricalLocation, LocationDataModel, string>
+public class HeritageRankDisplayNameResolver : IValueResolver<HistoricalLocation, HistoricalLocationDataModel, string>
 {
     private readonly IEnumService _enumService;
 
@@ -52,7 +46,7 @@ public class HeritageRankDisplayNameResolver : IValueResolver<HistoricalLocation
         _enumService = enumService;
     }
 
-    public string Resolve(HistoricalLocation source, LocationDataModel destination, string destMember, ResolutionContext context)
+    public string Resolve(HistoricalLocation source, HistoricalLocationDataModel destination, string destMember, ResolutionContext context)
     {
         return _enumService.GetEnumDisplayName(source.HeritageRank);
     }
