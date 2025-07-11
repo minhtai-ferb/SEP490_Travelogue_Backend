@@ -1,8 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Travelogue.Repository.Entities.Enums;
-using Travelogue.Service.BusinessModels.CraftVillageModels;
-using Travelogue.Service.BusinessModels.CuisineModels;
-using Travelogue.Service.BusinessModels.HistoricalLocationModels;
 
 namespace Travelogue.Service.BusinessModels.LocationModels;
 
@@ -18,6 +15,11 @@ public class LocationCreateModel
     public double Longitude { get; set; }
 
     public Guid? DistrictId { get; set; }
+    [Required]
+    public LocationType LocationType { get; set; }
+
+    public TimeSpan? OpenTime { get; set; }
+    public TimeSpan? CloseTime { get; set; }
     // [Required]
     // public List<LocationType> Types { get; set; } = new();
     // public CuisineCreateModel? Cuisine { get; set; }

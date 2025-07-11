@@ -22,6 +22,7 @@ public interface ILocationRepository : IGenericRepository<Location>
 
     Task<PagedResult<Location>> GetPageWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken = default, LocationType? locationType = null);
     Task<List<string>> GetAllCategoriesAsync(Guid locationId, CancellationToken cancellationToken = default);
+    Task<string> GetCategoryNameAsync(Guid locationId, CancellationToken cancellationToken = default);
 }
 public sealed class LocationRepository : GenericRepository<Location>, ILocationRepository
 {
@@ -35,7 +36,6 @@ public sealed class LocationRepository : GenericRepository<Location>, ILocationR
     public async Task<List<string>> GetAllCategoriesAsync(Guid locationId, CancellationToken cancellationToken = default)
     {
         var location = await _context.Locations
-            .Include(l => l.LocationTypes)
             .FirstOrDefaultAsync(l => l.Id == locationId, cancellationToken);
 
         if (location == null)
@@ -43,10 +43,23 @@ public sealed class LocationRepository : GenericRepository<Location>, ILocationR
             return new List<string>();
         }
 
-        return location.LocationTypes
-            .Select(lt => lt.Type.GetDisplayName())
-            .Distinct()
-            .ToList();
+        // Assuming LocationType is an enum or has a Type property that's an enum
+        return location.LocationType != null
+            ? new List<string> { location.LocationType.GetDisplayName() }
+            : new List<string>();
+    }
+
+    public async Task<string> GetCategoryNameAsync(Guid locationId, CancellationToken cancellationToken = default)
+    {
+        var location = await _context.Locations
+            .FirstOrDefaultAsync(l => l.Id == locationId, cancellationToken);
+
+        if (location == null || location.LocationType == null)
+        {
+            return string.Empty;
+        }
+
+        return location.LocationType.GetDisplayName();
     }
 
     public async Task<PagedResult<Location>> GetPageWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken = default)
@@ -84,8 +97,7 @@ public sealed class LocationRepository : GenericRepository<Location>, ILocationR
         }
 
         var query = ActiveEntities
-            .Include(l => l.LocationTypes)
-            .Where(l => l.LocationTypes.Any(lt => lt.Type == locationType || locationType == null))
+            .Where(l => l.LocationType == locationType)
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(name))

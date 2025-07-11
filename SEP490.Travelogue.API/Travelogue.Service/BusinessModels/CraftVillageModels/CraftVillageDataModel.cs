@@ -22,6 +22,6 @@ public class CraftVillageDataModel : BaseDataModel
     // public double Latitude { get; set; }
     // public double Longitude { get; set; }
     // public Guid? DistrictId { get; set; }
-    public List<string>? Categories { get; set; }
+    public string Category { get; set; }
     public List<MediaResponse> Medias { get; set; } = new List<MediaResponse>();
 }

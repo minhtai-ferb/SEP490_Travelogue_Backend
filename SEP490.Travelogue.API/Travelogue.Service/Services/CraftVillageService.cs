@@ -22,7 +22,7 @@ public interface ICraftVillageService
     Task<PagedResult<LocationDataModel>> GetPagedCraftVillagesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task AddCraftVillageAsync(CraftVillageCreateModel craftVillageCreateModel, CancellationToken cancellationToken);
     Task AddCraftVillageAsync(Guid locationId, CraftVillageCreateModel craftVillageCreateModel, CancellationToken cancellationToken);
-    Task UpdateCraftVillageAsync(Guid id, CraftVillageUpdateModel craftVillageUpdateModel, CancellationToken cancellationToken);
+    Task UpdateCraftVillageAsync(Guid id, CraftVillageUpdateDto craftVillageUpdateModel, CancellationToken cancellationToken);
     Task DeleteCraftVillageAsync(Guid id, CancellationToken cancellationToken);
     // Task<CraftVillageMediaResponse> AddCraftVillageWithMediaAsync(CraftVillageCreateWithMediaFileModel craftVillageCreateModel, string? thumbnailSelected, CancellationToken cancellationToken);
     // Task UpdateCraftVillageAsync(Guid id, CraftVillageUpdateWithMediaFileModel craftVillageUpdateModel, string? thumbnailSelected, CancellationToken cancellationToken);
@@ -49,7 +49,7 @@ public class CraftVillageService : ICraftVillageService
         _mapper = mapper;
         _userContextService = userContextService;
         _timeService = timeService;
-        this._cloudinaryService = cloudinaryService;
+        _cloudinaryService = cloudinaryService;
     }
 
     public async Task AddCraftVillageAsync(CraftVillageCreateModel craftVillageCreateModel, CancellationToken cancellationToken)
@@ -178,8 +178,7 @@ public class CraftVillageService : ICraftVillageService
         {
             var existingLocations = await _unitOfWork.LocationRepository
                 .ActiveEntities
-                .Include(l => l.LocationTypes)
-                .Where(l => l.LocationTypes.Any(lt => lt.Type == LocationType.CraftVillage))
+                .Where(l => l.LocationType == LocationType.CraftVillage)
                 .ToListAsync(cancellationToken);
 
             if (existingLocations == null || !existingLocations.Any())
@@ -193,7 +192,7 @@ public class CraftVillageService : ICraftVillageService
             {
                 locationData.Medias = await GetMediaWithoutVideoByIdAsync(locationData.Id, cancellationToken);
                 locationData.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationData.DistrictId ?? Guid.Empty);
-                locationData.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationData.Id);
+                locationData.Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(locationData.Id);
                 //locationData.HeritageRankName = _enumService.GetEnumDisplayName(locationData.HeritageRank);
             }
 
@@ -213,33 +212,31 @@ public class CraftVillageService : ICraftVillageService
     {
         try
         {
-            var existingLocation = await _unitOfWork.LocationRepository.GetWithIncludeAsync(id, include => include
-                .Include(l => l.LocationTypes)
-            );
+            var existingLocation = await _unitOfWork.LocationRepository.GetActiveEntityByIdAsync(id, cancellationToken);
 
             if (existingLocation == null || existingLocation.IsDeleted)
                 throw CustomExceptionFactory.CreateNotFoundError("location");
 
-            var locationTypes = existingLocation.LocationTypes.Select(t => t.Type).ToHashSet();
+            var locationTypes = existingLocation.LocationType;
 
-            if (!locationTypes.Contains(LocationType.HistoricalSite))
+            if (!(locationTypes == LocationType.HistoricalSite))
                 throw CustomExceptionFactory.CreateNotFoundError("historicalLocation");
 
             var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
 
-            if (locationTypes.Contains(LocationType.Cuisine))
+            if (locationTypes == LocationType.Cuisine)
             {
                 var cuisine = await _unitOfWork.CuisineRepository.GetByLocationId(existingLocation.Id, cancellationToken);
                 locationDataModel.Cuisine = cuisine != null ? _mapper.Map<CuisineDataModel>(cuisine) : null;
             }
 
-            if (locationTypes.Contains(LocationType.CraftVillage))
+            if (locationTypes == LocationType.CraftVillage)
             {
                 var craftVillage = await _unitOfWork.CraftVillageRepository.GetByLocationId(existingLocation.Id, cancellationToken);
                 locationDataModel.CraftVillage = craftVillage != null ? _mapper.Map<CraftVillageDataModel>(craftVillage) : null;
             }
 
-            if (locationTypes.Contains(LocationType.HistoricalSite))
+            if (locationTypes == LocationType.HistoricalSite)
             {
                 var historicalLocation = await _unitOfWork.HistoricalLocationRepository.GetByLocationId(existingLocation.Id, cancellationToken);
                 locationDataModel.HistoricalLocation = historicalLocation != null ? _mapper.Map<HistoricalLocationDataModel>(historicalLocation) : null;
@@ -247,7 +244,7 @@ public class CraftVillageService : ICraftVillageService
 
             locationDataModel.Medias = await GetMediaWithoutVideoByIdAsync(id, cancellationToken);
             locationDataModel.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationDataModel.DistrictId);
-            locationDataModel.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationDataModel.Id, cancellationToken);
+            locationDataModel.Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(locationDataModel.Id, cancellationToken);
 
             return locationDataModel;
         }
@@ -312,7 +309,7 @@ public class CraftVillageService : ICraftVillageService
             {
                 locationData.Medias = await GetMediaWithoutVideoByIdAsync(locationData.Id, cancellationToken);
                 locationData.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationData.DistrictId ?? Guid.Empty);
-                locationData.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationData.Id);
+                locationData.Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(locationData.Id);
             }
 
             return new PagedResult<LocationDataModel>
@@ -337,7 +334,7 @@ public class CraftVillageService : ICraftVillageService
         }
     }
 
-    public async Task UpdateCraftVillageAsync(Guid id, CraftVillageUpdateModel craftVillageUpdateModel, CancellationToken cancellationToken)
+    public async Task UpdateCraftVillageAsync(Guid id, CraftVillageUpdateDto craftVillageUpdateModel, CancellationToken cancellationToken)
     {
         try
         {

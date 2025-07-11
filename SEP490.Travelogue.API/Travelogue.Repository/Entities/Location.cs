@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Travelogue.Repository.Bases.BaseEntities;
+using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Repository.Entities;
 
@@ -28,7 +29,8 @@ public sealed class Location : BaseEntity
     public HistoricalLocation? HistoricalLocation { get; set; }
     public Cuisine? Cuisine { get; set; }
     public District? District { get; set; }
-    public ICollection<LocationTypeMapping> LocationTypes { get; set; } = new List<LocationTypeMapping>();
+    public LocationType LocationType { get; set; }
+    // public ICollection<LocationTypeMapping> LocationTypes { get; set; } = new List<LocationTypeMapping>();
     public ICollection<Experience> Experiences { get; set; } = new List<Experience>();
     public ICollection<Event> Activities { get; set; } = new List<Event>();
     public ICollection<LocationMedia> LocationMedias { get; set; } = new List<LocationMedia>();

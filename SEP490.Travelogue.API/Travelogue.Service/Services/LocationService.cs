@@ -51,13 +51,18 @@ public interface ILocationService
         List<IFormFile> videoUploads,
         CancellationToken cancellationToken);
 
-    Task<List<LocationDataModel>> GetAllLocationAdminAsync();
     Task<LocationDataDetailModel?> GetLocationByIdWithVideosAsync(Guid id, CancellationToken cancellationToken);
 
     Task<LocationDataModel> CreateBasicLocationAsync(LocationCreateModel model, CancellationToken cancellationToken);
-    Task<bool> AddCuisineDataAsync(Guid locationId, CuisineCreateModel? model, CancellationToken cancellationToken);
-    Task<bool> AddCraftVillageDataAsync(Guid locationId, CraftVillageCreateModel? model, CancellationToken cancellationToken);
-    Task<bool> AddHistoricalLocationDataAsync(Guid locationId, HistoricalLocationCreateModel? model, CancellationToken cancellationToken);
+    Task<LocationDataModel> AddCuisineDataAsync(Guid locationId, CuisineCreateModel? model, CancellationToken cancellationToken);
+    Task<LocationDataModel> AddCraftVillageDataAsync(Guid locationId, CraftVillageCreateModel? model, CancellationToken cancellationToken);
+    Task<LocationDataModel> AddHistoricalLocationDataAsync(Guid locationId, HistoricalLocationCreateModel? model, CancellationToken cancellationToken);
+    Task<LocationDataModel> UpdateCuisineDataAsync(
+        Guid locationId,
+        CuisineUpdateDto dto,
+        CancellationToken cancellationToken = default);
+    Task<LocationDataModel> UpdateCraftVillageDataAsync(Guid locationId, CraftVillageUpdateDto dto, CancellationToken cancellationToken = default);
+    Task<LocationDataModel> UpdateHistoricalLocationDataAsync(Guid locationId, HistoricalLocationUpdateDto dto, CancellationToken cancellationToken = default);
 }
 
 public class LocationService : ILocationService
@@ -83,51 +88,6 @@ public class LocationService : ILocationService
         _mediaService = mediaService;
     }
 
-    // public async Task<LocationDataModel> AddLocationAsync(LocationCreateModel locationCreateModel, CancellationToken cancellationToken)
-    // {
-    //     using var transaction = await _unitOfWork.BeginTransactionAsync();
-    //     try
-    //     {
-    //         var currentUserId = _userContextService.GetCurrentUserId();
-    //         var currentTime = _timeService.SystemTimeNow;
-
-    //         var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), locationCreateModel.DistrictId ?? Guid.Empty, cancellationToken);
-    //         if (!checkRole)
-    //         {
-    //             throw CustomExceptionFactory.CreateForbiddenError();
-    //         }
-
-    //         var newLocation = _mapper.Map<Location>(locationCreateModel);
-    //         newLocation.CreatedBy = currentUserId;
-    //         newLocation.LastUpdatedBy = currentUserId;
-    //         newLocation.CreatedTime = currentTime;
-    //         newLocation.LastUpdatedTime = currentTime;
-
-    //         await _unitOfWork.LocationRepository.AddAsync(newLocation);
-    //         await _unitOfWork.SaveAsync();
-    //         await transaction.CommitAsync(cancellationToken);
-
-    //         var result = _unitOfWork.LocationRepository.ActiveEntities
-    //             .FirstOrDefault(l => l.Id == newLocation.Id);
-
-    //         return _mapper.Map<LocationDataModel>(result);
-    //     }
-    //     catch (CustomException)
-    //     {
-    //         await _unitOfWork.RollBackAsync();
-    //         throw;
-    //     }
-    //     catch (Exception)
-    //     {
-    //         await _unitOfWork.RollBackAsync();
-    //         throw CustomExceptionFactory.CreateInternalServerError();
-    //     }
-    //     finally
-    //     {
-    //         //  _unitOfWork.Dispose();
-    //     }
-    // }
-
     public async Task<LocationDataModel> AddLocationAsync(LocationCreateModel locationCreateModel, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
@@ -142,84 +102,7 @@ public class LocationService : ILocationService
                 throw CustomExceptionFactory.CreateForbiddenError();
             }
 
-            // Danh sách type hợp lệ
-            // var typeSet = locationCreateModel.Types.ToHashSet();
-
-            // // Danh sách lỗi không đồng bộ
-            // var errors = new List<string>();
-
-            // // Kiểm tra từng loại dữ liệu có đồng bộ với type
-
-            // if (locationCreateModel.Cuisine != null && !typeSet.Contains(LocationType.Cuisine))
-            //     errors.Add("Cuisine data is provided but 'Cuisine' type is missing.");
-
-            // if (locationCreateModel.CraftVillage != null && !typeSet.Contains(LocationType.CraftVillage))
-            //     errors.Add("CraftVillage data is provided but 'CraftVillage' type is missing.");
-
-            // if (locationCreateModel.HistoricalLocation != null && !typeSet.Contains(LocationType.HistoricalSite))
-            //     errors.Add("HistoricalLocation data is provided but 'HistoricalSite' type is missing.");
-
-            // // nếu type có nhưng không có dữ liệu
-            // if (typeSet.Contains(LocationType.Cuisine) && locationCreateModel.Cuisine == null)
-            //     errors.Add("Type 'Cuisine' is specified but Cuisine data is missing.");
-
-            // if (typeSet.Contains(LocationType.CraftVillage) && locationCreateModel.CraftVillage == null)
-            //     errors.Add("Type 'CraftVillage' is specified but CraftVillage data is missing.");
-
-            // if (typeSet.Contains(LocationType.HistoricalSite) && locationCreateModel.HistoricalLocation == null)
-            //     errors.Add("Type 'HistoricalSite' is specified but HistoricalLocation data is missing.");
-
-            // if (errors.Count > 0)
-            //     throw new InvalidOperationException(string.Join(" | ", errors));
-
             var newLocation = _mapper.Map<Location>(locationCreateModel);
-            // newLocation.CreatedBy = currentUserId;
-            // newLocation.LastUpdatedBy = currentUserId;
-            // newLocation.CreatedTime = currentTime;
-            // newLocation.LastUpdatedTime = currentTime;
-
-            // newLocation.LocationTypes = typeSet.Select(type => new LocationTypeMapping
-            // {
-            //     Type = type,
-            //     LocationId = newLocation.Id
-            // }).ToList();
-
-            // // Gán dữ liệu phụ nếu có
-
-            // if (locationCreateModel.CraftVillage != null)
-            // {
-            //     newLocation.CraftVillage = new CraftVillage
-            //     {
-            //         PhoneNumber = locationCreateModel.CraftVillage.PhoneNumber,
-            //         Email = locationCreateModel.CraftVillage.Email,
-            //         Website = locationCreateModel.CraftVillage.Website,
-            //         WorkshopsAvailable = locationCreateModel.CraftVillage.WorkshopsAvailable,
-            //         LocationId = newLocation.Id
-            //     };
-            // }
-
-            // if (locationCreateModel.Cuisine != null)
-            // {
-            //     newLocation.Cuisine = new Cuisine
-            //     {
-            //         PhoneNumber = locationCreateModel.Cuisine.PhoneNumber,
-            //         Email = locationCreateModel.Cuisine.Email,
-            //         Website = locationCreateModel.Cuisine.Website,
-            //         CuisineType = locationCreateModel.Cuisine.CuisineType,
-            //         LocationId = newLocation.Id
-            //     };
-            // }
-
-            // if (locationCreateModel.HistoricalLocation != null)
-            // {
-            //     newLocation.HistoricalLocation = new HistoricalLocation
-            //     {
-            //         HeritageRank = locationCreateModel.HistoricalLocation.HeritageRank,
-            //         EstablishedDate = locationCreateModel.HistoricalLocation.EstablishedDate,
-            //         LocationId = newLocation.Id,
-            //         TypeHistoricalLocationId = locationCreateModel.HistoricalLocation.TypeHistoricalLocationId,
-            //     };
-            // }
 
             await _unitOfWork.LocationRepository.AddAsync(newLocation);
             await _unitOfWork.SaveAsync();
@@ -253,31 +136,14 @@ public class LocationService : ILocationService
         {
             // Validate user role
             var currentUserId = _userContextService.GetCurrentUserId();
-            // var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(
-            //     Guid.Parse(currentUserId),
-            //     model.DistrictId ?? Guid.Empty,
-            //     cancellationToken);
-
-            // if (!checkRole)
-            // {
-            //     throw CustomExceptionFactory.CreateForbiddenError();
-            // }
+            var currentTime = _timeService.SystemTimeNow;
 
             // Map and set common fields
-            var currentTime = _timeService.SystemTimeNow;
             var newLocation = _mapper.Map<Location>(model);
             newLocation.CreatedBy = currentUserId;
             newLocation.LastUpdatedBy = currentUserId;
             newLocation.CreatedTime = currentTime;
             newLocation.LastUpdatedTime = currentTime;
-
-            // Add LocationTypeMapping
-            // var typeSet = model.Types.ToHashSet();
-            // newLocation.LocationTypes = typeSet.Select(type => new LocationTypeMapping
-            // {
-            //     Type = type,
-            //     LocationId = newLocation.Id
-            // }).ToList();
 
             await _unitOfWork.LocationRepository.AddAsync(newLocation);
             await _unitOfWork.SaveAsync();
@@ -301,7 +167,7 @@ public class LocationService : ILocationService
         }
     }
 
-    public async Task<bool> AddCuisineDataAsync(Guid locationId, CuisineCreateModel? model, CancellationToken cancellationToken)
+    public async Task<LocationDataModel> AddCuisineDataAsync(Guid locationId, CuisineCreateModel? model, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
@@ -314,6 +180,12 @@ public class LocationService : ILocationService
             var location = await _unitOfWork.LocationRepository.GetByIdAsync(locationId, cancellationToken)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("location");
 
+            var isCuisine = location.LocationType == LocationType.Cuisine;
+            if (!isCuisine)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Location is not of type Cuisine.");
+            }
+
             // Add Cuisine data
             var cuisine = new Cuisine
             {
@@ -325,16 +197,26 @@ public class LocationService : ILocationService
             };
             await _unitOfWork.CuisineRepository.AddAsync(cuisine);
 
-            // Add LocationTypeMapping
-            var typeMapping = new LocationTypeMapping
-            {
-                LocationId = location.Id,
-                Type = LocationType.Cuisine
-            };
-            await _unitOfWork.LocationTypeMappingRepository.AddAsync(typeMapping);
             await _unitOfWork.SaveAsync();
+
+            var response = new LocationDataModel
+            {
+                Id = location.Id,
+                Name = location.Name,
+                Description = location.Description,
+                Content = location.Content,
+                Latitude = location.Latitude,
+                Longitude = location.Longitude,
+                OpenTime = location.OpenTime,
+                CloseTime = location.CloseTime,
+                Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(location.Id),
+                DistrictId = location.DistrictId,
+                DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(location.DistrictId ?? Guid.Empty),
+                Medias = await GetMediaWithoutVideoByIdAsync(location.Id, cancellationToken),
+            };
+
             await transaction.CommitAsync(cancellationToken);
-            return true;
+            return response;
         }
         catch (CustomException)
         {
@@ -350,7 +232,101 @@ public class LocationService : ILocationService
         }
     }
 
-    public async Task<bool> AddCraftVillageDataAsync(Guid locationId, CraftVillageCreateModel? model, CancellationToken cancellationToken)
+    public async Task<LocationDataModel> UpdateCuisineDataAsync(
+        Guid locationId,
+        CuisineUpdateDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        if (dto == null)
+            throw CustomExceptionFactory.CreateBadRequestError("Cuisine data cannot be null.");
+
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var location = await _unitOfWork.LocationRepository
+                .ActiveEntities
+                .Include(l => l.Cuisine)
+                .FirstOrDefaultAsync(l => l.Id == locationId, cancellationToken);
+
+            if (location == null)
+                throw CustomExceptionFactory.CreateBadRequestError("Location not found.");
+
+            if (location.LocationType != LocationType.Cuisine)
+                throw CustomExceptionFactory.CreateBadRequestError("The specified location is not a Cuisine.");
+
+            location.Name = dto.Name;
+            location.Description = dto.Description;
+            location.Content = dto.Content;
+            location.Address = dto.Address;
+            location.Latitude = dto.Latitude;
+            location.Longitude = dto.Longitude;
+            location.OpenTime = dto.OpenTime;
+            location.CloseTime = dto.CloseTime;
+            location.DistrictId = dto.DistrictId;
+            location.LastUpdatedTime = DateTime.UtcNow;
+
+            if (location.Cuisine == null)
+            {
+                location.Cuisine = new Cuisine
+                {
+                    LocationId = locationId,
+                    CuisineType = dto.CuisineType,
+                    PhoneNumber = dto.PhoneNumber,
+                    Email = dto.Email,
+                    Website = dto.Website,
+                    SignatureProduct = dto.SignatureProduct,
+                    CookingMethod = dto.CookingMethod,
+                    CreatedTime = DateTime.UtcNow,
+                    LastUpdatedTime = DateTime.UtcNow
+                };
+                await _unitOfWork.CuisineRepository.AddAsync(location.Cuisine);
+            }
+            else
+            {
+                var cuisine = location.Cuisine;
+                cuisine.CuisineType = dto.CuisineType;
+                cuisine.PhoneNumber = dto.PhoneNumber;
+                cuisine.Email = dto.Email;
+                cuisine.Website = dto.Website;
+                cuisine.SignatureProduct = dto.SignatureProduct;
+                cuisine.CookingMethod = dto.CookingMethod;
+                cuisine.LastUpdatedTime = DateTime.UtcNow;
+            }
+
+            await _unitOfWork.SaveAsync();
+
+            var model = new LocationDataModel
+            {
+                Id = location.Id,
+                Name = location.Name,
+                Description = location.Description,
+                Content = location.Content,
+                Latitude = location.Latitude,
+                Longitude = location.Longitude,
+                OpenTime = location.OpenTime,
+                CloseTime = location.CloseTime,
+                Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(location.Id),
+                DistrictId = location.DistrictId,
+                DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(location.DistrictId ?? Guid.Empty),
+                Medias = await GetMediaWithoutVideoByIdAsync(location.Id, cancellationToken),
+            };
+
+            await transaction.CommitAsync(cancellationToken);
+            return model;
+        }
+        catch (CustomException)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<LocationDataModel> AddCraftVillageDataAsync(Guid locationId, CraftVillageCreateModel? model, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
@@ -363,6 +339,12 @@ public class LocationService : ILocationService
             var location = await _unitOfWork.LocationRepository.GetByIdAsync(locationId, cancellationToken)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("location");
 
+            var isCraftVillage = location.LocationType == LocationType.CraftVillage;
+            if (!isCraftVillage)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Location is not of type Craft Village.");
+            }
+
             // Add CraftVillage data
             var craftVillage = new CraftVillage
             {
@@ -374,16 +356,26 @@ public class LocationService : ILocationService
             };
             await _unitOfWork.CraftVillageRepository.AddAsync(craftVillage);
 
-            // Add LocationTypeMapping
-            var typeMapping = new LocationTypeMapping
-            {
-                LocationId = location.Id,
-                Type = LocationType.CraftVillage
-            };
-            await _unitOfWork.LocationTypeMappingRepository.AddAsync(typeMapping);
             await _unitOfWork.SaveAsync();
+
+            var response = new LocationDataModel
+            {
+                Id = location.Id,
+                Name = location.Name,
+                Description = location.Description,
+                Content = location.Content,
+                Latitude = location.Latitude,
+                Longitude = location.Longitude,
+                OpenTime = location.OpenTime,
+                CloseTime = location.CloseTime,
+                Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(location.Id),
+                DistrictId = location.DistrictId,
+                DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(location.DistrictId ?? Guid.Empty),
+                Medias = await GetMediaWithoutVideoByIdAsync(location.Id, cancellationToken),
+            };
+
             await transaction.CommitAsync(cancellationToken);
-            return true;
+            return response;
         }
         catch (CustomException)
         {
@@ -399,7 +391,110 @@ public class LocationService : ILocationService
         }
     }
 
-    public async Task<bool> AddHistoricalLocationDataAsync(Guid locationId, HistoricalLocationCreateModel? model, CancellationToken cancellationToken)
+    public async Task<LocationDataModel> UpdateCraftVillageDataAsync(Guid locationId, CraftVillageUpdateDto dto, CancellationToken cancellationToken = default)
+    {
+        if (dto == null)
+        {
+            throw CustomExceptionFactory.CreateBadRequestError("Craft village data cannot be null.");
+        }
+
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            // Find the Location with its associated CraftVillage
+            var location = await _unitOfWork.LocationRepository
+                .ActiveEntities
+                .Include(l => l.CraftVillage)
+
+                .FirstOrDefaultAsync(l => l.Id == locationId, cancellationToken);
+
+            if (location == null)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Location not found.");
+            }
+
+            // Verify that the location is a CraftVillage
+            if (location.LocationType != LocationType.CraftVillage)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("The specified location is not a Craft Village.");
+            }
+
+            // Update Location properties
+            location.Name = dto.Name;
+            location.Description = dto.Description;
+            location.Content = dto.Content;
+            location.Address = dto.Address;
+            location.Latitude = dto.Latitude;
+            location.Longitude = dto.Longitude;
+            location.OpenTime = dto.OpenTime;
+            location.CloseTime = dto.CloseTime;
+            location.DistrictId = dto.DistrictId;
+            location.LastUpdatedTime = DateTime.UtcNow;
+
+            // Update or create CraftVillage
+            if (location.CraftVillage == null)
+            {
+                location.CraftVillage = new CraftVillage
+                {
+                    LocationId = locationId,
+                    PhoneNumber = dto.PhoneNumber,
+                    Email = dto.Email,
+                    Website = dto.Website,
+                    WorkshopsAvailable = dto.WorkshopsAvailable,
+                    SignatureProduct = dto.SignatureProduct,
+                    YearsOfHistory = dto.YearsOfHistory,
+                    IsRecognizedByUNESCO = dto.IsRecognizedByUNESCO,
+                    CreatedTime = DateTime.UtcNow,
+                    LastUpdatedTime = DateTime.UtcNow
+                };
+                await _unitOfWork.CraftVillageRepository.AddAsync(location.CraftVillage);
+            }
+            else
+            {
+                location.CraftVillage.PhoneNumber = dto.PhoneNumber;
+                location.CraftVillage.Email = dto.Email;
+                location.CraftVillage.Website = dto.Website;
+                location.CraftVillage.WorkshopsAvailable = dto.WorkshopsAvailable;
+                location.CraftVillage.SignatureProduct = dto.SignatureProduct;
+                location.CraftVillage.YearsOfHistory = dto.YearsOfHistory;
+                location.CraftVillage.IsRecognizedByUNESCO = dto.IsRecognizedByUNESCO;
+                location.CraftVillage.LastUpdatedTime = DateTime.UtcNow;
+            }
+
+            await _unitOfWork.SaveAsync();
+
+            var model = new LocationDataModel
+            {
+                Id = location.Id,
+                Name = location.Name,
+                Description = location.Description,
+                Content = location.Content,
+                Latitude = location.Latitude,
+                Longitude = location.Longitude,
+                OpenTime = location.OpenTime,
+                CloseTime = location.CloseTime,
+                Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(location.Id),
+                DistrictId = location.DistrictId,
+                DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(location.DistrictId ?? Guid.Empty),
+                Medias = await GetMediaWithoutVideoByIdAsync(location.Id, cancellationToken),
+            };
+
+            await transaction.CommitAsync(cancellationToken);
+            return model;
+        }
+        catch (CustomException)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<LocationDataModel> AddHistoricalLocationDataAsync(Guid locationId, HistoricalLocationCreateModel? model, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
@@ -412,26 +507,42 @@ public class LocationService : ILocationService
             var location = await _unitOfWork.LocationRepository.GetByIdAsync(locationId, cancellationToken)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("location");
 
+            var isHistoricalLocation = location.LocationType == LocationType.HistoricalSite;
+            if (!isHistoricalLocation)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Location is not of type HistoricalSite.");
+            }
+
             // Add HistoricalLocation data
             var historicalLocation = new HistoricalLocation
             {
                 HeritageRank = model.HeritageRank,
                 EstablishedDate = model.EstablishedDate,
                 LocationId = locationId,
-                TypeHistoricalLocationId = model.TypeHistoricalLocationId
+                TypeHistoricalLocation = model.TypeHistoricalLocation
             };
             await _unitOfWork.HistoricalLocationRepository.AddAsync(historicalLocation);
 
-            // Add LocationTypeMapping
-            var typeMapping = new LocationTypeMapping
-            {
-                LocationId = locationId,
-                Type = LocationType.HistoricalSite
-            };
-            await _unitOfWork.LocationTypeMappingRepository.AddAsync(typeMapping);
             await _unitOfWork.SaveAsync();
+
+            var response = new LocationDataModel
+            {
+                Id = location.Id,
+                Name = location.Name,
+                Description = location.Description,
+                Content = location.Content,
+                Latitude = location.Latitude,
+                Longitude = location.Longitude,
+                OpenTime = location.OpenTime,
+                CloseTime = location.CloseTime,
+                Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(location.Id),
+                DistrictId = location.DistrictId,
+                DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(location.DistrictId ?? Guid.Empty),
+                Medias = await GetMediaWithoutVideoByIdAsync(location.Id, cancellationToken),
+            };
+
             await transaction.CommitAsync(cancellationToken);
-            return true;
+            return response;
         }
         catch (CustomException)
         {
@@ -444,6 +555,101 @@ public class LocationService : ILocationService
         finally
         {
             // _unitOfWork.Dispose();
+        }
+    }
+
+    public async Task<LocationDataModel> UpdateHistoricalLocationDataAsync(Guid locationId, HistoricalLocationUpdateDto dto, CancellationToken cancellationToken = default)
+    {
+        if (dto == null)
+        {
+            throw CustomExceptionFactory.CreateBadRequestError("Craft village data cannot be null.");
+        }
+
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            // Find the Location with its associated HistoricalLocation
+            var location = await _unitOfWork.LocationRepository
+                .ActiveEntities
+                .Include(l => l.HistoricalLocation)
+
+                .FirstOrDefaultAsync(l => l.Id == locationId, cancellationToken);
+
+            if (location == null)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Location not found.");
+            }
+
+            // Verify that the location is a HistoricalLocation
+            if (location.LocationType != LocationType.HistoricalSite)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("The specified location is not a Craft Village.");
+            }
+
+            // Update Location properties
+            location.Name = dto.Name;
+            location.Description = dto.Description;
+            location.Content = dto.Content;
+            location.Address = dto.Address;
+            location.Latitude = dto.Latitude;
+            location.Longitude = dto.Longitude;
+            location.OpenTime = dto.OpenTime;
+            location.CloseTime = dto.CloseTime;
+            location.DistrictId = dto.DistrictId;
+            location.LastUpdatedTime = DateTime.UtcNow;
+
+            // Update or create HistoricalLocation
+            if (location.HistoricalLocation == null)
+            {
+                location.HistoricalLocation = new HistoricalLocation
+                {
+                    LocationId = locationId,
+                    HeritageRank = dto.HeritageRank,
+                    EstablishedDate = dto.EstablishedDate,
+                    TypeHistoricalLocation = dto.TypeHistoricalLocation,
+                    CreatedTime = DateTime.UtcNow,
+                    LastUpdatedTime = DateTime.UtcNow
+                };
+                await _unitOfWork.HistoricalLocationRepository.AddAsync(location.HistoricalLocation);
+            }
+            else
+            {
+                location.HistoricalLocation.HeritageRank = dto.HeritageRank;
+                location.HistoricalLocation.EstablishedDate = dto.EstablishedDate;
+                location.HistoricalLocation.TypeHistoricalLocation = dto.TypeHistoricalLocation;
+                location.HistoricalLocation.LastUpdatedTime = DateTime.UtcNow;
+            }
+
+            await _unitOfWork.SaveAsync();
+
+            var model = new LocationDataModel
+            {
+                Id = location.Id,
+                Name = location.Name,
+                Description = location.Description,
+                Content = location.Content,
+                Latitude = location.Latitude,
+                Longitude = location.Longitude,
+                OpenTime = location.OpenTime,
+                CloseTime = location.CloseTime,
+                Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(location.Id),
+                DistrictId = location.DistrictId,
+                DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(location.DistrictId ?? Guid.Empty),
+                Medias = await GetMediaWithoutVideoByIdAsync(location.Id, cancellationToken),
+            };
+
+            await transaction.CommitAsync(cancellationToken);
+            return model;
+        }
+        catch (CustomException)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -472,7 +678,7 @@ public class LocationService : ILocationService
                 await _unitOfWork.EventRepository.ActiveEntities.FirstOrDefaultAsync(e => e.LocationId == id, cancellationToken) != null ||
                 await _unitOfWork.NewsRepository.ActiveEntities.FirstOrDefaultAsync(e => e.LocationId == id, cancellationToken) != null;
 
-            // xóa các trường recomment nếu location bị xóa
+            // xóa các trường recommend nếu location bị xóa
             await _unitOfWork.LocationCraftVillageSuggestionRepository.ActiveEntities
                 .Where(s => s.LocationId == id)
                 .ForEachAsync(s => s.IsDeleted = true, cancellationToken);
@@ -529,7 +735,7 @@ public class LocationService : ILocationService
             {
                 locationData.Medias = await GetMediaWithoutVideoByIdAsync(locationData.Id, cancellationToken);
                 locationData.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationData.DistrictId ?? Guid.Empty);
-                locationData.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationData.Id);
+                locationData.Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(locationData.Id);
 
                 //locationData.HeritageRankName = _enumService.GetEnumDisplayName(locationData.HeritageRank);
             }
@@ -554,9 +760,7 @@ public class LocationService : ILocationService
     {
         try
         {
-            var existingLocation = await _unitOfWork.LocationRepository.GetWithIncludeAsync(id, include => include
-                .Include(l => l.LocationTypes)
-            );
+            var existingLocation = await _unitOfWork.LocationRepository.GetByIdAsync(id, cancellationToken);
             if (existingLocation == null || existingLocation.IsDeleted)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("location");
@@ -588,7 +792,7 @@ public class LocationService : ILocationService
 
             locationDataModel.Medias = await GetMediaWithoutVideoByIdAsync(id, cancellationToken);
             locationDataModel.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationDataModel.DistrictId);
-            locationDataModel.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationDataModel.Id, cancellationToken);
+            locationDataModel.Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(locationDataModel.Id, cancellationToken);
 
             return locationDataModel;
         }
@@ -628,7 +832,7 @@ public class LocationService : ILocationService
 
             locationDataModel.Medias = await GetMediaWithoutVideoByIdAsync(id, cancellationToken);
             locationDataModel.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationDataModel.DistrictId);
-            locationDataModel.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationDataModel.Id, cancellationToken);
+            locationDataModel.Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(locationDataModel.Id, cancellationToken);
 
             return locationDataModel;
         }
@@ -691,15 +895,15 @@ public class LocationService : ILocationService
             existingLocation.LastUpdatedTime = currentTime;
 
             // Cập nhật lại LocationTypes
-            existingLocation.LocationTypes.Clear();
-            foreach (var type in typeSet)
-            {
-                existingLocation.LocationTypes.Add(new LocationTypeMapping
-                {
-                    LocationId = existingLocation.Id,
-                    Type = type
-                });
-            }
+            // existingLocation.LocationTypes.Clear();
+            // foreach (var type in typeSet)
+            // {
+            //     existingLocation.LocationTypes.Add(new LocationTypeMapping
+            //     {
+            //         LocationId = existingLocation.Id,
+            //         Type = type
+            //     });
+            // }
 
             // Cập nhật dữ liệu phụ
             if (locationUpdateModel.CraftVillage != null)
@@ -1577,7 +1781,7 @@ public class LocationService : ILocationService
             {
                 locationData.Medias = await GetMediaWithoutVideoByIdAsync(locationData.Id, cancellationToken);
                 locationData.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationData.DistrictId ?? Guid.Empty);
-                locationData.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationData.Id);
+                locationData.Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(locationData.Id);
             }
 
             return new PagedResult<LocationDataModel>
@@ -1889,82 +2093,6 @@ public class LocationService : ILocationService
         catch (Exception)
         {
             await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
-        }
-    }
-
-    public async Task<List<LocationDataModel>> GetAllLocationAdminAsync()
-    {
-        try
-        {
-            // 1. Lấy userId nếu có
-            var currentUserId = _userContextService.TryGetCurrentUserId();
-
-            // 2. Nếu không có userId → là khách → trả toàn bộ
-            if (string.IsNullOrEmpty(currentUserId))
-            {
-                var allLocations = await _unitOfWork.LocationRepository.GetAllAsync();
-                var allLocationDataModels = _mapper.Map<List<LocationDataModel>>(allLocations);
-                await EnrichLocationDataModelsAsync(allLocationDataModels, new CancellationToken());
-                return allLocationDataModels;
-            }
-
-            // 3. Nếu có userId → tìm user
-            var userId = Guid.Parse(currentUserId);
-            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId, CancellationToken.None);
-
-            // 4. Nếu không tìm được user (trường hợp hiếm) → fallback: trả toàn bộ
-            if (user == null)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("user");
-            }
-
-            // 5. Lấy role
-            var roles = await _unitOfWork.UserRepository.GetRolesByUserIdAsync(userId);
-            var roleNames = roles.Select(r => r.Name).ToList();
-            var roleIds = roles.Select(r => r.Id).ToList();
-
-            List<Location> locations;
-
-            // 6. Admin toàn quyền
-            if (roleNames.Equals(AppRole.ADMIN))
-            {
-                locations = (await _unitOfWork.LocationRepository.GetAllAsync()).ToList();
-            }
-            // 7. Admin huyện (dựa vào RoleDistrict)
-            else
-            {
-                // Lấy các DistrictId mà user được phân quyền quản lý
-                var allowedDistrictIds = await _unitOfWork.RoleDistrictRepository.ActiveEntities
-                    .Where(rd => roleIds.Contains(rd.RoleId))
-                    .Select(rd => rd.DistrictId)
-                    .Distinct()
-                    .ToListAsync();
-
-                if (allowedDistrictIds.Any())
-                {
-                    // Là admin huyện → chỉ được lấy các Location trong danh sách huyện đó
-                    locations = await _unitOfWork.LocationRepository.ActiveEntities
-                        .Where(l => l.DistrictId.HasValue && allowedDistrictIds.Contains(l.DistrictId.Value))
-                        .ToListAsync();
-                }
-                else
-                {
-                    // Không có quyền theo huyện nào → xem là người dùng thường
-                    locations = (await _unitOfWork.LocationRepository.GetAllAsync()).ToList();
-                }
-            }
-
-            var locationDataModels = _mapper.Map<List<LocationDataModel>>(locations);
-            await EnrichLocationDataModelsAsync(locationDataModels, new CancellationToken());
-            return locationDataModels;
-        }
-        catch (CustomException)
-        {
-            throw;
-        }
-        catch (Exception)
-        {
             throw CustomExceptionFactory.CreateInternalServerError();
         }
     }
@@ -2390,184 +2518,11 @@ public class LocationService : ILocationService
                 location.DistrictName = districtName;
             }
 
-            location.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(location.Id);
+            location.Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(location.Id);
 
             // location.HeritageRankName = _enumService.GetEnumDisplayName(location.HeritageRank);
         }
     }
-
-    //public async Task UploadImageLocationAsync(Guid id, IFormFile image, CancellationToken cancellationToken)
-    //{
-    //    try
-    //    {
-    //        var currentUserId = _userContextService.GetCurrentUserId();
-    //        var existingLocation = await _unitOfWork.LocationRepository.GetByIdAsync(id, cancellationToken);
-    //        if (existingLocation == null || existingLocation.IsDeleted)
-    //        {
-    //            throw CustomExceptionFactory.CreateNotFoundError("location");
-    //        }
-
-    //        string imageUrl = string.Empty;
-
-    //        if (image != null && image.Length > 0)
-    //        {
-    //            imageUrl = await _cloudinaryService.UploadImageAsync(image);
-    //        }
-    //        else
-    //        {
-    //            imageUrl = existingLocation.ImageUrl ?? "";
-    //        }
-
-    //        existingLocation.ImageUrl = imageUrl;
-    //        existingLocation.LastUpdatedBy = currentUserId;
-    //        existingLocation.LastUpdatedTime = _timeService.SystemTimeNow;
-
-    //        _unitOfWork.BeginTransaction();
-    //        _unitOfWork.LocationRepository.Update(existingLocation);
-    //        _unitOfWork.CommitTransaction();
-    //    }
-    //    catch (CustomException)
-    //    {
-    //        throw;
-    //    }
-    //    catch (Exception)
-    //    {
-    //        throw CustomExceptionFactory.CreateInternalServerError();
-    //    }
-    //    finally
-    //    {
-    //       //  _unitOfWork.Dispose();
-    //    }
-    //}
-
-    //// upload nhiều hình ảnh cho location (chưa có interface)
-    //public async Task UploadImagesLocationAsync(Guid id, List<IFormFile> images, CancellationToken cancellationToken)
-    //{
-    //    try
-    //    {
-    //        var currentUserId = _userContextService.GetCurrentUserId();
-    //        var existingLocation = await _unitOfWork.LocationRepository.GetByIdAsync(id, cancellationToken);
-    //        if (existingLocation == null || existingLocation.IsDeleted)
-    //        {
-    //            throw CustomExceptionFactory.CreateNotFoundError("location");
-    //        }
-
-    //        var imageUrls = new List<string>();
-
-    //        if (images != null && images.Count > 0)
-    //        {
-    //            foreach (var image in images)
-    //            {
-    //                if (image.Length > 0)
-    //                {
-    //                    var imageUrl = await _cloudinaryService.UploadImageAsync(image);
-    //                    imageUrls.Add(imageUrl);
-    //                }
-    //            }
-    //        }
-    //        // luu sang bang khac
-    //        existingLocation.ImageUrl = string.Join(";", imageUrls);
-    //        existingLocation.LastUpdatedBy = currentUserId;
-    //        existingLocation.LastUpdatedTime = _timeService.SystemTimeNow;
-
-    //        _unitOfWork.BeginTransaction();
-    //        _unitOfWork.LocationRepository.Update(existingLocation);
-    //        _unitOfWork.CommitTransaction();
-    //    }
-    //    catch (CustomException)
-    //    {
-    //        throw;
-    //    }
-    //    catch (Exception)
-    //    {
-    //        throw CustomExceptionFactory.CreateInternalServerError();
-    //    }
-    //    finally
-    //    {
-    //       //  _unitOfWork.Dispose();
-    //    }
-    //}
-
-    //public async Task<PagedResult<LocationDataModel>> GetPagedLocationsWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken)
-    //{
-    //    try
-    //    {
-    //        var pagedResult = await _unitOfWork.LocationRepository.GetPageWithSearchAsync(pageNumber, pageSize, name, cancellationToken);
-
-    //        var locationDataModels = _mapper.Map<List<LocationDataModel>>(pagedResult.Items);
-
-    //        return new PagedResult<LocationDataModel>
-    //        {
-    //            Items = locationDataModels,
-    //            TotalCount = pagedResult.TotalCount,
-    //            PageNumber = pageNumber,
-    //            PageSize = pageSize
-    //        };
-    //    }
-    //    catch (CustomException)
-    //    {
-    //        throw;
-    //    }
-    //    catch (Exception)
-    //    {
-    //        throw CustomExceptionFactory.CreateInternalServerError();
-    //    }
-    //    finally
-    //    {
-    //       //  _unitOfWork.Dispose();
-    //    }
-    //}
-
-    //public async Task<PagedResult<LocationDataModel>> GetPagedLocationsWithSearchAsync(int pageNumber, int pageSize, string name, Guid typeId, CancellationToken cancellationToken)
-    //{
-    //    try
-    //    {
-    //        var pagedResult = await _unitOfWork.LocationRepository.GetPageWithSearchAsync(pageNumber, pageSize, name, cancellationToken);
-
-    //        var locationDataModels = _mapper.Map<List<LocationDataModel>>(pagedResult.Items);
-
-    //        return new PagedResult<LocationDataModel>
-    //        {
-    //            Items = locationDataModels,
-    //            TotalCount = pagedResult.TotalCount,
-    //            PageNumber = pageNumber,
-    //            PageSize = pageSize
-    //        };
-    //    }
-    //    catch (CustomException)
-    //    {
-    //        throw;
-    //    }
-    //    catch (Exception)
-    //    {
-    //        throw CustomExceptionFactory.CreateInternalServerError();
-    //    }
-    //    finally
-    //    {
-    //       //  _unitOfWork.Dispose();
-    //    }
-    //}
-
-    //public async Task<List<Location>> GetFavoriteLocationsAsync(CancellationToken cancellationToken)
-    //{
-    //    try
-    //    {
-    //        var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
-
-    //        var favoriteLocations = await _unitOfWork.FavoriteLocationRepository.ActiveEntities
-    //            .Where(fl => fl.UserId == currentUserId && !fl.IsDeleted)
-    //            .Select(fl => fl.Location)
-    //            .ToListAsync(cancellationToken);
-
-    //        return _mapper.Map<List<LocationDataModel>>(favoriteLocations);
-
-    //        //return favoriteLocations;
-    //    }
-    //    catch (Exception)
-    //    {
-    //        throw CustomExceptionFactory.CreateInternalServerError();
-    //    }
-    //}
 
     #endregion
 }

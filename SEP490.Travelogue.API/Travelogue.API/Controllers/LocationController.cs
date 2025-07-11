@@ -94,6 +94,69 @@ public class LocationController : ControllerBase
     }
 
     /// <summary>
+    /// Cập nhật dữ liệu ẩm thực 
+    /// </summary>
+    /// <param name="locationId"></param>
+    /// <param name="dto"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    [HttpPut("{locationId}/cuisine")]
+    public async Task<IActionResult> UpdateCuisineData(
+        Guid locationId,
+        [FromBody] CuisineUpdateDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _locationService.UpdateCuisineDataAsync(locationId, dto, cancellationToken);
+
+        return Ok(ResponseModel<LocationDataModel>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "cuisine")
+        ));
+    }
+
+    /// <summary>
+    /// Cập nhật dữ liệu làng nghề
+    /// </summary>
+    /// <param name="locationId"></param>
+    /// <param name="dto"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    [HttpPut("{locationId}/craft-village")]
+    public async Task<IActionResult> UpdateCraftVillageData(
+            Guid locationId,
+            [FromBody] CraftVillageUpdateDto dto,
+            CancellationToken cancellationToken = default)
+    {
+        var result = await _locationService.UpdateCraftVillageDataAsync(locationId, dto, cancellationToken);
+
+        return Ok(ResponseModel<LocationDataModel>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "craft‑village")
+        ));
+    }
+
+    /// <summary>
+    /// Cập nhật dữ liệu địa điểm lịch sử
+    /// </summary>
+    /// <param name="locationId"></param>
+    /// <param name="dto"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    [HttpPut("{locationId}/historical-location")]
+    public async Task<IActionResult> UpdateHistoricalLocationData(
+        Guid locationId,
+        [FromBody] HistoricalLocationUpdateDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _locationService.UpdateHistoricalLocationDataAsync(locationId, dto, cancellationToken);
+
+        return Ok(ResponseModel<LocationDataModel>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "historical location")
+        ));
+    }
+
+    /// <summary>
     /// Xóa location theo id
     /// </summary>
     /// <param name="id"></param>
@@ -294,7 +357,6 @@ public class LocationController : ControllerBase
     //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPLOAD_SUCCESS, "media")
     //     ));
     // }
-
     [HttpPost("upload-media")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> UploadMediaV2(Guid id, [FromForm] List<IFormFile> imageUploads, string? thumbnailFileName)
@@ -305,36 +367,6 @@ public class LocationController : ControllerBase
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPLOAD_SUCCESS, "media")
         ));
     }
-
-    // [HttpPost("upload-video")]
-    // [ProducesResponseType(StatusCodes.Status200OK)]
-    // public async Task<IActionResult> UploadVideo(Guid id, [FromForm] List<IFormFile> imageUploads)
-    // {
-    //     var result = await _locationService.UploadVideoAsync(id, imageUploads, new CancellationToken());
-    //     return Ok(ResponseModel<object>.OkResponseModel(
-    //         data: result,
-    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPLOAD_SUCCESS, "media")
-    //     ));
-    // }
-
-    /// <summary>
-    /// Cập nhật location với media
-    /// </summary>
-    /// <param name="id"></param>
-    /// <param name="locationUpdateModel"></param>
-    /// <param name="thumbnailSelected"></param>
-    /// <returns></returns>
-    // [HttpPut("update")]
-    // [ProducesResponseType(StatusCodes.Status200OK)]
-    // public async Task<IActionResult> Update(Guid id, [FromForm] LocationUpdateWithMediaFileModel locationUpdateModel, string? thumbnailSelected)
-    // {
-    //     await _locationService.UpdateLocationAsync(id, locationUpdateModel, thumbnailSelected,
-    //         new CancellationToken());
-    //     return Ok(ResponseModel<object>.OkResponseModel(
-    //         data: true,
-    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPLOAD_SUCCESS, "media")
-    //     ));
-    // }
 
     [HttpGet("heritage-rank")]
     public IActionResult GetOrderStatus()
@@ -370,16 +402,6 @@ public class LocationController : ControllerBase
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "media")
-        ));
-    }
-
-    [HttpGet("admin-get")]
-    public async Task<IActionResult> GetAllLocationsAdmin()
-    {
-        var locations = await _locationService.GetAllLocationAdminAsync();
-        return Ok(ResponseModel<List<LocationDataModel>>.OkResponseModel(
-            data: locations,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "location")
         ));
     }
 
@@ -440,34 +462,6 @@ public class LocationController : ControllerBase
     }
 
     /// <summary>
-    /// Theem địa điểm lịch sử
-    /// </summary>
-    /// <returns></returns>
-    [HttpPost("historical-locations")]
-    public async Task<IActionResult> AddHistoricalLocation(Guid locationId, HistoricalLocationCreateModel historicalLocationCreateModel)
-    {
-        await _historicalLocationService.AddHistoricalLocationAsync(locationId, historicalLocationCreateModel, new CancellationToken());
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: true,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "craft village")
-        ));
-    }
-
-    /// <summary>
-    /// Theem làng nghề
-    /// </summary>
-    /// <returns></returns>
-    [HttpPost("craft-villages")]
-    public async Task<IActionResult> AddCraftVillage(Guid locationId, CraftVillageCreateModel craftVillageCreateModel)
-    {
-        await _craftVillageService.AddCraftVillageAsync(locationId, craftVillageCreateModel, new CancellationToken());
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: true,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "craft village")
-        ));
-    }
-
-    /// <summary>
     /// Lấy tất cả làng nghề
     /// </summary>
     /// <returns></returns>
@@ -505,20 +499,6 @@ public class LocationController : ControllerBase
             totalCount: historicalLocations.TotalCount,
             pageSize: pageSize,
             pageNumber: pageNumber
-        ));
-    }
-
-    /// <summary>
-    /// Thêm cuisine
-    /// </summary>
-    /// <returns></returns>
-    [HttpPost("cuisine")]
-    public async Task<IActionResult> AddCuisine(Guid locationId, CuisineCreateModel cuisineCreateModel)
-    {
-        await _cuisineService.AddCuisineAsync(locationId, cuisineCreateModel, new CancellationToken());
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: true,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "craft village")
         ));
     }
 

@@ -19,6 +19,34 @@ public class TourController : ControllerBase
     }
 
     /// <summary>
+    /// Lấy thông tin tour
+    /// </summary>
+    /// <returns>Thông tin tour</returns>
+    [HttpGet("")]
+    [ProducesResponseType(typeof(ResponseModel<List<TourResponseDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetTours()
+    {
+        try
+        {
+            var result = await _tourService.GetAllToursAsync();
+            return Ok(ResponseModel<List<TourResponseDto>>.OkResponseModel(
+                data: result,
+                message: "Tour details retrieved successfully."
+            ));
+        }
+        catch (CustomException ex)
+        {
+            return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+        }
+    }
+
+    /// <summary>
     /// Tạo mới tour
     /// </summary>
     /// <param name="model">Thông tin tour cần tạo</param>

@@ -15,7 +15,6 @@ public interface IUnitOfWork //: IDisposable
     IFavoriteLocationRepository FavoriteLocationRepository { get; }
     ILocationCraftVillageSuggestionRepository LocationCraftVillageSuggestionRepository { get; }
     ILocationCuisineSuggestionRepository LocationCuisineSuggestionRepository { get; }
-    ITypeLocationRepository TypeLocationRepository { get; }
     IExperienceRepository ExperienceRepository { get; }
     IEventRepository EventRepository { get; }
     ITypeEventRepository TypeEventRepository { get; }
@@ -42,10 +41,8 @@ public interface IUnitOfWork //: IDisposable
     ITripPlanExchangeRepository TripPlanExchangeRepository { get; }
     ITripPlanExchangeSessionRepository TripPlanExchangeSessionRepository { get; }
     IHistoricalLocationRepository HistoricalLocationRepository { get; }
-    ITypeHistoricalLocationRepository TypeHistoricalLocationRepository { get; }
     ITourGuideScheduleRepository TourGuideScheduleRepository { get; }
     ITourScheduleRepository TourScheduleRepository { get; }
-    ILocationTypeMappingRepository LocationTypeMappingRepository { get; }
     IWorkshopRepository WorkshopRepository { get; }
     IWorkshopActivityRepository WorkshopActivityRepository { get; }
     IWorkshopScheduleRepository WorkshopScheduleRepository { get; }

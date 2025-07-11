@@ -19,7 +19,6 @@ public class UnitOfWork : IUnitOfWork
     public IFavoriteLocationRepository FavoriteLocationRepository { get; }
     public ILocationCuisineSuggestionRepository LocationCuisineSuggestionRepository { get; }
     public ILocationCraftVillageSuggestionRepository LocationCraftVillageSuggestionRepository { get; }
-    public ITypeLocationRepository TypeLocationRepository { get; }
     public IExperienceRepository ExperienceRepository { get; }
     public IEventRepository EventRepository { get; }
     public ITypeEventRepository TypeEventRepository { get; }
@@ -44,12 +43,10 @@ public class UnitOfWork : IUnitOfWork
     public ITripPlanExchangeRepository TripPlanExchangeRepository { get; }
     public ITripPlanExchangeSessionRepository TripPlanExchangeSessionRepository { get; }
     public IHistoricalLocationRepository HistoricalLocationRepository { get; }
-    public ITypeHistoricalLocationRepository TypeHistoricalLocationRepository { get; }
     public ITourPlanLocationRepository TourPlanLocationRepository { get; }
     public ITourTypeRepository TourTypeRepository { get; }
     public ITourGuideScheduleRepository TourGuideScheduleRepository { get; }
     public ITourScheduleRepository TourScheduleRepository { get; }
-    public ILocationTypeMappingRepository LocationTypeMappingRepository { get; }
     public IWorkshopRepository WorkshopRepository { get; }
     public IWorkshopActivityRepository WorkshopActivityRepository { get; }
     public IWorkshopScheduleRepository WorkshopScheduleRepository { get; }
@@ -67,7 +64,6 @@ public class UnitOfWork : IUnitOfWork
         FavoriteLocationRepository = new FavoriteLocationRepository(_dbContext);
         LocationCuisineSuggestionRepository = new LocationCuisineSuggestionRepository(_dbContext);
         LocationCraftVillageSuggestionRepository = new LocationCraftVillageSuggestionRepository(_dbContext);
-        TypeLocationRepository = new TypeLocationRepository(_dbContext);
         ExperienceRepository = new ExperienceRepository(_dbContext);
         EventRepository = new EventRepository(_dbContext);
         TypeEventRepository = new TypeEventRepository(_dbContext);
@@ -92,12 +88,10 @@ public class UnitOfWork : IUnitOfWork
         TripPlanExchangeRepository = new TripPlanExchangeRepository(_dbContext);
         TripPlanExchangeSessionRepository = new TripPlanExchangeSessionRepository(_dbContext);
         HistoricalLocationRepository = new HistoricalLocationRepository(_dbContext);
-        TypeHistoricalLocationRepository = new TypeHistoricalLocationRepository(_dbContext);
         TourPlanLocationRepository = new TourPlanLocationRepository(_dbContext);
         TourTypeRepository = new TourTypeRepository(_dbContext);
         TourGuideScheduleRepository = new TourGuideScheduleRepository(_dbContext);
         TourScheduleRepository = new TourScheduleRepository(_dbContext);
-        LocationTypeMappingRepository = new LocationTypeMappingRepository(_dbContext);
         WorkshopRepository = new WorkshopRepository(_dbContext);
         WorkshopActivityRepository = new WorkshopActivityRepository(_dbContext);
         WorkshopScheduleRepository = new WorkshopScheduleRepository(_dbContext);

@@ -24,9 +24,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<FavoriteLocation> FavoriteLocations { get; set; }
     public DbSet<LocationCraftVillageSuggestion> LocationCraftVillageSuggestions { get; set; }
     public DbSet<LocationCuisineSuggestion> LocationCuisineSuggestions { get; set; }
-    public DbSet<LocationCategory> LocationCategories { get; set; }
     public DbSet<HistoricalLocation> HistoricalLocations { get; set; }
-    public DbSet<TypeHistoricalLocation> TypeHistoricalLocations { get; set; }
 
     // Craft Village Management
     public DbSet<CraftVillage> CraftVillages { get; set; }

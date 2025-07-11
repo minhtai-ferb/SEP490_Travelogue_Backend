@@ -22,7 +22,7 @@ public interface ICuisineService
     Task<PagedResult<LocationDataModel>> GetPagedCuisinesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task AddCuisineAsync(CuisineCreateModel cuisineCreateModel, CancellationToken cancellationToken);
     Task AddCuisineAsync(Guid locationId, CuisineCreateModel cuisineCreateModel, CancellationToken cancellationToken);
-    Task UpdateCuisineAsync(Guid id, CuisineUpdateModel cuisineUpdateModel, CancellationToken cancellationToken);
+    Task UpdateCuisineAsync(Guid id, CuisineUpdateDto cuisineUpdateModel, CancellationToken cancellationToken);
     Task DeleteCuisineAsync(Guid id, CancellationToken cancellationToken);
     // Task<PagedResult<CuisineDataModel>> GetPagedCuisinesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
     // Task<CuisineMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
@@ -69,9 +69,9 @@ public class CuisineService : ICuisineService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -104,9 +104,9 @@ public class CuisineService : ICuisineService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -158,9 +158,9 @@ public class CuisineService : ICuisineService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -173,8 +173,7 @@ public class CuisineService : ICuisineService
         try
         {
             var existingLocations = await _unitOfWork.LocationRepository.ActiveEntities
-                .Include(l => l.LocationTypes)
-                .Where(l => l.LocationTypes.Any(lt => lt.Type == LocationType.Cuisine))
+                .Where(l => l.LocationType == LocationType.Cuisine)
                 .ToListAsync(cancellationToken);
 
             if (existingLocations == null || !existingLocations.Any())
@@ -188,7 +187,7 @@ public class CuisineService : ICuisineService
             {
                 locationData.Medias = await GetMediaWithoutVideoByIdAsync(locationData.Id, cancellationToken);
                 locationData.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationData.DistrictId ?? Guid.Empty);
-                locationData.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationData.Id);
+                locationData.Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(locationData.Id);
                 //locationData.HeritageRankName = _enumService.GetEnumDisplayName(locationData.HeritageRank);
             }
 
@@ -198,9 +197,9 @@ public class CuisineService : ICuisineService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -212,33 +211,31 @@ public class CuisineService : ICuisineService
     {
         try
         {
-            var existingLocation = await _unitOfWork.LocationRepository.GetWithIncludeAsync(id, include => include
-                .Include(l => l.LocationTypes)
-            );
+            var existingLocation = await _unitOfWork.LocationRepository.GetByIdAsync(id, cancellationToken);
 
             if (existingLocation == null || existingLocation.IsDeleted)
                 throw CustomExceptionFactory.CreateNotFoundError("location");
 
-            var locationTypes = existingLocation.LocationTypes.Select(t => t.Type).ToHashSet();
+            var locationTypes = existingLocation.LocationType;
 
-            if (!locationTypes.Contains(LocationType.HistoricalSite))
+            if (!(locationTypes == LocationType.HistoricalSite))
                 throw CustomExceptionFactory.CreateNotFoundError("historicalLocation");
 
             var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
 
-            if (locationTypes.Contains(LocationType.Cuisine))
+            if (locationTypes == LocationType.Cuisine)
             {
                 var cuisine = await _unitOfWork.CuisineRepository.GetByLocationId(existingLocation.Id, cancellationToken);
                 locationDataModel.Cuisine = cuisine != null ? _mapper.Map<CuisineDataModel>(cuisine) : null;
             }
 
-            if (locationTypes.Contains(LocationType.CraftVillage))
+            if (locationTypes == LocationType.CraftVillage)
             {
                 var craftVillage = await _unitOfWork.CraftVillageRepository.GetByLocationId(existingLocation.Id, cancellationToken);
                 locationDataModel.CraftVillage = craftVillage != null ? _mapper.Map<CraftVillageDataModel>(craftVillage) : null;
             }
 
-            if (locationTypes.Contains(LocationType.HistoricalSite))
+            if (locationTypes == LocationType.HistoricalSite)
             {
                 var historicalLocation = await _unitOfWork.HistoricalLocationRepository.GetByLocationId(existingLocation.Id, cancellationToken);
                 locationDataModel.HistoricalLocation = historicalLocation != null ? _mapper.Map<HistoricalLocationDataModel>(historicalLocation) : null;
@@ -246,7 +243,7 @@ public class CuisineService : ICuisineService
 
             locationDataModel.Medias = await GetMediaWithoutVideoByIdAsync(id, cancellationToken);
             locationDataModel.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationDataModel.DistrictId);
-            locationDataModel.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationDataModel.Id, cancellationToken);
+            locationDataModel.Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(locationDataModel.Id, cancellationToken);
 
             return locationDataModel;
         }
@@ -254,9 +251,9 @@ public class CuisineService : ICuisineService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -289,9 +286,9 @@ public class CuisineService : ICuisineService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -311,7 +308,7 @@ public class CuisineService : ICuisineService
             {
                 locationData.Medias = await GetMediaWithoutVideoByIdAsync(locationData.Id, cancellationToken);
                 locationData.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationData.DistrictId ?? Guid.Empty);
-                locationData.Categories = await _unitOfWork.LocationRepository.GetAllCategoriesAsync(locationData.Id);
+                locationData.Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(locationData.Id);
             }
 
             return new PagedResult<LocationDataModel>
@@ -326,9 +323,9 @@ public class CuisineService : ICuisineService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -336,7 +333,7 @@ public class CuisineService : ICuisineService
         }
     }
 
-    public async Task UpdateCuisineAsync(Guid id, CuisineUpdateModel cuisineUpdateModel, CancellationToken cancellationToken)
+    public async Task UpdateCuisineAsync(Guid id, CuisineUpdateDto cuisineUpdateModel, CancellationToken cancellationToken)
     {
         try
         {
@@ -361,9 +358,9 @@ public class CuisineService : ICuisineService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -433,10 +430,10 @@ public class CuisineService : ICuisineService
     //         await _unitOfWork.RollBackAsync();
     //         throw;
     //     }
-    //     catch (Exception)
+    //     catch (Exception ex)
     //     {
     //         await _unitOfWork.RollBackAsync();
-    //         throw CustomExceptionFactory.CreateInternalServerError();
+    //         throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
     //     }
     // }
 
@@ -467,9 +464,9 @@ public class CuisineService : ICuisineService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -520,10 +517,10 @@ public class CuisineService : ICuisineService
             await _unitOfWork.RollBackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 

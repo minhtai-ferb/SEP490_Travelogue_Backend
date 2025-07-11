@@ -11,6 +11,7 @@ namespace Travelogue.Service.Services;
 
 public interface ITourService
 {
+    Task<List<TourResponseDto>> GetAllToursAsync();
     Task<TourResponseDto> CreateTourAsync(CreateTourDto dto);
     Task<TourResponseDto> UpdateTourAsync(Guid tourId, UpdateTourDto dto);
     Task<TourResponseDto> ConfirmTourAsync(Guid tourId, ConfirmTourDto dto);
@@ -70,6 +71,12 @@ public class TourService : ITourService
             return new TourResponseDto
             {
                 TourId = tour.Id,
+                Name = dto.Name,
+                Description = dto.Description,
+                Content = dto.Content,
+                TotalDays = dto.TotalDays,
+                TourTypeId = dto.TourTypeId,
+                TourTypeText = tourType.Name,
                 Status = tour.Status
             };
         }
@@ -157,6 +164,11 @@ public class TourService : ITourService
             return new TourResponseDto
             {
                 TourId = tour.Id,
+                Name = dto.Name,
+                Description = dto.Description,
+                Content = dto.Content,
+                TourTypeId = dto.TourTypeId,
+                TotalDays = dto.TotalDays,
                 Status = tour.Status
             };
         }
@@ -237,6 +249,77 @@ public class TourService : ITourService
         }
     }
 
+    public async Task<List<TourResponseDto>> GetAllToursAsync()
+    {
+        try
+        {
+            var tours = await _unitOfWork.TourRepository
+                .ActiveEntities
+                .Include(t => t.TourType)
+                .Include(t => t.TourPlanLocations)
+                    .ThenInclude(l => l.Location)
+                .Include(t => t.TourSchedules)
+                .Include(t => t.TourGuideMappings)
+                    .ThenInclude(tg => tg.TourGuide)
+                        .ThenInclude(tg => tg.User)
+                .Include(t => t.PromotionApplicables)
+                    .ThenInclude(p => p.Promotion)
+                .ToListAsync();
+
+            if (!tours.Any())
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("tours");
+            }
+
+            var tourResponses = new List<TourResponseDto>();
+
+            foreach (var tour in tours)
+            {
+                // tính giá thấp nhất
+                var activeSchedules = tour.TourSchedules.Where(s => !s.IsDeleted).ToList();
+                var adultPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.AdultPrice) : 0m;
+                var childrenPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.ChildrenPrice) : 0m;
+                var finalPrice = adultPrice;
+
+                var tourGuide = GetTourGuideInfo(tour);
+
+                var groupedLocations = tour.TourPlanLocations
+                    .Where(l => !l.IsDeleted)
+                    .GroupBy(l => l.DayOrder)
+                    .OrderBy(g => g.Key)
+                    .ToList();
+
+                var dayDetails = BuildDayDetails(tour);
+
+                tourResponses.Add(new TourResponseDto
+                {
+                    TourId = tour.Id,
+                    Name = tour.Name,
+                    Description = tour.Description,
+                    Content = tour.Content,
+                    TotalDays = tour.TotalDays,
+                    TotalDaysText = tour.TotalDays == 1 ? "1 ngày" : $"{tour.TotalDays} ngày {tour.TotalDays - 1} đêm",
+                    TourTypeId = tour.TourTypeId,
+                    TourTypeText = tour.TourType?.Name ?? "Unknown",
+                    AdultPrice = adultPrice,
+                    ChildrenPrice = childrenPrice,
+                    FinalPrice = finalPrice,
+                    Status = tour.Status,
+                });
+            }
+
+            return tourResponses;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
     public async Task<TourDetailsResponseDto> GetTourDetailsAsync(Guid tourId)
     {
         try
@@ -255,12 +338,12 @@ public class TourService : ITourService
                 .FirstOrDefaultAsync(t => t.Id == tourId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Tour");
 
-            // Tính giá từ TourSchedules
+            // tính giá thấp nhất
             var activeSchedules = tour.TourSchedules.Where(s => !s.IsDeleted).ToList();
             var adultPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.AdultPrice) : 0m;
             var childrenPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.ChildrenPrice) : 0m;
 
-            // Tính khuyến mãi và giá cuối cùng
+            // tính khuyến mãi
             var activePromotions = tour.PromotionApplicables
                 .Where(p => !p.IsDeleted && p.Promotion != null && p.Promotion.StartDate <= DateTime.UtcNow && p.Promotion.EndDate >= DateTime.UtcNow)
                 .Select(p => new PromotionDto
@@ -278,10 +361,8 @@ public class TourService : ITourService
             var maxDiscount = isDiscount ? activePromotions.Max(p => p.DiscountPercentage) : 0;
             var finalPrice = adultPrice * (1 - maxDiscount / 100);
 
-            // Lấy thông tin TourGuide (giả sử lấy hướng dẫn viên đầu tiên)
             var tourGuide = GetTourGuideInfo(tour);
 
-            // Tạo danh sách Days từ TourPlanLocations
             var groupedLocations = tour.TourPlanLocations
                 .Where(l => !l.IsDeleted)
                 .GroupBy(l => l.DayOrder)
@@ -472,15 +553,15 @@ public class TourService : ITourService
             }
 
             // Validate DestinationId
-            var destinationIds = dtos.Select(d => d.LocationId).Distinct().ToList();
-            var validDestinations = await _unitOfWork.LocationRepository
+            var locationIds = dtos.Select(d => d.LocationId).Distinct().ToList();
+            var validLocations = await _unitOfWork.LocationRepository
                 .ActiveEntities
-                .Where(l => destinationIds.Contains(l.Id))
+                .Where(l => locationIds.Contains(l.Id))
                 .Select(l => l.Id)
                 .ToListAsync();
-            var invalidDestinations = destinationIds.Except(validDestinations).ToList();
-            if (invalidDestinations.Any())
-                throw CustomExceptionFactory.CreateBadRequestError($"Các ID địa điểm không hợp lệ: {string.Join(", ", invalidDestinations)}");
+            var invalidLocations = locationIds.Except(validLocations).ToList();
+            if (invalidLocations.Any())
+                throw CustomExceptionFactory.CreateBadRequestError($"Các ID địa điểm không hợp lệ: {string.Join(", ", invalidLocations)}");
 
             var existingLocations = tour.TourPlanLocations.Where(l => !l.IsDeleted).ToList();
             var providedLocationIds = dtos.Where(d => d.TourPlanLocationId.HasValue).Select(d => d.TourPlanLocationId.Value).ToList();
@@ -1169,8 +1250,9 @@ public class TourService : ITourService
                 DayOrder = l.DayOrder,
                 StartTime = l.StartTime,
                 EndTime = l.EndTime,
-                StartTimeFormatted = l.StartTime.ToString("HH:mm"),
-                EndTimeFormatted = l.EndTime.ToString("HH:mm")
+                StartTimeFormatted = l.StartTime.ToString(@"hh\:mm"),
+                EndTimeFormatted = l.EndTime.ToString(@"hh\:mm"),
+                Duration = $"{(l.EndTime - l.StartTime).TotalMinutes} phút",
             }).ToList();
 
             dayDetails.Add(new TourDayDetail
