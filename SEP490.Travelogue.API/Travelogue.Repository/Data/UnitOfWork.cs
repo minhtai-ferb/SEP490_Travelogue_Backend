@@ -46,11 +46,14 @@ public class UnitOfWork : IUnitOfWork
     public IHistoricalLocationRepository HistoricalLocationRepository { get; }
     public ITypeHistoricalLocationRepository TypeHistoricalLocationRepository { get; }
     public ITourPlanLocationRepository TourPlanLocationRepository { get; }
-    public ITourPlanVersionRepository TourPlanVersionRepository { get; }
     public ITourTypeRepository TourTypeRepository { get; }
     public ITourGuideScheduleRepository TourGuideScheduleRepository { get; }
     public ITourScheduleRepository TourScheduleRepository { get; }
     public ILocationTypeMappingRepository LocationTypeMappingRepository { get; }
+    public IWorkshopRepository WorkshopRepository { get; }
+    public IWorkshopActivityRepository WorkshopActivityRepository { get; }
+    public IWorkshopScheduleRepository WorkshopScheduleRepository { get; }
+    public ITourGuideMappingRepository TourGuideMappingRepository { get; }
 
     public UnitOfWork(ApplicationDbContext dbContext)
     {
@@ -91,11 +94,14 @@ public class UnitOfWork : IUnitOfWork
         HistoricalLocationRepository = new HistoricalLocationRepository(_dbContext);
         TypeHistoricalLocationRepository = new TypeHistoricalLocationRepository(_dbContext);
         TourPlanLocationRepository = new TourPlanLocationRepository(_dbContext);
-        TourPlanVersionRepository = new TourPlanVersionRepository(_dbContext);
         TourTypeRepository = new TourTypeRepository(_dbContext);
         TourGuideScheduleRepository = new TourGuideScheduleRepository(_dbContext);
         TourScheduleRepository = new TourScheduleRepository(_dbContext);
         LocationTypeMappingRepository = new LocationTypeMappingRepository(_dbContext);
+        WorkshopRepository = new WorkshopRepository(_dbContext);
+        WorkshopActivityRepository = new WorkshopActivityRepository(_dbContext);
+        WorkshopScheduleRepository = new WorkshopScheduleRepository(_dbContext);
+        TourGuideMappingRepository = new TourGuideMappingRepository(_dbContext);
     }
 
     public IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity

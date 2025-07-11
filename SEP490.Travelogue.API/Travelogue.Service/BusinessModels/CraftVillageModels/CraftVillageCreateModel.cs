@@ -1,4 +1,6 @@
-﻿namespace Travelogue.Service.BusinessModels.CraftVillageModels;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Travelogue.Service.BusinessModels.CraftVillageModels;
 
 public class CraftVillageCreateModel
 {
@@ -13,4 +15,9 @@ public class CraftVillageCreateModel
     public string? Email { get; set; }
     public string? Website { get; set; }
     public bool WorkshopsAvailable { get; set; } = false;
+    public string? SignatureProduct { get; set; }
+    [Range(0, int.MaxValue, ErrorMessage = "Số năm lịch sử phải là số không âm")]
+    public int? YearsOfHistory { get; set; }
+
+    public bool IsRecognizedByUNESCO { get; set; } = false;
 }

@@ -17,6 +17,7 @@ namespace Travelogue.Service.Services;
 
 public interface IHistoricalLocationService
 {
+    Task AddHistoricalLocationAsync(Guid locationId, HistoricalLocationCreateModel dto, CancellationToken cancellationToken);
     Task<LocationDataDetailModel?> GetHistoricalLocationByLocationIdAsync(Guid id, CancellationToken cancellationToken);
     Task<List<LocationDataModel>> GetAllHistoricalLocationsAsync(CancellationToken cancellationToken);
     Task<PagedResult<LocationDataModel>> GetPagedHistoricalLocationsWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
@@ -40,6 +41,41 @@ public class HistoricalLocationService : IHistoricalLocationService
         _userContextService = userContextService;
         _timeService = timeService;
         _cloudinaryService = cloudinaryService;
+    }
+
+    public async Task AddHistoricalLocationAsync(Guid locationId, HistoricalLocationCreateModel dto, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentTime = _timeService.SystemTimeNow;
+
+            var location = await _unitOfWork.LocationRepository.GetByIdAsync(locationId, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("location");
+
+            var newHistoricalLocation = _mapper.Map<HistoricalLocation>(dto);
+            newHistoricalLocation.LocationId = locationId;
+            newHistoricalLocation.CreatedBy = currentUserId;
+            newHistoricalLocation.LastUpdatedBy = currentUserId;
+            newHistoricalLocation.CreatedTime = currentTime;
+            newHistoricalLocation.LastUpdatedTime = currentTime;
+
+            _unitOfWork.BeginTransaction();
+            await _unitOfWork.HistoricalLocationRepository.AddAsync(newHistoricalLocation);
+            _unitOfWork.CommitTransaction();
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError();
+        }
+        finally
+        {
+            //  _unitOfWork.Dispose();
+        }
     }
 
     public async Task<List<LocationDataModel>> GetAllHistoricalLocationsAsync(CancellationToken cancellationToken)

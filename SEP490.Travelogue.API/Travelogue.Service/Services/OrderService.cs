@@ -41,16 +41,16 @@ public class OrderService : IOrderService
                 throw CustomExceptionFactory.CreateBadRequestError("Invalid user ID format.");
 
             // Validate tour plan version
-            var tourPlanVersion = await _unitOfWork.TourPlanVersionRepository.GetAsync(
-                tp => tp.Id == request.TourPlanVersionId,
-                q => q.Include(tp => tp.Tour).Include(tp => tp.TourSchedules),
+            var tour = await _unitOfWork.TourRepository.GetAsync(
+                tp => tp.Id == request.TourId,
+                q => q.Include(tp => tp.TourSchedules),
                 cancellationToken)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Tour plan version not found.");
 
             // Validate tour guide
             var tourGuide = await _unitOfWork.TourGuideRepository.GetAsync(
                 tg => tg.Id == request.TourGuideId,
-                q => q.Include(tg => tg.User).Include(tg => tg.TourGuideSchedules).Include(tg => tg.TourGuideSchedules),
+                q => q.Include(tg => tg.User).Include(tg => tg.TourGuideSchedules),
                 cancellationToken)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Tour guide not found.");
 
@@ -64,7 +64,7 @@ public class OrderService : IOrderService
             {
                 // Predefined tour: Validate tour schedule and guide assignment
                 tourSchedule = await _unitOfWork.TourScheduleRepository.GetAsync(
-                    ts => ts.Id == request.TourScheduleId.Value && ts.TourPlanVersionId == request.TourPlanVersionId,
+                    ts => ts.Id == request.TourScheduleId.Value && ts.TourId == request.TourId,
                     q => q.Include(ts => ts.TourScheduleGuides),
                     cancellationToken)
                     ?? throw CustomExceptionFactory.CreateNotFoundError("Tour schedule not found or not associated with the tour plan version.");
@@ -84,8 +84,8 @@ public class OrderService : IOrderService
                 if (tourSchedule.CurrentBooked + totalParticipants > tourSchedule.MaxParticipant)
                     throw CustomExceptionFactory.CreateBadRequestError("Tour schedule has reached maximum participant capacity.");
 
-                // Use tour plan version pricing
-                totalAmount = (request.AdultCount * tourPlanVersion.AdultPrice) + (request.ChildCount * tourPlanVersion.ChildrenPrice);
+                // Use tour schedule pricing
+                totalAmount = (request.AdultCount * tourSchedule.AdultPrice) + (request.ChildCount * tourSchedule.ChildrenPrice);
             }
             else
             {
@@ -96,9 +96,10 @@ public class OrderService : IOrderService
                     .FirstOrDefaultAsync(
                         b => b.SuggestedTripPlanVersionId == request.TripPlanVersionId
                         && b.TourGuideId == request.TourGuideId,
-                        cancellationToken);
+                        cancellationToken)
+                    ?? throw CustomExceptionFactory.CreateNotFoundError("Booking request not found for the specified trip plan version and tour guide.");
 
-                // Kiểm tra có phải là người dùng đã gửi yêu cầu booking này không
+                // Check if the user sent this booking request
                 if (bookingRequest.UserId != Guid.Parse(currentUserId))
                 {
                     throw CustomExceptionFactory.CreateBadRequestError("You are not the user who sent this booking request.");
@@ -149,7 +150,7 @@ public class OrderService : IOrderService
             // Create booking
             var booking = new Booking
             {
-                TourPlanVersionId = request.TourPlanVersionId,
+                TourId = request.TourId,
                 TourScheduleId = request.TourScheduleId,
                 TourGuideId = request.TourGuideId,
                 UserId = currentUserIdGuid,
@@ -163,13 +164,13 @@ public class OrderService : IOrderService
                     {
                         Type = ParticipantType.Adult,
                         Quantity = request.AdultCount,
-                        PricePerParticipant = request.TourScheduleId.HasValue ? tourPlanVersion.AdultPrice : tourGuide.Price
+                        PricePerParticipant = request.TourScheduleId.HasValue ? tourSchedule!.AdultPrice : tourGuide.Price
                     },
                     new BookingParticipant
                     {
                         Type = ParticipantType.Child,
                         Quantity = request.ChildCount,
-                        PricePerParticipant = request.TourScheduleId.HasValue ? tourPlanVersion.ChildrenPrice : tourGuide.Price
+                        PricePerParticipant = request.TourScheduleId.HasValue ? tourSchedule!.ChildrenPrice : tourGuide.Price
                     }
                 }
             };
@@ -186,7 +187,7 @@ public class OrderService : IOrderService
 
             // Prepare PayOS payment data
             string tourDescription = request.TourScheduleId.HasValue
-                ? $"Tour: {tourPlanVersion.Tour?.Name ?? "Custom Tour"} (Run: {startDate:yyyy-MM-dd}, Adults: {request.AdultCount}, Children: {request.ChildCount})"
+                ? $"Tour: {tour.Name ?? "Custom Tour"} (Run: {startDate:yyyy-MM-dd}, Adults: {request.AdultCount}, Children: {request.ChildCount})"
                 : $"Custom Trip Plan with {tourGuide.User.FullName} (Adults: {request.AdultCount}, Children: {request.ChildCount})";
 
             var items = new List<ItemData>

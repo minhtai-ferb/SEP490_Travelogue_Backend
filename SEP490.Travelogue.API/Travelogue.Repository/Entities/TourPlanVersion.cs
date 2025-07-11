@@ -1,32 +1,24 @@
-using System.ComponentModel.DataAnnotations;
-using Travelogue.Repository.Bases.BaseEntities;
+// using System.ComponentModel.DataAnnotations;
+// using Travelogue.Repository.Bases.BaseEntities;
 
-namespace Travelogue.Repository.Entities;
+// namespace Travelogue.Repository.Entities;
 
-public sealed class TourPlanVersion : BaseEntity
-{
-    public Guid TourId { get; set; }
-    public Tour? Tour { get; set; }
+// public sealed class TourPlanVersion : BaseEntity
+// {
+//     public Guid TourId { get; set; }
+//     public Tour? Tour { get; set; }
 
-    [Range(0, double.MaxValue)]
-    public decimal AdultPrice { get; set; }
-    [Range(0, double.MaxValue)]
-    public decimal ChildrenPrice { get; set; }
+//     public string? Content { get; set; }
+//     public int TotalDays { get; set; }
 
-    public string? Content { get; set; }
-    public int TotalDays { get; set; }
-    public Guid TourTypeId { get; set; }
-    public string? TourTypeText { get; set; }
-    public Guid? CurrentVersionId { get; set; }
+//     public DateTimeOffset VersionDate { get; set; } = DateTime.UtcNow;
+//     public string Description { get; set; } = string.Empty;
+//     // public bool IsFromTourGuide { get; set; } = false;
+//     public int VersionNumber { get; set; } = 1;
+//     public string? Notes { get; set; } = string.Empty;
+//     // public string Status { get; set; } = "Draft";
 
-    public DateTimeOffset VersionDate { get; set; } = DateTime.UtcNow;
-    public string Description { get; set; } = string.Empty;
-    // public bool IsFromTourGuide { get; set; } = false;
-    public int VersionNumber { get; set; } = 1;
-    public string? Notes { get; set; } = string.Empty;
-    // public string Status { get; set; } = "Draft";
-
-    public ICollection<TourPlanLocation> TourPlanLocations { get; set; } = new List<TourPlanLocation>();
-    public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
-    public ICollection<TourSchedule> TourSchedules { get; set; } = new List<TourSchedule>();
-}
+//     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
+//     public ICollection<TourPlanLocation> TourPlanLocations { get; set; } = new List<TourPlanLocation>();
+//     public ICollection<TourSchedule> TourSchedules { get; set; } = new List<TourSchedule>();
+// }

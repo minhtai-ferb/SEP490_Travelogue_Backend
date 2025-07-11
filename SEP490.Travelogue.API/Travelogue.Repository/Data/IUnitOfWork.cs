@@ -37,7 +37,6 @@ public interface IUnitOfWork //: IDisposable
     ITourGuideRepository TourGuideRepository { get; }
     ITourRepository TourRepository { get; }
     ITourPlanLocationRepository TourPlanLocationRepository { get; }
-    ITourPlanVersionRepository TourPlanVersionRepository { get; }
     ITourTypeRepository TourTypeRepository { get; }
     IBookingRepository BookingRepository { get; }
     ITripPlanExchangeRepository TripPlanExchangeRepository { get; }
@@ -47,6 +46,10 @@ public interface IUnitOfWork //: IDisposable
     ITourGuideScheduleRepository TourGuideScheduleRepository { get; }
     ITourScheduleRepository TourScheduleRepository { get; }
     ILocationTypeMappingRepository LocationTypeMappingRepository { get; }
+    IWorkshopRepository WorkshopRepository { get; }
+    IWorkshopActivityRepository WorkshopActivityRepository { get; }
+    IWorkshopScheduleRepository WorkshopScheduleRepository { get; }
+    ITourGuideMappingRepository TourGuideMappingRepository { get; }
 
     IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity;
     void Save();

@@ -10,6 +10,7 @@ public sealed class PromotionApplicable : BaseEntity
     public Guid PromotionId { get; set; }
     public Guid? TourId { get; set; }
     public Guid? TourGuideId { get; set; }
+    public Guid? WorkshopId { get; set; }
 
     [Required]
     [EnumDataType(typeof(ServiceOption))]
@@ -24,4 +25,6 @@ public sealed class PromotionApplicable : BaseEntity
 
     [ForeignKey("GuideId")]
     public TourGuide? TourGuide { get; set; }
+    [ForeignKey("WorkshopId")]
+    public Workshop? Workshop { get; set; }
 }

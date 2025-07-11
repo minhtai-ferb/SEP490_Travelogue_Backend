@@ -58,6 +58,21 @@ public class TourGuideService : ITourGuideService
 
             var roleTourGuide = await _unitOfWork.RoleRepository.GetByNameAsync(AppRole.TOUR_GUIDE);
 
+            if (roleTourGuide == null)
+            {
+
+                roleTourGuide = new Role(AppRole.TOUR_GUIDE, true);
+                // Thêm mới role tour guide
+                roleTourGuide.Description = "Tour Guide Role";
+                roleTourGuide.CreatedBy = currentUserId;
+                roleTourGuide.LastUpdatedBy = currentUserId;
+                roleTourGuide.CreatedTime = currentTime;
+                roleTourGuide.LastUpdatedTime = currentTime;
+
+                await _unitOfWork.RoleRepository.AddAsync(roleTourGuide);
+                await _unitOfWork.SaveAsync();
+            }
+
             var tourGuides = new List<TourGuide>();
             foreach (var user in users)
             {

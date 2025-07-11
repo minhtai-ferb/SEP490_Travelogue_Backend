@@ -8,6 +8,8 @@ public class CuisineCreateModel
     // public string? Content { get; set; }
     // public Guid LocationId { get; set; }
     // public string? Address { get; set; }
+    public string? SignatureProduct { get; set; }
+    public string? CookingMethod { get; set; }
     public string? CuisineType { get; set; } // Loại âm thực 
     public string? PhoneNumber { get; set; }
     public string? Email { get; set; }

@@ -21,6 +21,9 @@ public sealed class User : BaseEntity
     public string? EmailCode { get; set; }
     public string? AvatarUrl { get; set; }
 
+    public Guid? CraftVillageId { get; set; }
+    public CraftVillage CraftVillage { get; set; }
+
     public Gender Sex { get; set; }
 
     [StringLength(200)]

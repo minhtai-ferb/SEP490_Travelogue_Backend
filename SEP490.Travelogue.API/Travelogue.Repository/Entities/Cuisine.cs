@@ -11,6 +11,9 @@ public sealed class Cuisine : BaseEntity
 
     public Guid? LocationId { get; set; }
 
+    public string? SignatureProduct { get; set; }
+    public string? CookingMethod { get; set; }
+
     // Navigation Properties
     public Location Location { get; set; } = null!;
     public ICollection<LocationCuisineSuggestion> LocationCuisineSuggestions { get; set; } = new List<LocationCuisineSuggestion>();

@@ -31,6 +31,9 @@ public class ApplicationDbContext : DbContext
     // Craft Village Management
     public DbSet<CraftVillage> CraftVillages { get; set; }
     public DbSet<CraftVillageInterest> CraftVillageInterests { get; set; }
+    public DbSet<Workshop> Workshops { get; set; }
+    public DbSet<WorkshopSchedule> WorkshopSchedules { get; set; }
+    public DbSet<WorkshopActivity> WorkshopActivities { get; set; }
 
     // Cuisine Management
     public DbSet<Cuisine> Cuisines { get; set; }
@@ -40,7 +43,6 @@ public class ApplicationDbContext : DbContext
     public DbSet<Tour> Tours { get; set; }
     public DbSet<TourType> TourTypes { get; set; }
     public DbSet<TourInterest> TourInterests { get; set; }
-    public DbSet<TourPlanVersion> TourPlanVersions { get; set; }
     public DbSet<TourSchedule> TourSchedules { get; set; }
     public DbSet<TourPlanLocation> TourPlanLocations { get; set; }
     public DbSet<TourGuide> TourGuides { get; set; }
@@ -104,12 +106,6 @@ public class ApplicationDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
-        modelBuilder.Entity<Tour>()
-            .HasOne(t => t.CurrentVersion)
-            .WithMany()
-            .HasForeignKey(t => t.CurrentVersionId)
-            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Experience>()
             .HasOne(a => a.Location)

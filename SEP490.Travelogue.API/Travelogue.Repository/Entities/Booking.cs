@@ -7,8 +7,7 @@ namespace Travelogue.Repository.Entities;
 
 public sealed class Booking : BaseEntity
 {
-    [Required]
-    public Guid TourPlanVersionId { get; set; } // Links to tour version for pricing/itinerary
+    public Guid TourId { get; set; }
     public Guid? TourScheduleId { get; set; }
     public Guid? TourGuideId { get; set; }
     public Guid UserId { get; set; }
@@ -30,6 +29,7 @@ public sealed class Booking : BaseEntity
     public bool IsOpenToJoin { get; set; } = false;
 
     public Guid? PromotionId { get; set; }
+    public Guid? WorkshopId { get; set; }
 
     [Required]
     [Column(TypeName = "decimal(10,2)")]
@@ -46,9 +46,9 @@ public sealed class Booking : BaseEntity
     public User? User { get; set; }
     public Tour? Tour { get; set; }
     public TourGuide? TourGuide { get; set; }
+    public Workshop? Workshop { get; set; }
     public TripPlan? TripPlan { get; set; }
     public TripPlanVersion? TripPlanVersion { get; set; }
-    public TourPlanVersion TourPlanVersion { get; set; } = null!;
     public TourSchedule? TourSchedule { get; set; }
 
     [ForeignKey("PromotionId")]

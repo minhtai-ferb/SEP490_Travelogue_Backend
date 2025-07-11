@@ -568,9 +568,23 @@ public class LocationService : ILocationService
 
             var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
 
-            locationDataModel.Cuisine = cuisine != null ? _mapper.Map<CuisineDataModel>(cuisine) : null;
-            locationDataModel.CraftVillage = craftVillage != null ? _mapper.Map<CraftVillageDataModel>(craftVillage) : null;
-            locationDataModel.HistoricalLocation = historicalLocation != null ? _mapper.Map<HistoricalLocationDataModel>(historicalLocation) : null;
+            if (cuisine != null)
+            {
+                locationDataModel.Cuisine = _mapper.Map<CuisineDataModel>(cuisine);
+                locationDataModel.Cuisine.CuisineId = cuisine.Id;
+            }
+
+            if (craftVillage != null)
+            {
+                locationDataModel.CraftVillage = _mapper.Map<CraftVillageDataModel>(craftVillage);
+                locationDataModel.CraftVillage.CraftVillageId = craftVillage.Id;
+            }
+
+            if (historicalLocation != null)
+            {
+                locationDataModel.HistoricalLocation = _mapper.Map<HistoricalLocationDataModel>(historicalLocation);
+                locationDataModel.HistoricalLocation.HistoricalLocationId = historicalLocation.Id;
+            }
 
             locationDataModel.Medias = await GetMediaWithoutVideoByIdAsync(id, cancellationToken);
             locationDataModel.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationDataModel.DistrictId);

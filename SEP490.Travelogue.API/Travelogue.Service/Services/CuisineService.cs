@@ -21,6 +21,7 @@ public interface ICuisineService
     Task<List<LocationDataModel>> GetAllCuisinesAsync(CancellationToken cancellationToken);
     Task<PagedResult<LocationDataModel>> GetPagedCuisinesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task AddCuisineAsync(CuisineCreateModel cuisineCreateModel, CancellationToken cancellationToken);
+    Task AddCuisineAsync(Guid locationId, CuisineCreateModel cuisineCreateModel, CancellationToken cancellationToken);
     Task UpdateCuisineAsync(Guid id, CuisineUpdateModel cuisineUpdateModel, CancellationToken cancellationToken);
     Task DeleteCuisineAsync(Guid id, CancellationToken cancellationToken);
     // Task<PagedResult<CuisineDataModel>> GetPagedCuisinesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
@@ -55,6 +56,41 @@ public class CuisineService : ICuisineService
             var currentTime = _timeService.SystemTimeNow;
 
             var newCuisine = _mapper.Map<Cuisine>(cuisineCreateModel);
+            newCuisine.CreatedBy = currentUserId;
+            newCuisine.LastUpdatedBy = currentUserId;
+            newCuisine.CreatedTime = currentTime;
+            newCuisine.LastUpdatedTime = currentTime;
+
+            _unitOfWork.BeginTransaction();
+            await _unitOfWork.CuisineRepository.AddAsync(newCuisine);
+            _unitOfWork.CommitTransaction();
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError();
+        }
+        finally
+        {
+            //  _unitOfWork.Dispose();
+        }
+    }
+
+    public async Task AddCuisineAsync(Guid locationId, CuisineCreateModel cuisineCreateModel, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentTime = _timeService.SystemTimeNow;
+
+            var location = await _unitOfWork.LocationRepository.GetByIdAsync(locationId, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("location");
+
+            var newCuisine = _mapper.Map<Cuisine>(cuisineCreateModel);
+            newCuisine.LocationId = locationId;
             newCuisine.CreatedBy = currentUserId;
             newCuisine.LastUpdatedBy = currentUserId;
             newCuisine.CreatedTime = currentTime;
@@ -238,7 +274,7 @@ public class CuisineService : ICuisineService
 
             foreach (var cuisine in cuisineDataModels)
             {
-                cuisine.Medias = await GetMediaByIdAsync(cuisine.Id, cancellationToken);
+                cuisine.Medias = await GetMediaByIdAsync(cuisine.CuisineId, cancellationToken);
             }
 
             return new PagedResult<CuisineDataModel>

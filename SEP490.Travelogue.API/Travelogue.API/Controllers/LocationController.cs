@@ -346,6 +346,16 @@ public class LocationController : ControllerBase
         ));
     }
 
+    [HttpGet("location-type")]
+    public IActionResult GetLocationType()
+    {
+        var result = _enumService.GetEnumValues<LocationType>();
+        return Ok(ResponseModel<List<EnumResponse>>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "location type")
+        ));
+    }
+
     /// <summary>
     /// Xóa media của location
     /// </summary>
@@ -430,6 +440,34 @@ public class LocationController : ControllerBase
     }
 
     /// <summary>
+    /// Theem địa điểm lịch sử
+    /// </summary>
+    /// <returns></returns>
+    [HttpPost("historical-locations")]
+    public async Task<IActionResult> AddHistoricalLocation(Guid locationId, HistoricalLocationCreateModel historicalLocationCreateModel)
+    {
+        await _historicalLocationService.AddHistoricalLocationAsync(locationId, historicalLocationCreateModel, new CancellationToken());
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: true,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "craft village")
+        ));
+    }
+
+    /// <summary>
+    /// Theem làng nghề
+    /// </summary>
+    /// <returns></returns>
+    [HttpPost("craft-villages")]
+    public async Task<IActionResult> AddCraftVillage(Guid locationId, CraftVillageCreateModel craftVillageCreateModel)
+    {
+        await _craftVillageService.AddCraftVillageAsync(locationId, craftVillageCreateModel, new CancellationToken());
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: true,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "craft village")
+        ));
+    }
+
+    /// <summary>
     /// Lấy tất cả làng nghề
     /// </summary>
     /// <returns></returns>
@@ -471,7 +509,21 @@ public class LocationController : ControllerBase
     }
 
     /// <summary>
-    /// Lấy tất cả hotel
+    /// Thêm cuisine
+    /// </summary>
+    /// <returns></returns>
+    [HttpPost("cuisine")]
+    public async Task<IActionResult> AddCuisine(Guid locationId, CuisineCreateModel cuisineCreateModel)
+    {
+        await _cuisineService.AddCuisineAsync(locationId, cuisineCreateModel, new CancellationToken());
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: true,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "craft village")
+        ));
+    }
+
+    /// <summary>
+    /// Lấy tất cả cuisine
     /// </summary>
     /// <returns></returns>
     [HttpGet("cuisine")]

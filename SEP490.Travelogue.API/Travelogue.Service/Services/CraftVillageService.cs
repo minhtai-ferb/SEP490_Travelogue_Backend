@@ -21,6 +21,7 @@ public interface ICraftVillageService
     Task<List<LocationDataModel>> GetAllCraftVillagesAsync(CancellationToken cancellationToken);
     Task<PagedResult<LocationDataModel>> GetPagedCraftVillagesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task AddCraftVillageAsync(CraftVillageCreateModel craftVillageCreateModel, CancellationToken cancellationToken);
+    Task AddCraftVillageAsync(Guid locationId, CraftVillageCreateModel craftVillageCreateModel, CancellationToken cancellationToken);
     Task UpdateCraftVillageAsync(Guid id, CraftVillageUpdateModel craftVillageUpdateModel, CancellationToken cancellationToken);
     Task DeleteCraftVillageAsync(Guid id, CancellationToken cancellationToken);
     // Task<CraftVillageMediaResponse> AddCraftVillageWithMediaAsync(CraftVillageCreateWithMediaFileModel craftVillageCreateModel, string? thumbnailSelected, CancellationToken cancellationToken);
@@ -82,6 +83,41 @@ public class CraftVillageService : ICraftVillageService
         }
     }
 
+    public async Task AddCraftVillageAsync(Guid locationId, CraftVillageCreateModel craftVillageCreateModel, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentTime = _timeService.SystemTimeNow;
+
+            var location = await _unitOfWork.LocationRepository.GetByIdAsync(locationId, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("location");
+
+            var newCraftVillage = _mapper.Map<CraftVillage>(craftVillageCreateModel);
+            newCraftVillage.LocationId = locationId;
+            newCraftVillage.CreatedBy = currentUserId;
+            newCraftVillage.LastUpdatedBy = currentUserId;
+            newCraftVillage.CreatedTime = currentTime;
+            newCraftVillage.LastUpdatedTime = currentTime;
+
+            _unitOfWork.BeginTransaction();
+            await _unitOfWork.CraftVillageRepository.AddAsync(newCraftVillage);
+            _unitOfWork.CommitTransaction();
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError();
+        }
+        finally
+        {
+            //  _unitOfWork.Dispose();
+        }
+    }
+
     public async Task DeleteCraftVillageAsync(Guid id, CancellationToken cancellationToken)
     {
         try
@@ -98,7 +134,7 @@ public class CraftVillageService : ICraftVillageService
 
             //var isInUsing = await _unitOfWork.LocationCraftVillageSuggestionRepository.ActiveEntities.FirstOrDefaultAsync(e => e.LocationId == id, cancellationToken) != null;
 
-            // nếu đang được suggess thì xóa đi
+            // nếu đang được suggest thì xóa đi
             await _unitOfWork.LocationCraftVillageSuggestionRepository.ActiveEntities
                 .Where(s => s.CraftVillageId == id)
                 .ForEachAsync(s => s.IsDeleted = true, cancellationToken);
@@ -140,7 +176,8 @@ public class CraftVillageService : ICraftVillageService
     {
         try
         {
-            var existingLocations = await _unitOfWork.LocationRepository.ActiveEntities
+            var existingLocations = await _unitOfWork.LocationRepository
+                .ActiveEntities
                 .Include(l => l.LocationTypes)
                 .Where(l => l.LocationTypes.Any(lt => lt.Type == LocationType.CraftVillage))
                 .ToListAsync(cancellationToken);
@@ -238,7 +275,7 @@ public class CraftVillageService : ICraftVillageService
 
             foreach (var craftVillage in craftVillageDataModels)
             {
-                craftVillage.Medias = await GetMediaByIdAsync(craftVillage.Id, cancellationToken);
+                craftVillage.Medias = await GetMediaByIdAsync(craftVillage.CraftVillageId, cancellationToken);
             }
 
             return new PagedResult<CraftVillageDataModel>
