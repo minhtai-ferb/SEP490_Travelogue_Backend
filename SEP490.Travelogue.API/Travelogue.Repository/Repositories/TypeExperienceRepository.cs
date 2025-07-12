@@ -31,9 +31,9 @@ public sealed class TypeExperienceRepository : GenericRepository<TypeExperience>
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 

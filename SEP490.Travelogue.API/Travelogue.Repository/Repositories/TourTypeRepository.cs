@@ -32,9 +32,9 @@ public sealed class TourTypeRepository : GenericRepository<TourType>, ITourTypeR
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -79,9 +79,9 @@ public sealed class TourTypeRepository : GenericRepository<TourType>, ITourTypeR
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 }

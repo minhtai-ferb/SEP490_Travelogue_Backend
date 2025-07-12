@@ -71,10 +71,10 @@ public class BookingService : IBookingService
             await _unitOfWork.RollBackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -124,10 +124,10 @@ public class BookingService : IBookingService
             await _unitOfWork.RollBackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -163,10 +163,10 @@ public class BookingService : IBookingService
             await _unitOfWork.RollBackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -212,10 +212,10 @@ public class BookingService : IBookingService
             await _unitOfWork.RollBackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -254,10 +254,10 @@ public class BookingService : IBookingService
             await _unitOfWork.RollBackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -332,10 +332,10 @@ public class BookingService : IBookingService
             await _unitOfWork.RollBackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 }

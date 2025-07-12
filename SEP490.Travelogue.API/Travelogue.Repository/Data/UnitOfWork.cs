@@ -17,8 +17,6 @@ public class UnitOfWork : IUnitOfWork
     public IPasswordResetTokenRepository PasswordResetTokenRepository { get; }
     public ILocationRepository LocationRepository { get; }
     public IFavoriteLocationRepository FavoriteLocationRepository { get; }
-    public ILocationCuisineSuggestionRepository LocationCuisineSuggestionRepository { get; }
-    public ILocationCraftVillageSuggestionRepository LocationCraftVillageSuggestionRepository { get; }
     public IExperienceRepository ExperienceRepository { get; }
     public IEventRepository EventRepository { get; }
     public ITypeEventRepository TypeEventRepository { get; }
@@ -62,8 +60,6 @@ public class UnitOfWork : IUnitOfWork
         PasswordResetTokenRepository = new PasswordResetTokenRepository(_dbContext);
         LocationRepository = new LocationRepository(_dbContext);
         FavoriteLocationRepository = new FavoriteLocationRepository(_dbContext);
-        LocationCuisineSuggestionRepository = new LocationCuisineSuggestionRepository(_dbContext);
-        LocationCraftVillageSuggestionRepository = new LocationCraftVillageSuggestionRepository(_dbContext);
         ExperienceRepository = new ExperienceRepository(_dbContext);
         EventRepository = new EventRepository(_dbContext);
         TypeEventRepository = new TypeEventRepository(_dbContext);

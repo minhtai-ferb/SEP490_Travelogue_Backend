@@ -73,9 +73,9 @@ public class CraftVillageService : ICraftVillageService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -108,9 +108,9 @@ public class CraftVillageService : ICraftVillageService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -133,11 +133,6 @@ public class CraftVillageService : ICraftVillageService
             }
 
             //var isInUsing = await _unitOfWork.LocationCraftVillageSuggestionRepository.ActiveEntities.FirstOrDefaultAsync(e => e.LocationId == id, cancellationToken) != null;
-
-            // nếu đang được suggest thì xóa đi
-            await _unitOfWork.LocationCraftVillageSuggestionRepository.ActiveEntities
-                .Where(s => s.CraftVillageId == id)
-                .ForEachAsync(s => s.IsDeleted = true, cancellationToken);
 
             await _unitOfWork.LocationMediaRepository.ActiveEntities
                 .Where(s => s.LocationId == existingCraftVillage.LocationId)
@@ -162,9 +157,9 @@ public class CraftVillageService : ICraftVillageService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -202,9 +197,9 @@ public class CraftVillageService : ICraftVillageService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -252,9 +247,9 @@ public class CraftVillageService : ICraftVillageService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -287,9 +282,9 @@ public class CraftVillageService : ICraftVillageService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -324,9 +319,9 @@ public class CraftVillageService : ICraftVillageService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -359,9 +354,9 @@ public class CraftVillageService : ICraftVillageService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -511,10 +506,10 @@ public class CraftVillageService : ICraftVillageService
     //         await _unitOfWork.RollBackAsync();
     //         throw;
     //     }
-    //     catch (Exception)
+    //     catch (Exception ex)
     //     {
     //         await _unitOfWork.RollBackAsync();
-    //         throw CustomExceptionFactory.CreateInternalServerError();
+    //         throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
     //     }
     // }
 
@@ -543,9 +538,9 @@ public class CraftVillageService : ICraftVillageService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 

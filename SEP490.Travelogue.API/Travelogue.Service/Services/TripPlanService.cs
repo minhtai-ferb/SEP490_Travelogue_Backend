@@ -551,9 +551,9 @@ public class TripPlanService : ITripPlanService
     //     {
     //         throw;
     //     }
-    //     catch (Exception)
+    //     catch (Exception ex)
     //     {
-    //         throw CustomExceptionFactory.CreateInternalServerError();
+    //         throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
     //     }
     //     finally
     //     {
@@ -637,9 +637,9 @@ public class TripPlanService : ITripPlanService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -772,9 +772,9 @@ public class TripPlanService : ITripPlanService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -1012,10 +1012,10 @@ public class TripPlanService : ITripPlanService
             await _unitOfWork.RollBackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 

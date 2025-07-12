@@ -48,7 +48,7 @@ public class GoogleAuthService : IGoogleAuthService
             var result = await httpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             if (result?.Principal == null)
             {
-                throw CustomExceptionFactory.CreateInternalServerError();
+                throw CustomExceptionFactory.CreateBadRequestError("Không thể xác thực người dùng từ Google. Vui lòng thử lại.");
             }
 
             var claims = result.Principal.Identities.First().Claims;
@@ -158,9 +158,9 @@ public class GoogleAuthService : IGoogleAuthService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -193,10 +193,10 @@ public class GoogleAuthService : IGoogleAuthService
 
             bool resultAddRole = await _unitOfWork.UserRepository.AddToRoleAsync(newUser, AppRole.USER);
             if (!resultAddRole)
-                throw CustomExceptionFactory.CreateInternalServerError();
+                throw CustomExceptionFactory.CreateBadRequestError("Thêm role thất bại");
             //if (!result.Succeeded)
             //{
-            //    throw CustomExceptionFactory.CreateInternalServerError();
+            //    throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
             //}
 
             return newUser;
@@ -205,9 +205,9 @@ public class GoogleAuthService : IGoogleAuthService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 }

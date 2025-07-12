@@ -85,9 +85,9 @@ public class RoleRepository : GenericRepository<Role>, IRoleRepository
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
 
     }
@@ -141,9 +141,9 @@ public class RoleRepository : GenericRepository<Role>, IRoleRepository
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -158,9 +158,9 @@ public class RoleRepository : GenericRepository<Role>, IRoleRepository
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 }

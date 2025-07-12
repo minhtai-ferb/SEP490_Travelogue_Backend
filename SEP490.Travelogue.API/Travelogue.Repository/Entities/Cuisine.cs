@@ -16,6 +16,4 @@ public sealed class Cuisine : BaseEntity
 
     // Navigation Properties
     public Location Location { get; set; } = null!;
-    public ICollection<LocationCuisineSuggestion> LocationCuisineSuggestions { get; set; } = new List<LocationCuisineSuggestion>();
-    // public ICollection<TripPlanCuisine> TripPlanCuisines { get; set; } = new List<TripPlanCuisine>();
 }

@@ -73,10 +73,10 @@ public class UserService : IUserService
             _unitOfWork.RollBack();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             _unitOfWork.RollBack();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -121,9 +121,9 @@ public class UserService : IUserService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -190,9 +190,9 @@ public class UserService : IUserService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -219,10 +219,10 @@ public class UserService : IUserService
             _unitOfWork.RollBack();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             _unitOfWork.RollBack();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -249,10 +249,10 @@ public class UserService : IUserService
             _unitOfWork.RollBack();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             _unitOfWork.RollBack();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -293,9 +293,9 @@ public class UserService : IUserService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -323,9 +323,9 @@ public class UserService : IUserService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -361,10 +361,10 @@ public class UserService : IUserService
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -407,10 +407,10 @@ public class UserService : IUserService
             await transaction.RollbackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -433,10 +433,10 @@ public class UserService : IUserService
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -470,10 +470,10 @@ public class UserService : IUserService
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -512,10 +512,10 @@ public class UserService : IUserService
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -551,9 +551,9 @@ public class UserService : IUserService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {

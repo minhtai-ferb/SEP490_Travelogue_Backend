@@ -80,9 +80,9 @@ public class NewsService : INewsService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -118,9 +118,9 @@ public class NewsService : INewsService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -166,9 +166,9 @@ public class NewsService : INewsService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -192,9 +192,9 @@ public class NewsService : INewsService
     //    {
     //        throw;
     //    }
-    //    catch (Exception)
+    //    catch (Exception ex)
     //    {
-    //        throw CustomExceptionFactory.CreateInternalServerError();
+    //        throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
     //    }
     //    finally
     //    {
@@ -294,9 +294,9 @@ public class NewsService : INewsService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -320,9 +320,9 @@ public class NewsService : INewsService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -371,9 +371,9 @@ public class NewsService : INewsService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -401,9 +401,9 @@ public class NewsService : INewsService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -452,9 +452,9 @@ public class NewsService : INewsService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -487,9 +487,9 @@ public class NewsService : INewsService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -594,10 +594,10 @@ public class NewsService : INewsService
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -738,10 +738,10 @@ public class NewsService : INewsService
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -793,10 +793,10 @@ public class NewsService : INewsService
             await _unitOfWork.RollBackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -942,10 +942,10 @@ public class NewsService : INewsService
             await _unitOfWork.RollBackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -1011,10 +1011,10 @@ public class NewsService : INewsService
             await _unitOfWork.RollBackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -1086,9 +1086,9 @@ public class NewsService : INewsService
     //    {
     //        throw;
     //    }
-    //    catch (Exception)
+    //    catch (Exception ex)
     //    {
-    //        throw CustomExceptionFactory.CreateInternalServerError();
+    //        throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
     //    }
     //}
 

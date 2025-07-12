@@ -1,6 +1,7 @@
 ﻿using Travelogue.Repository.Bases.Exceptions;
 
 namespace Travelogue.Service.Services;
+
 public class MailTemplateService
 {
     private readonly HttpClient _httpClient;
@@ -22,9 +23,9 @@ public class MailTemplateService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 }

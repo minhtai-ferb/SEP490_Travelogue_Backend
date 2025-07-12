@@ -4,6 +4,7 @@ using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 
 namespace Travelogue.Repository.Repositories;
+
 public interface IUserRoleRepository : IGenericRepository<UserRole>
 {
     Task<bool> AddRolesToUser(Guid userId, List<Guid> rolesToAdd);
@@ -37,9 +38,9 @@ public sealed class UserRoleRepository : GenericRepository<UserRole>, IUserRoleR
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -54,9 +55,9 @@ public sealed class UserRoleRepository : GenericRepository<UserRole>, IUserRoleR
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -70,9 +71,9 @@ public sealed class UserRoleRepository : GenericRepository<UserRole>, IUserRoleR
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -104,9 +105,9 @@ public sealed class UserRoleRepository : GenericRepository<UserRole>, IUserRoleR
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 }

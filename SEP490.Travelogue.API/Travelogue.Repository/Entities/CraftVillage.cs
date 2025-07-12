@@ -16,10 +16,9 @@ public sealed class CraftVillage : BaseEntity
     [Range(0, int.MaxValue, ErrorMessage = "Số năm lịch sử phải là số không âm")]
     public int? YearsOfHistory { get; set; }
 
-    public bool IsRecognizedByUNESCO { get; set; } = false;
+    public bool IsRecognizedByUnesco { get; set; } = false;
 
     // Navigation Properties
     public Location Location { get; set; } = null!;
     public ICollection<User> Managers { get; set; } = new List<User>();
-    public ICollection<LocationCraftVillageSuggestion> LocationCraftVillageSuggestions { get; set; } = new List<LocationCraftVillageSuggestion>();
 }

@@ -31,9 +31,9 @@ public sealed class DistrictMediaRepository : GenericRepository<DistrictMedia>, 
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 

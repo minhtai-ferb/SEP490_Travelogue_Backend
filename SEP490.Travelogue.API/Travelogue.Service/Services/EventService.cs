@@ -97,10 +97,10 @@ public class EventService : IEventService
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -153,10 +153,10 @@ public class EventService : IEventService
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -220,9 +220,9 @@ public class EventService : IEventService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -265,9 +265,9 @@ public class EventService : IEventService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -318,10 +318,10 @@ public class EventService : IEventService
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -391,9 +391,9 @@ public class EventService : IEventService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -474,9 +474,9 @@ public class EventService : IEventService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -573,9 +573,9 @@ public class EventService : IEventService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -605,9 +605,9 @@ public class EventService : IEventService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -677,10 +677,10 @@ public class EventService : IEventService
             await _unitOfWork.RollBackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -781,10 +781,10 @@ public class EventService : IEventService
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -925,10 +925,10 @@ public class EventService : IEventService
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -990,10 +990,10 @@ public class EventService : IEventService
             await _unitOfWork.RollBackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -1145,10 +1145,10 @@ public class EventService : IEventService
             await _unitOfWork.RollBackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -1222,9 +1222,9 @@ public class EventService : IEventService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -1303,9 +1303,9 @@ public class EventService : IEventService
     //    {
     //        throw;
     //    }
-    //    catch (Exception)
+    //    catch (Exception ex)
     //    {
-    //        throw CustomExceptionFactory.CreateInternalServerError();
+    //        throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
     //    }
     //    finally
     //    {
@@ -1333,9 +1333,9 @@ public class EventService : IEventService
     //    {
     //        throw;
     //    }
-    //    catch (Exception)
+    //    catch (Exception ex)
     //    {
-    //        throw CustomExceptionFactory.CreateInternalServerError();
+    //        throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
     //    }
     //    finally
     //    {
@@ -1363,9 +1363,9 @@ public class EventService : IEventService
     //    {
     //        throw;
     //    }
-    //    catch (Exception)
+    //    catch (Exception ex)
     //    {
-    //        throw CustomExceptionFactory.CreateInternalServerError();
+    //        throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
     //    }
     //    finally
     //    {

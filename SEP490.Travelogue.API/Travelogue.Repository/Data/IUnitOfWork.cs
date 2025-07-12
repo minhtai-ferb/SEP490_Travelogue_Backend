@@ -13,8 +13,6 @@ public interface IUnitOfWork //: IDisposable
     IPasswordResetTokenRepository PasswordResetTokenRepository { get; }
     ILocationRepository LocationRepository { get; }
     IFavoriteLocationRepository FavoriteLocationRepository { get; }
-    ILocationCraftVillageSuggestionRepository LocationCraftVillageSuggestionRepository { get; }
-    ILocationCuisineSuggestionRepository LocationCuisineSuggestionRepository { get; }
     IExperienceRepository ExperienceRepository { get; }
     IEventRepository EventRepository { get; }
     ITypeEventRepository TypeEventRepository { get; }

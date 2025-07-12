@@ -132,9 +132,9 @@ public class UserRepository : GenericRepository<User>, IUserRepository
             await _context.SaveChangesAsync();
             return result.Entity;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -147,9 +147,9 @@ public class UserRepository : GenericRepository<User>, IUserRepository
             await _context.SaveChangesAsync();
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -159,9 +159,9 @@ public class UserRepository : GenericRepository<User>, IUserRepository
         {
             return await Task.Run(() => VerifyPasswordHash(password, passwordHash, passwordSalt));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -205,9 +205,9 @@ public class UserRepository : GenericRepository<User>, IUserRepository
 
             return roles;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -218,7 +218,7 @@ public class UserRepository : GenericRepository<User>, IUserRepository
             var role = await _context.Roles.FirstOrDefaultAsync(r => r.Name == roleName);
             if (role == null)
             {
-                throw CustomExceptionFactory.CreateInternalServerError();
+                throw CustomExceptionFactory.CreateBadRequestError("Role chưa tồn tại");
             }
 
             UserRole userRole = new UserRole
@@ -232,9 +232,9 @@ public class UserRepository : GenericRepository<User>, IUserRepository
             await _context.SaveChangesAsync();
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -245,9 +245,9 @@ public class UserRepository : GenericRepository<User>, IUserRepository
             var query = await ActiveEntities.FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
             return query;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -273,9 +273,9 @@ public class UserRepository : GenericRepository<User>, IUserRepository
 
             return roles;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -290,9 +290,9 @@ public class UserRepository : GenericRepository<User>, IUserRepository
             }
             return user;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 }

@@ -108,9 +108,9 @@ public class AuthService : IAuthService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -140,7 +140,7 @@ public class AuthService : IAuthService
                 var roleResult = await _unitOfWork.RoleRepository.AddAsync(userRole);
                 if (roleResult == null)
                 {
-                    throw CustomExceptionFactory.CreateInternalServerError();
+                    throw CustomExceptionFactory.CreateInternalServerError("Thêm Role thất bại");
                 }
             }
 
@@ -159,7 +159,7 @@ public class AuthService : IAuthService
             User? resultCreateUser = await _unitOfWork.UserRepository.CreateUser(newUser, model.Password);
             if (resultCreateUser == null)
             {
-                throw CustomExceptionFactory.CreateInternalServerError();
+                throw CustomExceptionFactory.CreateInternalServerError("Tạo người dùng thất bại");
             }
 
             resultCreateUser.CreatedBy = resultCreateUser.Id.ToString();
@@ -170,7 +170,7 @@ public class AuthService : IAuthService
             bool resultAddRole = await _unitOfWork.UserRepository.AddToRoleAsync(newUser, userRole.Id);
             if (!resultAddRole)
             {
-                throw CustomExceptionFactory.CreateInternalServerError();
+                throw CustomExceptionFactory.CreateInternalServerError("Thêm role cho người dùng thất bại");
             }
 
             // Đăng ký tài khoản với Firebase
@@ -184,7 +184,6 @@ public class AuthService : IAuthService
             var userRecord = await FirebaseAuth.DefaultInstance.CreateUserAsync(userRecordArgs);
             firebaseUid = userRecord.Uid;
 
-            // Commit transaction nếu mọi thứ thành công
             await transaction.CommitAsync();
 
             //Đăng nhập
@@ -218,8 +217,6 @@ public class AuthService : IAuthService
                 MailTemplateLinks.VerifyAccountMailTemplate,
                 mailModel);
 
-            // Commit transaction nếu mọi thứ thành công
-            //await transaction.CommitAsync(cancellationToken);
             return response;
         }
         catch (CustomException)
@@ -293,9 +290,9 @@ public class AuthService : IAuthService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -329,10 +326,10 @@ public class AuthService : IAuthService
             await transaction.RollbackAsync();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -407,10 +404,10 @@ public class AuthService : IAuthService
             _unitOfWork.RollBack();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             _unitOfWork.RollBack();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -441,10 +438,10 @@ public class AuthService : IAuthService
             _unitOfWork.RollBack();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             _unitOfWork.RollBack();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -498,10 +495,10 @@ public class AuthService : IAuthService
             _unitOfWork.RollBack();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             _unitOfWork.RollBack();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -582,10 +579,10 @@ public class AuthService : IAuthService
             _unitOfWork.RollBack();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             _unitOfWork.RollBack();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -670,10 +667,10 @@ public class AuthService : IAuthService
             _unitOfWork.RollBack();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             _unitOfWork.RollBack();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
@@ -741,7 +738,7 @@ public class AuthService : IAuthService
         catch (Exception ex)
         {
             _unitOfWork.RollBack();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -773,7 +770,7 @@ public class AuthService : IAuthService
         catch (Exception ex)
         {
             _unitOfWork.RollBack();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -811,10 +808,10 @@ public class AuthService : IAuthService
             _unitOfWork.RollBack();
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             _unitOfWork.RollBack();
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -883,9 +880,9 @@ public class AuthService : IAuthService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -919,9 +916,9 @@ public class AuthService : IAuthService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -973,9 +970,9 @@ public class AuthService : IAuthService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -1037,9 +1034,9 @@ public class AuthService : IAuthService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -1062,9 +1059,9 @@ public class AuthService : IAuthService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -1080,9 +1077,9 @@ public class AuthService : IAuthService
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 }

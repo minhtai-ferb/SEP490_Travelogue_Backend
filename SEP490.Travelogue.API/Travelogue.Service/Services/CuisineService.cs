@@ -130,11 +130,6 @@ public class CuisineService : ICuisineService
 
             //var isInUsing = await _unitOfWork.LocationCraftVillageSuggestionRepository.ActiveEntities.FirstOrDefaultAsync(e => e.LocationId == id, cancellationToken) != null;
 
-            // nếu đang được suggess thì xóa đi
-            await _unitOfWork.LocationCuisineSuggestionRepository.ActiveEntities
-                .Where(s => s.CuisineId == id)
-                .ForEachAsync(s => s.IsDeleted = true, cancellationToken);
-
             await _unitOfWork.LocationMediaRepository.ActiveEntities
                .Where(s => s.LocationId == existingCuisine.LocationId)
                .ForEachAsync(s => s.IsDeleted = true, cancellationToken);

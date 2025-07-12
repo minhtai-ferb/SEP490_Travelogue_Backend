@@ -73,7 +73,7 @@ public class ExchangeSessionService : IExchangeSessionService
         catch (Exception ex)
         {
             Console.WriteLine($"-----------------Error creating exchange session: {ex.Message}");
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -98,7 +98,7 @@ public class ExchangeSessionService : IExchangeSessionService
         catch (Exception ex)
         {
             Console.WriteLine($"-----------------Error getting exchange sessions: {ex.Message}");
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -128,7 +128,7 @@ public class ExchangeSessionService : IExchangeSessionService
         catch (Exception ex)
         {
             Console.WriteLine($"-----------------Error getting exchange session by ID: {ex.Message}");
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 }

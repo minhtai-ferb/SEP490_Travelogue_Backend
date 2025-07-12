@@ -41,7 +41,7 @@ public class WorkshopController : ControllerBase
         {
             return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
         }
@@ -72,7 +72,7 @@ public class WorkshopController : ControllerBase
         {
             return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
         }
@@ -103,7 +103,7 @@ public class WorkshopController : ControllerBase
         {
             return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
         }
@@ -133,7 +133,7 @@ public class WorkshopController : ControllerBase
         {
             return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
         }
@@ -169,7 +169,7 @@ public class WorkshopController : ControllerBase
         {
             return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
         }
@@ -199,7 +199,7 @@ public class WorkshopController : ControllerBase
         {
             return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
         }
@@ -230,7 +230,7 @@ public class WorkshopController : ControllerBase
         {
             return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
         }
@@ -260,7 +260,7 @@ public class WorkshopController : ControllerBase
         {
             return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
         }
@@ -292,7 +292,7 @@ public class WorkshopController : ControllerBase
         {
             return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
         }
@@ -323,7 +323,7 @@ public class WorkshopController : ControllerBase
         {
             return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
         }

@@ -33,9 +33,9 @@ public sealed class CraftVillageRepository : GenericRepository<CraftVillage>, IC
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -60,9 +60,9 @@ public sealed class CraftVillageRepository : GenericRepository<CraftVillage>, IC
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 

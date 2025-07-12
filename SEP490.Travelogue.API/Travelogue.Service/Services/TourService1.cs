@@ -506,9 +506,9 @@
 //         {
 //             throw;
 //         }
-//         catch (Exception)
+//         catch (Exception ex)
 //         {
-//             throw CustomExceptionFactory.CreateInternalServerError();
+//             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
 //         }
 //         finally
 //         {

@@ -29,5 +29,5 @@ public class CraftVillageUpdateDto
     [Range(0, int.MaxValue, ErrorMessage = "Số năm lịch sử phải là số không âm")]
     public int? YearsOfHistory { get; set; }
 
-    public bool IsRecognizedByUNESCO { get; set; } = false;
+    public bool IsRecognizedByUnesco { get; set; } = false;
 }

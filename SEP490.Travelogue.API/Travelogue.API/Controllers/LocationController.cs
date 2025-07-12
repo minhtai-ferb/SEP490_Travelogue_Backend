@@ -226,63 +226,33 @@ public class LocationController : ControllerBase
         ));
     }
 
-    [HttpGet("{locationId}/recommended-craftVillages")]
-    public async Task<IActionResult> GetRecommendedCraftVillages(Guid locationId, CancellationToken cancellationToken)
+    [HttpGet("nearest-cuisine")]
+    public async Task<IActionResult> GetNearestCuisineLocations(Guid locationId, CancellationToken cancellationToken)
     {
-        var result = await _locationService.GetRecommendedCraftVillagesAsync(locationId, cancellationToken);
+        var result = await _locationService.GetNearestCuisineLocationsAsync(locationId, cancellationToken);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "location")
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "cuisines")
         ));
     }
 
-    [HttpPost("{locationId}/recommended-craftVillages")]
-    public async Task<IActionResult> AddRecommendedCraftVillages(Guid locationId, [FromBody] List<Guid> craftVillageIds, CancellationToken cancellationToken)
+    [HttpGet("nearest-craft-village")]
+    public async Task<IActionResult> GetNearestCraftVillageLocations(Guid locationId, CancellationToken cancellationToken)
     {
-        var success = await _locationService.AddRecommendedCraftVillagesAsync(locationId, craftVillageIds, cancellationToken);
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: success,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "location")
-        ));
-    }
-
-    [HttpPut("{locationId}/recommended-craftVillages")]
-    public async Task<IActionResult> UpdateRecommendedCraftVillages(Guid locationId, [FromBody] List<Guid> craftVillageIds, CancellationToken cancellationToken)
-    {
-        var success = await _locationService.UpdateRecommendedCraftVillagesAsync(locationId, craftVillageIds, cancellationToken);
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: success,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
-        ));
-    }
-
-    [HttpGet("{locationId}/recommended-cuisines")]
-    public async Task<IActionResult> GetRecommendedCuisines(Guid locationId, CancellationToken cancellationToken)
-    {
-        var result = await _locationService.GetRecommendedCuisinesAsync(locationId, cancellationToken);
+        var result = await _locationService.GetNearestCraftVillageLocationsAsync(locationId, cancellationToken);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "location")
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "craft villages")
         ));
     }
 
-    [HttpPost("{locationId}/recommended-cuisines")]
-    public async Task<IActionResult> AddRecommendedCuisines(Guid locationId, [FromBody] List<Guid> cuisineIds, CancellationToken cancellationToken)
+    [HttpGet("nearest-historical")]
+    public async Task<IActionResult> GetNearestHistoricalLocations(Guid locationId, CancellationToken cancellationToken)
     {
-        var success = await _locationService.AddRecommendedCuisinesAsync(locationId, cuisineIds, cancellationToken);
+        var result = await _locationService.GetNearestHistoricalLocationsAsync(locationId, cancellationToken);
         return Ok(ResponseModel<object>.OkResponseModel(
-            data: success,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "location")
-        ));
-    }
-
-    [HttpPut("{locationId}/recommended-cuisines")]
-    public async Task<IActionResult> UpdateRecommendedCuisines(Guid locationId, [FromBody] List<Guid> cuisineIds, CancellationToken cancellationToken)
-    {
-        var success = await _locationService.UpdateRecommendedCuisinesAsync(locationId, cuisineIds, cancellationToken);
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: success,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "historical locations")
         ));
     }
 

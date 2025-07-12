@@ -32,9 +32,9 @@ public sealed class NewsRepository : GenericRepository<News>, INewsRepository
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 

@@ -18,7 +18,7 @@ public class CraftVillageDataModel : BaseDataModel
     public string? SignatureProduct { get; set; }
     public int? YearsOfHistory { get; set; }
 
-    public bool IsRecognizedByUNESCO { get; set; } = false;
+    public bool IsRecognizedByUnesco { get; set; } = false;
     // public double Latitude { get; set; }
     // public double Longitude { get; set; }
     // public Guid? DistrictId { get; set; }

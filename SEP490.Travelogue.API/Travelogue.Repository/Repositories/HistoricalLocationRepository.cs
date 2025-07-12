@@ -31,9 +31,9 @@ public sealed class HistoricalLocationRepository : GenericRepository<HistoricalL
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 }
