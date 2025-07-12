@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Travelogue.Service.BusinessModels.TourModels;
 
-public class CreateTourDto
+public class UpdateTourDto
 {
     [Required, MaxLength(150)]
     public string Name { get; set; } = string.Empty;

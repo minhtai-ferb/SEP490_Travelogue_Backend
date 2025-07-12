@@ -573,13 +573,11 @@ public class LocationService : ILocationService
             if (currentLongitude < -180 || currentLongitude > 180)
                 throw CustomExceptionFactory.CreateBadRequestError("Invalid longitude value.");
 
-            // Query locations with Cuisine type
             var cuisineLocations = await _unitOfWork.LocationRepository
                 .ActiveEntities
                 .Where(l => l.LocationType == LocationType.Cuisine && l.Cuisine != null)
                 .ToListAsync(cancellationToken);
 
-            // Calculate distances and sort
             var locationsWithDistance = cuisineLocations
                 .Select(location => new
                 {
@@ -647,14 +645,12 @@ public class LocationService : ILocationService
             if (currentLongitude < -180 || currentLongitude > 180)
                 throw CustomExceptionFactory.CreateBadRequestError("Invalid longitude value.");
 
-            // Query locations with CraftVillage type
             var craftVillageLocations = await _unitOfWork.LocationRepository
                 .ActiveEntities
                 .Include(l => l.CraftVillage)
                 .Where(l => l.LocationType == LocationType.CraftVillage && l.CraftVillage != null)
                 .ToListAsync(cancellationToken);
 
-            // Calculate distances and sort
             var locationsWithDistance = craftVillageLocations
                 .Select(location => new
                 {
@@ -665,7 +661,6 @@ public class LocationService : ILocationService
                 .Take(10)
                 .ToList();
 
-            // Process async operations for additional data
             var result = new List<LocationDataModel>();
             foreach (var item in locationsWithDistance)
             {
@@ -712,20 +707,17 @@ public class LocationService : ILocationService
             double currentLatitude = location.Latitude;
             double currentLongitude = location.Longitude;
 
-            // Validate input coordinates
             if (currentLatitude < -90 || currentLatitude > 90)
                 throw CustomExceptionFactory.CreateBadRequestError("Invalid latitude value.");
             if (currentLongitude < -180 || currentLongitude > 180)
                 throw CustomExceptionFactory.CreateBadRequestError("Invalid longitude value.");
 
-            // Query locations with HistoricalLocation type
             var historicalLocations = await _unitOfWork.LocationRepository
                 .ActiveEntities
                 .Include(l => l.HistoricalLocation)
                 .Where(l => l.LocationType == LocationType.HistoricalSite && l.HistoricalLocation != null)
                 .ToListAsync(cancellationToken);
 
-            // Calculate distances and sort
             var locationsWithDistance = historicalLocations
                 .Select(location => new
                 {
@@ -736,7 +728,6 @@ public class LocationService : ILocationService
                 .Take(10)
                 .ToList();
 
-            // Process async operations for additional data
             var result = new List<LocationDataModel>();
             foreach (var item in locationsWithDistance)
             {
@@ -801,7 +792,6 @@ public class LocationService : ILocationService
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
-            // Find the Location with its associated HistoricalLocation
             var location = await _unitOfWork.LocationRepository
                 .ActiveEntities
                 .Include(l => l.HistoricalLocation)
@@ -813,13 +803,11 @@ public class LocationService : ILocationService
                 throw CustomExceptionFactory.CreateBadRequestError("Location not found.");
             }
 
-            // Verify that the location is a HistoricalLocation
             if (location.LocationType != LocationType.HistoricalSite)
             {
                 throw CustomExceptionFactory.CreateBadRequestError("The specified location is not a Craft Village.");
             }
 
-            // Update Location properties
             location.Name = dto.Name;
             location.Description = dto.Description;
             location.Content = dto.Content;
@@ -832,7 +820,6 @@ public class LocationService : ILocationService
             location.LocationType = LocationType.HistoricalSite;
             location.LastUpdatedTime = DateTime.UtcNow;
 
-            // Update or create HistoricalLocation
             if (location.HistoricalLocation == null)
             {
                 location.HistoricalLocation = new HistoricalLocation

@@ -14,15 +14,9 @@ public class LocationCreateModel
     [Range(-180, 180)]
     public double Longitude { get; set; }
 
+    public TimeSpan? OpenTime { get; set; }
+    public TimeSpan? CloseTime { get; set; }
     public Guid? DistrictId { get; set; }
     [Required]
     public LocationType LocationType { get; set; }
-
-    public TimeSpan? OpenTime { get; set; }
-    public TimeSpan? CloseTime { get; set; }
-    // [Required]
-    // public List<LocationType> Types { get; set; } = new();
-    // public CuisineCreateModel? Cuisine { get; set; }
-    // public CraftVillageCreateModel? CraftVillage { get; set; }
-    // public HistoricalLocationCreateModel? HistoricalLocation { get; set; }
 }
