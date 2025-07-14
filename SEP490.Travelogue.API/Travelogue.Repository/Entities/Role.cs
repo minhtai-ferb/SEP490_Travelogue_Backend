@@ -11,7 +11,6 @@ public sealed class Role : BaseEntity
     public string? NormalizedName { get; private set; }
     public string? Description { get; set; }
     public ICollection<UserRole>? UserRoles { get; set; }
-    public ICollection<RoleDistrict>? RoleDistricts { get; set; }
 
     private Role() { } // Dành cho EF Core
 

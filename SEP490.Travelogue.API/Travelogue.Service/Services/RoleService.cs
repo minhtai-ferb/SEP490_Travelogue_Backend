@@ -52,22 +52,6 @@ public sealed class RoleService : IRoleService
             //    throw new CustomException(StatusCodes.Status409Conflict, ResponseCodeConstants.BAD_REQUEST, ResponseMessages.DUPLICATE);
             //}
 
-            if (!request.DistrictId.HasValue)
-            {
-                return result != null;
-            }
-
-            var addRoleDistrict = await _unitOfWork.RoleDistrictRepository
-                .AddAsync(new RoleDistrict
-                {
-                    RoleId = result.Id,
-                    DistrictId = request.DistrictId.Value,
-                    CreatedBy = currentUserId,
-                    LastUpdatedBy = currentUserId,
-                    CreatedTime = currentTime,
-                    LastUpdatedTime = currentTime
-                });
-
             return result != null;
         }
         catch (CustomException)
@@ -109,20 +93,6 @@ public sealed class RoleService : IRoleService
             var pagedResult = await _unitOfWork.RoleRepository.GetPageRoleAsync(pageNumber, pageSize, name, cancellationToken);
 
             var roleDataModels = _mapper.Map<List<RoleResponseModel>>(pagedResult.Items);
-
-            foreach (var role in roleDataModels)
-            {
-                if (role.Id != null)
-                {
-                    role.DistrictId = await _unitOfWork.RoleDistrictRepository.GetDistrictIdByRoleId(role.Id);
-                    role.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(role.DistrictId);
-                }
-                else
-                {
-                    role.DistrictId = Guid.Empty;
-                    role.DistrictName = null;
-                }
-            }
 
             return new PagedResult<RoleResponseModel>
             {

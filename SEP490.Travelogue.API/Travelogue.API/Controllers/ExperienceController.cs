@@ -5,6 +5,7 @@ using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 
 namespace Travelogue.API.Controllers;
+
 [Route("api/[controller]")]
 [ApiController]
 public class ExperienceController : ControllerBase
@@ -123,16 +124,6 @@ public class ExperienceController : ControllerBase
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPLOAD_SUCCESS, "media")
-        ));
-    }
-
-    [HttpGet("admin-get")]
-    public async Task<IActionResult> GetAllExperiencesAdmin()
-    {
-        var experiences = await _experienceService.GetAllExperienceAdminAsync();
-        return Ok(ResponseModel<List<ExperienceDataModel>>.OkResponseModel(
-            data: experiences,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "experience")
         ));
     }
 

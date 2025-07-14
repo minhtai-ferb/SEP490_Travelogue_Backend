@@ -5,6 +5,7 @@ using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 
 namespace Travelogue.API.Controllers;
+
 [Route("api/[controller]")]
 [ApiController]
 public class EventController : ControllerBase
@@ -163,16 +164,6 @@ public class EventController : ControllerBase
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "media")
-        ));
-    }
-
-    [HttpGet("admin-get")]
-    public async Task<IActionResult> GetAllEventsAdmin()
-    {
-        var events = await _eventService.GetAllEventAdminAsync();
-        return Ok(ResponseModel<List<EventDataModel>>.OkResponseModel(
-            data: events,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "event")
         ));
     }
 

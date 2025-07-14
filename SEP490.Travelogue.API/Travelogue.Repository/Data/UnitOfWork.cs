@@ -13,7 +13,6 @@ public class UnitOfWork : IUnitOfWork
     public IUserRepository UserRepository { get; }
     public IRoleRepository RoleRepository { get; }
     public IUserRoleRepository UserRoleRepository { get; }
-    public IRoleDistrictRepository RoleDistrictRepository { get; }
     public IPasswordResetTokenRepository PasswordResetTokenRepository { get; }
     public ILocationRepository LocationRepository { get; }
     public IFavoriteLocationRepository FavoriteLocationRepository { get; }
@@ -56,7 +55,6 @@ public class UnitOfWork : IUnitOfWork
         UserRepository = new UserRepository(_dbContext);
         RoleRepository = new RoleRepository(_dbContext);
         UserRoleRepository = new UserRoleRepository(_dbContext);
-        RoleDistrictRepository = new RoleDistrictRepository(_dbContext);
         PasswordResetTokenRepository = new PasswordResetTokenRepository(_dbContext);
         LocationRepository = new LocationRepository(_dbContext);
         FavoriteLocationRepository = new FavoriteLocationRepository(_dbContext);

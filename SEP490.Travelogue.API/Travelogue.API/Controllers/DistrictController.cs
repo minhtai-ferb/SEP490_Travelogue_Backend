@@ -18,21 +18,6 @@ public class DistrictController : ControllerBase
     }
 
     /// <summary>
-    /// Tạo mới District và Role
-    /// </summary>
-    /// <param name="model"></param>
-    /// <returns></returns>
-    [HttpPost]
-    public async Task<IActionResult> AddDistrictWithRole([FromBody] DistrictCreateModel model)
-    {
-        var result = await _districtService.AddDistrictWithRoleAsync(model, new CancellationToken());
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "district")
-        ));
-    }
-
-    /// <summary>
     /// Xóa District theo id
     /// </summary>
     /// <param name="id"></param>

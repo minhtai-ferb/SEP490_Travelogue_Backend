@@ -6,11 +6,11 @@ namespace Travelogue.Service.BusinessModels.WorkshopModels;
 public class WorkshopDetailsResponseDto
 {
     public Guid WorkshopId { get; set; }
-    public string Name { get; set; }
+    public string? Name { get; set; }
     public string? Description { get; set; }
     public string? Content { get; set; }
     public Guid CraftVillageId { get; set; }
-    public string CraftVillageName { get; set; }
+    public string? CraftVillageName { get; set; }
     public WorkshopStatus Status { get; set; }
     public string StatusText
     {
@@ -25,9 +25,9 @@ public class WorkshopDetailsResponseDto
             };
         }
     }
-    public List<ActivityResponseDto> Activities { get; set; }
+    public List<ActivityResponseDto>? Activities { get; set; }
     public List<PromotionDto>? Promotions { get; set; } = new List<PromotionDto>();
-    public List<ScheduleResponseDto> Schedules { get; set; }
+    public List<ScheduleResponseDto>? Schedules { get; set; }
     public List<WorkshopDayDetail> Days { get; set; } = new List<WorkshopDayDetail>();
 }
 

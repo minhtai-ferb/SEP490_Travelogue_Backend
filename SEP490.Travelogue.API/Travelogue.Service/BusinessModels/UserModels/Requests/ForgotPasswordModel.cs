@@ -1,5 +1,6 @@
 ﻿namespace Travelogue.Service.BusinessModels.UserModels.Requests;
+
 public class ForgotPasswordModel
 {
-    public string Email { get; set; }
+    public required string Email { get; set; }
 }

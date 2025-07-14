@@ -25,7 +25,6 @@ public interface IDistrictService
     //Task<PagedResult<DistrictDataModel>> GetPagedDistrictsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<PagedResult<DistrictDataModel>> GetPagedDistrictsWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
     //Task<string> GetDistrictRoleNameAsync(DistrictCreateModel districtCreateModel, CancellationToken cancellationToken);
-    Task<bool> AddDistrictWithRoleAsync(DistrictCreateModel districtCreateModel, CancellationToken cancellationToken);
     Task<DistrictMediaResponse> AddDistrictWithMediaAsync(DistrictCreateWithMediaFileModel districtCreateModel, CancellationToken cancellationToken);
     //Task<DistrictMediaResponse> UploadMediaAsync(Guid id, IFormFile imageUpload, CancellationToken cancellationToken);
     Task<DistrictMediaResponse> UpdateDistrictAsync(Guid id, DistrictUpdateWithMediaFileModel districtUpdateModel, CancellationToken cancellationToken);
@@ -83,116 +82,6 @@ public class DistrictService : IDistrictService
             ////  _unitOfWork.Dispose();
         }
     }
-
-    public async Task<bool> AddDistrictWithRoleAsync(DistrictCreateModel districtCreateModel, CancellationToken cancellationToken)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-            var currentTime = _timeService.SystemTimeNow;
-
-            districtCreateModel.Name = GenerateFormattedDistrictName(districtCreateModel.Name);
-
-            // chỗ này dùng .Entities vì cần lấy kể cả những district đã bị xóa
-            var districtExist = _unitOfWork.DistrictRepository.Entities
-                .FirstOrDefault(d => d.Name == districtCreateModel.Name);
-
-            // khôi phục district đã bị xóa 
-            if (districtExist != null)
-            {
-                if (districtExist.IsDeleted)
-                {
-                    districtExist.IsDeleted = false;
-                    districtExist.IsActive = true;
-                    districtExist.LastUpdatedBy = currentUserId;
-                    districtExist.LastUpdatedTime = currentTime;
-
-                    _unitOfWork.DistrictRepository.Update(districtExist);
-
-                    // khôi phục role district
-                    var roleDistrictExist = _unitOfWork.RoleDistrictRepository.Entities
-                        .FirstOrDefault(rd => rd.DistrictId == districtExist.Id);
-                    if (roleDistrictExist != null)
-                    {
-                        roleDistrictExist.IsActive = true;
-                        roleDistrictExist.LastUpdatedBy = currentUserId;
-                        roleDistrictExist.LastUpdatedTime = currentTime;
-                        _unitOfWork.RoleDistrictRepository.Update(roleDistrictExist);
-                    }
-
-                    if (roleDistrictExist != null)
-                    {
-                        // khôi phục role tương ứng với district
-                        var roleExist = _unitOfWork.RoleRepository.Entities
-                            .FirstOrDefault(r => r.Id == roleDistrictExist.RoleId);
-                        if (roleExist != null)
-                        {
-                            roleExist.IsActive = true;
-                            roleExist.LastUpdatedBy = currentUserId;
-                            roleExist.LastUpdatedTime = currentTime;
-                            _unitOfWork.RoleRepository.Update(roleExist);
-                        }
-                    }
-
-                    await _unitOfWork.SaveAsync();
-                    await transaction.CommitAsync(cancellationToken);
-                    return true;
-                }
-                else
-                {
-                    throw CustomExceptionFactory.CreateBadRequestError($"{ResponseMessages.EXISTED.Replace("{0}", "đơn vị hành chính")}");
-                }
-            }
-
-            var newDistrict = _mapper.Map<District>(districtCreateModel);
-            newDistrict.CreatedBy = currentUserId;
-            newDistrict.LastUpdatedBy = currentUserId;
-            newDistrict.CreatedTime = currentTime;
-            newDistrict.LastUpdatedTime = currentTime;
-
-            await _unitOfWork.DistrictRepository.AddAsync(newDistrict);
-
-            // tạo role cho district
-            //var roleName = GenerateRoleName(newDistrict.Name);
-
-            var result = await _unitOfWork.RoleRepository
-                .AddAsync(new Role(newDistrict.Name)
-                {
-                    CreatedBy = currentUserId,
-                    LastUpdatedBy = currentUserId,
-                    CreatedTime = currentTime,
-                    LastUpdatedTime = currentTime
-                });
-
-            // gán district cho role
-            var addRoleDistrict = await _unitOfWork.RoleDistrictRepository
-                .AddAsync(new RoleDistrict
-                {
-                    RoleId = result.Id,
-                    DistrictId = newDistrict.Id,
-                    CreatedBy = currentUserId,
-                    LastUpdatedBy = currentUserId,
-                    CreatedTime = currentTime,
-                    LastUpdatedTime = currentTime
-                });
-
-            await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync(cancellationToken);
-            return true;
-        }
-        catch (CustomException)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw;
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
     public async Task DeleteDistrictAsync(Guid id, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
@@ -215,41 +104,6 @@ public class DistrictService : IDistrictService
             existingDistrict.LastUpdatedBy = currentUserId;
             existingDistrict.LastUpdatedTime = currentTime;
             _unitOfWork.DistrictRepository.Update(existingDistrict);
-
-            // xóa mềm role districts liên quan
-            var roleDistricts = _unitOfWork.RoleDistrictRepository.Entities
-                .Where(rd => rd.DistrictId == id)
-                .ToList();
-
-            foreach (var roleDistrict in roleDistricts)
-            {
-                roleDistrict.IsActive = false;
-                roleDistrict.IsDeleted = true;
-                roleDistrict.DeletedBy = currentUserId;
-                roleDistrict.DeletedTime = currentTime;
-                roleDistrict.LastUpdatedBy = currentUserId;
-                roleDistrict.LastUpdatedTime = currentTime;
-                _unitOfWork.RoleDistrictRepository.Update(roleDistrict);
-
-                // xóa mềm role 
-                var hasOtherLinks = _unitOfWork.RoleDistrictRepository.Entities
-                    .Any(rd => rd.RoleId == roleDistrict.RoleId && !rd.IsDeleted);
-
-                if (!hasOtherLinks)
-                {
-                    var role = await _unitOfWork.RoleRepository.GetByIdAsync(roleDistrict.RoleId, cancellationToken);
-                    if (role != null && !role.IsDeleted)
-                    {
-                        role.IsActive = false;
-                        role.IsDeleted = true;
-                        role.DeletedBy = currentUserId;
-                        role.DeletedTime = currentTime;
-                        role.LastUpdatedBy = currentUserId;
-                        role.LastUpdatedTime = currentTime;
-                        _unitOfWork.RoleRepository.Update(role);
-                    }
-                }
-            }
 
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);
@@ -455,51 +309,6 @@ public class DistrictService : IDistrictService
 
             _unitOfWork.DistrictRepository.Update(existingDistrict);
 
-            // cập nhật lại role
-            //var roleName = GenerateRoleName(existingDistrict.Name);
-            var roleDistrict = _unitOfWork.RoleDistrictRepository.Entities
-                .FirstOrDefault(rd => rd.DistrictId == existingDistrict.Id);
-
-            if (roleDistrict != null)
-            {
-                // update
-                var existingRole = await _unitOfWork.RoleRepository.GetByIdAsync(roleDistrict.RoleId, cancellationToken);
-                if (existingRole != null)
-                {
-                    // xử dụng hàm này vì đây là RULE CỦA CHƯƠNG TRÌNH
-                    existingRole.SetName(existingDistrict.Name);
-                    existingRole.LastUpdatedBy = currentUserId;
-                    existingRole.LastUpdatedTime = currentTime;
-
-                    _unitOfWork.RoleRepository.Update(existingRole);
-                }
-            }
-            else
-            {
-                // create new
-                var newRole = new Role(existingDistrict.Name)
-                {
-                    CreatedBy = currentUserId,
-                    LastUpdatedBy = currentUserId,
-                    CreatedTime = currentTime,
-                    LastUpdatedTime = currentTime
-                };
-
-                await _unitOfWork.RoleRepository.AddAsync(newRole);
-                await _unitOfWork.SaveAsync();
-
-                var newRoleDistrict = new RoleDistrict
-                {
-                    RoleId = newRole.Id,
-                    DistrictId = existingDistrict.Id,
-                    CreatedBy = currentUserId,
-                    LastUpdatedBy = currentUserId,
-                    CreatedTime = currentTime,
-                    LastUpdatedTime = currentTime
-                };
-                await _unitOfWork.RoleDistrictRepository.AddAsync(newRoleDistrict);
-            }
-
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);
         }
@@ -534,46 +343,6 @@ public class DistrictService : IDistrictService
             existingDistrict.LastUpdatedBy = currentUserId;
             existingDistrict.LastUpdatedTime = currentTime;
             _unitOfWork.DistrictRepository.Update(existingDistrict);
-
-            // Cập nhật hoặc tạo mới Role
-            var roleDistrict = _unitOfWork.RoleDistrictRepository.Entities.FirstOrDefault(rd => rd.DistrictId == existingDistrict.Id);
-            if (roleDistrict != null)
-            {
-                var existingRole = await _unitOfWork.RoleRepository.GetByIdAsync(roleDistrict.RoleId, cancellationToken);
-                if (existingRole != null)
-                {
-                    existingRole.SetName(existingDistrict.Name);
-                    existingRole.LastUpdatedBy = currentUserId;
-                    existingRole.LastUpdatedTime = currentTime;
-                    _unitOfWork.RoleRepository.Update(existingRole);
-                }
-            }
-            else
-            {
-                // khó xảy ra vlon nhưng mà chat gpt kêu làm z mới tốt nên để
-                // cái này chỉ xảy ra khi update một district mà không có trong bảng role - district 
-                var newRole = new Role(existingDistrict.Name.Trim())
-                {
-                    CreatedBy = currentUserId,
-                    LastUpdatedBy = currentUserId,
-                    CreatedTime = currentTime,
-                    LastUpdatedTime = currentTime
-                };
-
-                await _unitOfWork.RoleRepository.AddAsync(newRole);
-                await _unitOfWork.SaveAsync();
-
-                var newRoleDistrict = new RoleDistrict
-                {
-                    RoleId = newRole.Id,
-                    DistrictId = existingDistrict.Id,
-                    CreatedBy = currentUserId,
-                    LastUpdatedBy = currentUserId,
-                    CreatedTime = currentTime,
-                    LastUpdatedTime = currentTime
-                };
-                await _unitOfWork.RoleDistrictRepository.AddAsync(newRoleDistrict);
-            }
 
             // upload ảnh
             var mediaResponses = new List<MediaResponse>();
@@ -737,38 +506,6 @@ public class DistrictService : IDistrictService
                 district.CreatedTime = currentTime;
                 district.LastUpdatedTime = currentTime;
                 await _unitOfWork.DistrictRepository.AddAsync(district);
-            }
-
-            // Tạo hoặc khôi phục Role & RoleDistrict
-            var roleDistrictExist = _unitOfWork.RoleDistrictRepository.Entities
-                .FirstOrDefault(rd => rd.DistrictId == district.Id);
-
-            if (roleDistrictExist != null)
-            {
-                roleDistrictExist.IsActive = true;
-                roleDistrictExist.LastUpdatedBy = currentUserId;
-                roleDistrictExist.LastUpdatedTime = currentTime;
-                _unitOfWork.RoleDistrictRepository.Update(roleDistrictExist);
-            }
-            else
-            {
-                var newRole = await _unitOfWork.RoleRepository.AddAsync(new Role(district.Name.Trim())
-                {
-                    CreatedBy = currentUserId,
-                    LastUpdatedBy = currentUserId,
-                    CreatedTime = currentTime,
-                    LastUpdatedTime = currentTime
-                });
-
-                await _unitOfWork.RoleDistrictRepository.AddAsync(new RoleDistrict
-                {
-                    RoleId = newRole.Id,
-                    DistrictId = district.Id,
-                    CreatedBy = currentUserId,
-                    LastUpdatedBy = currentUserId,
-                    CreatedTime = currentTime,
-                    LastUpdatedTime = currentTime
-                });
             }
 
             // upload anh

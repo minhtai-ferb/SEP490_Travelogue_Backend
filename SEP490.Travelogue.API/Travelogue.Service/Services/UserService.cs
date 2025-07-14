@@ -390,14 +390,6 @@ public class UserService : IUserService
                 await _unitOfWork.UserRoleRepository.AddRolesToUser(userId, new List<Guid> { role.Id });
             }
 
-            // check role có district chưa
-            var districtRoleExists = await _unitOfWork.RoleDistrictRepository.ExistsAsync(districtId, role.Id);
-            if (!userRoleExists)
-            {
-                var roleDistrict = new RoleDistrict { DistrictId = districtId, RoleId = role.Id };
-                await _unitOfWork.RoleDistrictRepository.AddAsync(roleDistrict);
-            }
-
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync();
             return true;

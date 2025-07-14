@@ -13,5 +13,4 @@ public sealed class District : BaseEntity
     public ICollection<Event>? Events { get; set; }
     public ICollection<Experience>? Experiences { get; set; }
     public ICollection<Location>? Locations { get; set; }
-    public ICollection<RoleDistrict>? RoleDistricts { get; set; }
 }

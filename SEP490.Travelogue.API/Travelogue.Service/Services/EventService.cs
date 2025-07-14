@@ -33,7 +33,6 @@ public interface IEventService
     Task<List<object>> GetHighlightedEventsObjectAsync(CancellationToken cancellationToken);
     Task<EventMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, string? thumbnailFileName, CancellationToken cancellationToken);
     Task<bool> DeleteMediaAsync(Guid id, List<string> deletedUrlImages, CancellationToken cancellationToken);
-    Task<List<EventDataModel>> GetAllEventAdminAsync();
 }
 
 public class EventService : IEventService
@@ -60,12 +59,6 @@ public class EventService : IEventService
         {
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
-
-            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), eventCreateModel.DistrictId ?? Guid.Empty, cancellationToken);
-            if (!checkRole)
-            {
-                throw CustomExceptionFactory.CreateForbiddenError();
-            }
 
             var newEvent = _mapper.Map<Event>(eventCreateModel);
 
@@ -117,12 +110,6 @@ public class EventService : IEventService
             if (existingEvent == null || existingEvent.IsDeleted)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("event");
-            }
-
-            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), existingEvent.DistrictId ?? Guid.Empty, cancellationToken);
-            if (!checkRole)
-            {
-                throw CustomExceptionFactory.CreateForbiddenError();
             }
 
             var isInUsing =
@@ -286,12 +273,6 @@ public class EventService : IEventService
             if (existingEvent == null || existingEvent.IsDeleted)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("event");
-            }
-
-            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), existingEvent.DistrictId ?? Guid.Empty, cancellationToken);
-            if (!checkRole)
-            {
-                throw CustomExceptionFactory.CreateForbiddenError();
             }
 
             _mapper.Map(eventUpdateModel, existingEvent);
@@ -693,12 +674,6 @@ public class EventService : IEventService
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
 
-            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), eventCreateModel.DistrictId ?? Guid.Empty, cancellationToken);
-            if (!checkRole)
-            {
-                throw CustomExceptionFactory.CreateForbiddenError();
-            }
-
             var newEvent = _mapper.Map<Event>(eventCreateModel);
             newEvent.CreatedBy = currentUserId;
             newEvent.LastUpdatedBy = currentUserId;
@@ -799,12 +774,6 @@ public class EventService : IEventService
         try
         {
             var currentUserId = _userContextService.GetCurrentUserId();
-
-            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), eventUpdateModel.DistrictId ?? Guid.Empty, cancellationToken);
-            if (!checkRole)
-            {
-                throw CustomExceptionFactory.CreateForbiddenError();
-            }
 
             var existingEvent = await _unitOfWork.EventRepository.GetByIdAsync(id, cancellationToken);
             if (existingEvent == null || existingEvent.IsDeleted)
@@ -944,12 +913,6 @@ public class EventService : IEventService
                 throw CustomExceptionFactory.CreateNotFoundError("event");
             }
 
-            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), id, cancellationToken);
-            if (!checkRole)
-            {
-                throw CustomExceptionFactory.CreateForbiddenError();
-            }
-
             if (imageDeleted == null || imageDeleted.Count == 0)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("images");
@@ -1011,12 +974,6 @@ public class EventService : IEventService
             if (existingEvent == null || existingEvent.IsDeleted)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("event");
-            }
-
-            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), id, cancellationToken);
-            if (!checkRole)
-            {
-                throw CustomExceptionFactory.CreateForbiddenError();
             }
 
             if (imageUploads == null || imageUploads.Count == 0)
@@ -1151,83 +1108,6 @@ public class EventService : IEventService
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
-
-    public async Task<List<EventDataModel>> GetAllEventAdminAsync()
-    {
-        try
-        {
-            // 1. Lấy userId nếu có
-            var currentUserId = _userContextService.TryGetCurrentUserId();
-
-            // 2. Nếu không có userId → là khách → trả toàn bộ
-            if (string.IsNullOrEmpty(currentUserId))
-            {
-                var allEvents = await _unitOfWork.EventRepository.GetAllAsync();
-                var allEventDataModels = _mapper.Map<List<EventDataModel>>(allEvents);
-                await EnrichEventDataModelsAsync(allEventDataModels, new CancellationToken());
-                return allEventDataModels;
-            }
-
-            // 3. Nếu có userId → tìm user
-            var userId = Guid.Parse(currentUserId);
-            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId, CancellationToken.None);
-
-            // 4. Nếu không tìm được user (trường hợp hiếm) → fallback: trả toàn bộ
-            if (user == null)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("user");
-            }
-
-            // 5. Lấy role
-            var roles = await _unitOfWork.UserRepository.GetRolesByUserIdAsync(userId);
-            var roleNames = roles.Select(r => r.Name).ToList();
-            var roleIds = roles.Select(r => r.Id).ToList();
-
-            List<Event> events;
-
-            // 6. Admin toàn quyền
-            if (roleNames.Equals(AppRole.ADMIN))
-            {
-                events = (await _unitOfWork.EventRepository.GetAllAsync()).ToList();
-            }
-            // 7. Admin huyện (dựa vào RoleDistrict)
-            else
-            {
-                // Lấy các DistrictId mà user được phân quyền quản lý
-                var allowedDistrictIds = await _unitOfWork.RoleDistrictRepository.ActiveEntities
-                    .Where(rd => roleIds.Contains(rd.RoleId))
-                    .Select(rd => rd.DistrictId)
-                    .Distinct()
-                    .ToListAsync();
-
-                if (allowedDistrictIds.Any())
-                {
-                    // Là admin huyện → chỉ được lấy các Event trong danh sách huyện đó
-                    events = await _unitOfWork.EventRepository.ActiveEntities
-                        .Where(l => l.DistrictId.HasValue && allowedDistrictIds.Contains(l.DistrictId.Value))
-                        .ToListAsync();
-                }
-                else
-                {
-                    // Không có quyền theo huyện nào → xem là người dùng thường
-                    events = (await _unitOfWork.EventRepository.GetAllAsync()).ToList();
-                }
-            }
-
-            var eventDataModels = _mapper.Map<List<EventDataModel>>(events);
-            await EnrichEventDataModelsAsync(eventDataModels, new CancellationToken());
-            return eventDataModels;
-        }
-        catch (CustomException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
     private async Task EnrichEventDataModelsAsync(List<EventDataModel> eventDataModels, CancellationToken cancellationToken)
     {
         var eventIds = eventDataModels.Select(x => x.Id).ToList();

@@ -91,12 +91,6 @@ public class LocationService : ILocationService
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
 
-            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), locationCreateModel.DistrictId ?? Guid.Empty, cancellationToken);
-            if (!checkRole)
-            {
-                throw CustomExceptionFactory.CreateForbiddenError();
-            }
-
             var newLocation = _mapper.Map<Location>(locationCreateModel);
 
             await _unitOfWork.LocationRepository.AddAsync(newLocation);
@@ -1099,14 +1093,6 @@ public class LocationService : ILocationService
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
 
-            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(
-                Guid.Parse(currentUserId),
-                locationUpdateModel.DistrictId ?? Guid.Empty,
-                cancellationToken);
-
-            if (!checkRole)
-                throw CustomExceptionFactory.CreateForbiddenError();
-
             var existingLocation = await _unitOfWork.LocationRepository.GetByIdAsync(id, cancellationToken);
             if (existingLocation == null || existingLocation.IsDeleted)
                 throw CustomExceptionFactory.CreateNotFoundError("location");
@@ -1215,12 +1201,6 @@ public class LocationService : ILocationService
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
 
-            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), locationCreateModel.DistrictId ?? Guid.Empty, cancellationToken);
-            if (!checkRole)
-            {
-                throw CustomExceptionFactory.CreateForbiddenError();
-            }
-
             var newLocation = _mapper.Map<Location>(locationCreateModel);
             newLocation.CreatedBy = currentUserId;
             newLocation.LastUpdatedBy = currentUserId;
@@ -1321,12 +1301,6 @@ public class LocationService : ILocationService
         try
         {
             var currentUserId = _userContextService.GetCurrentUserId();
-
-            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), locationUpdateModel.DistrictId ?? Guid.Empty, cancellationToken);
-            if (!checkRole)
-            {
-                throw CustomExceptionFactory.CreateForbiddenError();
-            }
 
             var existingLocation = await _unitOfWork.LocationRepository.GetByIdAsync(id, cancellationToken);
             if (existingLocation == null || existingLocation.IsDeleted)

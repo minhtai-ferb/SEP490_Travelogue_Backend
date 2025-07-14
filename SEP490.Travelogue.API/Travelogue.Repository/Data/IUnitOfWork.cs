@@ -9,7 +9,6 @@ public interface IUnitOfWork //: IDisposable
     IUserRepository UserRepository { get; }
     IRoleRepository RoleRepository { get; }
     IUserRoleRepository UserRoleRepository { get; }
-    IRoleDistrictRepository RoleDistrictRepository { get; }
     IPasswordResetTokenRepository PasswordResetTokenRepository { get; }
     ILocationRepository LocationRepository { get; }
     IFavoriteLocationRepository FavoriteLocationRepository { get; }

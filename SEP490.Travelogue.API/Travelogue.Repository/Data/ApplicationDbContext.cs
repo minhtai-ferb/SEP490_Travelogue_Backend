@@ -10,7 +10,6 @@ public class ApplicationDbContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<Role> Roles { get; set; }
     public DbSet<UserRole> UserRoles { get; set; }
-    public DbSet<RoleDistrict> RoleDistricts { get; set; }
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
     public DbSet<UserInterest> UserInterests { get; set; }
     public DbSet<UserAnnouncement> UserAnnouncements { get; set; }

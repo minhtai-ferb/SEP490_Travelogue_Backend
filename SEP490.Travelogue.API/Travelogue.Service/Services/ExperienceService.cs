@@ -32,7 +32,6 @@ public interface IExperienceService
         List<IFormFile>? imageUploads,
         string? thumbnailSelected,
         CancellationToken cancellationToken);
-    Task<List<ExperienceDataModel>> GetAllExperienceAdminAsync();
 }
 
 public class ExperienceService : IExperienceService
@@ -58,12 +57,6 @@ public class ExperienceService : IExperienceService
         {
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
-
-            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), experienceCreateModel.DistrictId ?? Guid.Empty, cancellationToken);
-            if (!checkRole)
-            {
-                throw CustomExceptionFactory.CreateForbiddenError();
-            }
 
             var newExperience = _mapper.Map<Experience>(experienceCreateModel);
             newExperience.CreatedBy = currentUserId;
@@ -105,12 +98,6 @@ public class ExperienceService : IExperienceService
             if (existingExperience == null || existingExperience.IsDeleted)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("experience");
-            }
-
-            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), existingExperience.DistrictId ?? Guid.Empty, cancellationToken);
-            if (!checkRole)
-            {
-                throw CustomExceptionFactory.CreateForbiddenError();
             }
 
             await _unitOfWork.ExperienceMediaRepository.ActiveEntities
@@ -293,12 +280,6 @@ public class ExperienceService : IExperienceService
                 throw CustomExceptionFactory.CreateNotFoundError("experience");
             }
 
-            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), existingExperience.DistrictId ?? Guid.Empty, cancellationToken);
-            if (!checkRole)
-            {
-                throw CustomExceptionFactory.CreateForbiddenError();
-            }
-
             _mapper.Map(experienceUpdateModel, existingExperience);
 
             existingExperience.LastUpdatedBy = currentUserId;
@@ -336,12 +317,6 @@ public class ExperienceService : IExperienceService
             if (existingExperience == null || existingExperience.IsDeleted)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("experience");
-            }
-
-            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), id, cancellationToken);
-            if (!checkRole)
-            {
-                throw CustomExceptionFactory.CreateForbiddenError();
             }
 
             if (imageUploads == null || imageUploads.Count == 0)
@@ -486,12 +461,6 @@ public class ExperienceService : IExperienceService
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
 
-            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), experienceCreateModel.DistrictId ?? Guid.Empty, cancellationToken);
-            if (!checkRole)
-            {
-                throw CustomExceptionFactory.CreateForbiddenError();
-            }
-
             var newExperience = _mapper.Map<Experience>(experienceCreateModel);
             newExperience.CreatedBy = currentUserId;
             newExperience.LastUpdatedBy = currentUserId;
@@ -592,12 +561,6 @@ public class ExperienceService : IExperienceService
         try
         {
             var currentUserId = _userContextService.GetCurrentUserId();
-
-            var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), experienceUpdateModel.DistrictId ?? Guid.Empty, cancellationToken);
-            if (!checkRole)
-            {
-                throw CustomExceptionFactory.CreateForbiddenError();
-            }
 
             var existingExperience = await _unitOfWork.ExperienceRepository.GetByIdAsync(id, cancellationToken);
             if (existingExperience == null || existingExperience.IsDeleted)
@@ -721,82 +684,6 @@ public class ExperienceService : IExperienceService
         catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
-    public async Task<List<ExperienceDataModel>> GetAllExperienceAdminAsync()
-    {
-        try
-        {
-            // 1. Lấy userId nếu có
-            var currentUserId = _userContextService.TryGetCurrentUserId();
-
-            // 2. Nếu không có userId → là khách → trả toàn bộ
-            if (string.IsNullOrEmpty(currentUserId))
-            {
-                var allExperiences = await _unitOfWork.ExperienceRepository.GetAllAsync();
-                var allExperienceDataModels = _mapper.Map<List<ExperienceDataModel>>(allExperiences);
-                await EnrichExperienceDataModelsAsync(allExperienceDataModels, new CancellationToken());
-                return allExperienceDataModels;
-            }
-
-            // 3. Nếu có userId → tìm user
-            var userId = Guid.Parse(currentUserId);
-            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId, CancellationToken.None);
-
-            // 4. Nếu không tìm được user (trường hợp hiếm) → fallback: trả toàn bộ
-            if (user == null)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("user");
-            }
-
-            // 5. Lấy role
-            var roles = await _unitOfWork.UserRepository.GetRolesByUserIdAsync(userId);
-            var roleNames = roles.Select(r => r.Name).ToList();
-            var roleIds = roles.Select(r => r.Id).ToList();
-
-            List<Experience> experiences;
-
-            // 6. Admin toàn quyền
-            if (roleNames.Equals(AppRole.ADMIN))
-            {
-                experiences = (await _unitOfWork.ExperienceRepository.GetAllAsync()).ToList();
-            }
-            // 7. Admin huyện (dựa vào RoleDistrict)
-            else
-            {
-                // Lấy các DistrictId mà user được phân quyền quản lý
-                var allowedDistrictIds = await _unitOfWork.RoleDistrictRepository.ActiveEntities
-                    .Where(rd => roleIds.Contains(rd.RoleId))
-                    .Select(rd => rd.DistrictId)
-                    .Distinct()
-                    .ToListAsync();
-
-                if (allowedDistrictIds.Any())
-                {
-                    // Là admin huyện → chỉ được lấy các Experience trong danh sách huyện đó
-                    experiences = await _unitOfWork.ExperienceRepository.ActiveEntities
-                        .Where(l => l.DistrictId.HasValue && allowedDistrictIds.Contains(l.DistrictId.Value))
-                        .ToListAsync();
-                }
-                else
-                {
-                    // Không có quyền theo huyện nào → xem là người dùng thường
-                    experiences = (await _unitOfWork.ExperienceRepository.GetAllAsync()).ToList();
-                }
-            }
-
-            var experienceDataModels = _mapper.Map<List<ExperienceDataModel>>(experiences);
-            await EnrichExperienceDataModelsAsync(experienceDataModels, new CancellationToken());
-            return experienceDataModels;
-        }
-        catch (CustomException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }

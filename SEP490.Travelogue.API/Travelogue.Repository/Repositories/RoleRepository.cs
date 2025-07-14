@@ -14,7 +14,6 @@ public interface IRoleRepository : IGenericRepository<Role>
     Task<List<Role>> GetAllRoleAsync(string? search = null);
     Task<PagedResult<Role>> GetPageRoleAsync(int pageNumber, int pageSize, string search, CancellationToken cancellationToken);
     Task<Role?> GetByNameAsync(string name);
-    Task<bool> CheckUserRoleForDistrict(Guid userId, Guid districtId, CancellationToken cancellationToken);
     Task<List<Role>> GetByNamesAsync(List<string> listName);
 }
 public class RoleRepository : GenericRepository<Role>, IRoleRepository
@@ -90,61 +89,6 @@ public class RoleRepository : GenericRepository<Role>, IRoleRepository
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
 
-    }
-
-    public async Task<bool> CheckUserRoleForDistrict(Guid userId, Guid districtId, CancellationToken cancellationToken)
-    {
-        try
-        {
-            //var userRole = _context.UserRoles
-            //    .Include(x => x.Role)
-            //    .Where(x => x.UserId == userId)
-            //    .Select(x => x.RoleId)
-            //    .ToListAsync(cancellationToken);
-
-            //foreach (var roleId in userRole.Result)
-            //{
-            //    var roleDistrict = await _context.RoleDistricts
-            //        .FirstOrDefaultAsync(x => x.RoleId == roleId && x.DistrictId == districtId, cancellationToken);
-            //    if (roleDistrict != null)
-            //    {
-            //        return true;
-            //    }
-            //}
-
-            //return false;
-
-            var userRoleIds = await _context.UserRoles
-                .Where(x => x.UserId == userId)
-                .Select(x => x.RoleId)
-                .ToListAsync(cancellationToken);
-
-            // check admin
-            var isAdmin = await _context.Roles
-                .AnyAsync(r =>
-                userRoleIds.Contains(r.Id) &&
-                r.Name == AppRole.ADMIN,
-                cancellationToken);
-
-            if (isAdmin)
-            {
-                return true;
-            }
-
-            // check theo district id
-            var hasAccess = await _context.RoleDistricts
-                .AnyAsync(rd => userRoleIds.Contains(rd.RoleId) && rd.DistrictId == districtId, cancellationToken);
-
-            return hasAccess;
-        }
-        catch (CustomException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
     }
 
     public async Task<List<Role>> GetByNamesAsync(List<string> listName)

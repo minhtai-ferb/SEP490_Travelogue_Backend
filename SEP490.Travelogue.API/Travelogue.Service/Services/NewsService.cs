@@ -506,12 +506,6 @@ public class NewsService : INewsService
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
 
-            //var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), newsCreateModel.DistrictId ?? Guid.Empty, cancellationToken);
-            //if (!checkRole)
-            //{
-            //    throw CustomExceptionFactory.CreateForbiddenError();
-            //}
-
             var newNews = _mapper.Map<News>(newsCreateModel);
             newNews.CreatedBy = currentUserId;
             newNews.LastUpdatedBy = currentUserId;
@@ -612,12 +606,6 @@ public class NewsService : INewsService
         try
         {
             var currentUserId = _userContextService.GetCurrentUserId();
-
-            //var checkRole = await _unitOfWork.RoleRepository.CheckUserRoleForDistrict(Guid.Parse(currentUserId), newsUpdateModel.DistrictId ?? Guid.Empty, cancellationToken);
-            //if (!checkRole)
-            //{
-            //    throw CustomExceptionFactory.CreateForbiddenError();
-            //}
 
             var existingNews = await _unitOfWork.NewsRepository.GetByIdAsync(id, cancellationToken);
             if (existingNews == null || existingNews.IsDeleted)
