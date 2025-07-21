@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Bases.Responses;
 using Travelogue.Service.BusinessModels.TourModels;
@@ -242,29 +243,29 @@ public class TourController : ControllerBase
     /// <param name="tourId">ID của tour</param>
     /// <param name="cancellationToken">Token để hủy thao tác</param>
     /// <returns>Danh sách các địa điểm không bị xóa</returns>
-    [HttpGet("{tourId}/locations")]
-    [ProducesResponseType(typeof(ResponseModel<List<TourPlanLocationResponseDto>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetLocations(Guid tourId, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var result = await _tourService.GetLocationsAsync(tourId);
-            return Ok(ResponseModel<List<TourPlanLocationResponseDto>>.OkResponseModel(
-                data: result,
-                message: "Tour locations retrieved successfully."
-            ));
-        }
-        catch (CustomException ex)
-        {
-            return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
-        }
-    }
+    // [HttpGet("{tourId}/locations")]
+    // [ProducesResponseType(typeof(ResponseModel<List<TourPlanLocationResponseDto>>), StatusCodes.Status200OK)]
+    // [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
+    // [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
+    // public async Task<IActionResult> GetLocations(Guid tourId, CancellationToken cancellationToken)
+    // {
+    //     try
+    //     {
+    //         var result = await _tourService.GetLocationsAsync(tourId);
+    //         return Ok(ResponseModel<List<TourPlanLocationResponseDto>>.OkResponseModel(
+    //             data: result,
+    //             message: "Tour locations retrieved successfully."
+    //         ));
+    //     }
+    //     catch (CustomException ex)
+    //     {
+    //         return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+    //     }
+    // }
 
     #endregion
 
@@ -441,5 +442,89 @@ public class TourController : ControllerBase
         {
             return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
         }
+    }
+
+    /// <summary>
+    /// Thêm danh sách hình ảnh cho tour
+    /// </summary>
+    /// <param name="tourId">ID của tour</param>
+    /// <param name="createDtos">Danh sách media cần thêm</param>
+    /// <returns>Danh sách media đã được thêm</returns>
+    [HttpPost("tour-media")]
+    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> AddTourMedias(Guid tourId, [FromBody] List<TourMediaCreateDto> createDtos)
+    {
+        try
+        {
+            var result = await _tourService.AddTourMediasAsync(tourId, createDtos);
+            return Ok(ResponseModel<object>.OkResponseModel(
+                data: result,
+                message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "tour media")
+            ));
+        }
+        catch (CustomException ex)
+        {
+            return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+        }
+    }
+
+    /// <summary>
+    /// Xóa một media của tour
+    /// </summary>
+    /// <param name="tourId">ID của tour</param>
+    /// <param name="mediaId">ID của media cần xóa</param>
+    /// <returns>Thông báo xóa thành công</returns>
+    [HttpDelete("tour-media/{mediaId:guid}")]
+    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteTourMedia(Guid tourId, Guid mediaId)
+    {
+        try
+        {
+            var success = await _tourService.DeleteTourMediaAsync(mediaId);
+            if (!success)
+                throw CustomExceptionFactory.CreateBadRequestError("Không thể xóa media.");
+
+            return Ok(ResponseModel<object>.OkResponseModel(
+                data: null,
+                message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "tour media")
+            ));
+        }
+        catch (CustomException ex)
+        {
+            return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+        }
+    }
+
+    [HttpGet("guide/email")]
+    public async Task<ActionResult<PagedResult<TourResponseDto>>> GetToursByGuideEmail(
+        [FromQuery] string email,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return BadRequest("Email cannot be empty.");
+        }
+
+        if (pageNumber < 1 || pageSize < 1)
+        {
+            return BadRequest("Page number and page size must be greater than 0.");
+        }
+
+        var result = await _tourService.GetPagedToursByGuideEmailAsync(email, pageNumber, pageSize, cancellationToken);
+        return Ok(result);
     }
 }

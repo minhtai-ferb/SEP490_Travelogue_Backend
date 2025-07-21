@@ -4,8 +4,14 @@ namespace Travelogue.Service.BusinessModels.WorkshopModels;
 
 public class WorkshopResponseDto
 {
-    public Guid WorkshopId { get; set; }
-    public WorkshopStatus Status { get; set; }
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? Content { get; set; }
+    public WorkshopStatus Status { get; set; } = WorkshopStatus.Draft;
+
+    public Guid CraftVillageId { get; set; }
+    public string? CraftVillageName { get; set; }
     public string StatusText
     {
         get
@@ -13,8 +19,10 @@ public class WorkshopResponseDto
             return Status switch
             {
                 WorkshopStatus.Draft => "Draft",
-                WorkshopStatus.Confirmed => "Confirmed",
-                WorkshopStatus.Cancelled => "Cancelled",
+                WorkshopStatus.Pending => "Pending",
+                // WorkshopStatus.NeedRevision => "Need Revision",
+                WorkshopStatus.Approved => "Approved",
+                WorkshopStatus.Rejected => "Rejected",
                 _ => "Unknown"
             };
         }

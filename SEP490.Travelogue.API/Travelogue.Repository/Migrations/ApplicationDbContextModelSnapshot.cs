@@ -38,6 +38,38 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("CreatedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_time");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("deleted_by");
+
+                    b.Property<DateTimeOffset?>("DeletedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_time");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("last_updated_by");
+
+                    b.Property<DateTimeOffset>("LastUpdatedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_updated_time");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("longtext")
@@ -50,6 +82,10 @@ namespace Travelogue.Repository.Migrations
                     b.Property<Guid?>("TourId")
                         .HasColumnType("char(36)")
                         .HasColumnName("tour_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("user_id");
 
                     b.HasKey("Id");
 
@@ -155,10 +191,6 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("char(36)")
                         .HasColumnName("trip_plan_id");
 
-                    b.Property<Guid?>("TripPlanVersionId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("trip_plan_version_id");
-
                     b.Property<Guid>("UserId")
                         .HasColumnType("char(36)")
                         .HasColumnName("user_id");
@@ -178,8 +210,6 @@ namespace Travelogue.Repository.Migrations
                     b.HasIndex("TourScheduleId");
 
                     b.HasIndex("TripPlanId");
-
-                    b.HasIndex("TripPlanVersionId");
 
                     b.HasIndex("UserId");
 
@@ -310,6 +340,65 @@ namespace Travelogue.Repository.Migrations
                     b.ToTable("booking_withdrawals");
                 });
 
+            modelBuilder.Entity("Travelogue.Repository.Entities.Certification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CertificateUrl")
+                        .HasColumnType("longtext")
+                        .HasColumnName("certificate_url");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("CreatedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_time");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("deleted_by");
+
+                    b.Property<DateTimeOffset?>("DeletedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_time");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("last_updated_by");
+
+                    b.Property<DateTimeOffset>("LastUpdatedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_updated_time");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("TourGuideId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("tour_guide_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TourGuideId");
+
+                    b.ToTable("certifications");
+                });
+
             modelBuilder.Entity("Travelogue.Repository.Entities.CraftVillage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -345,9 +434,9 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_deleted");
 
-                    b.Property<bool>("IsRecognizedByUNESCO")
+                    b.Property<bool>("IsRecognizedByUnesco")
                         .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_recognized_by_u_n_e_s_c_o");
+                        .HasColumnName("is_recognized_by_unesco");
 
                     b.Property<string>("LastUpdatedBy")
                         .HasColumnType("longtext")
@@ -360,6 +449,10 @@ namespace Travelogue.Repository.Migrations
                     b.Property<Guid>("LocationId")
                         .HasColumnType("char(36)")
                         .HasColumnName("location_id");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("owner_id");
 
                     b.Property<string>("PhoneNumber")
                         .HasColumnType("longtext")
@@ -386,19 +479,29 @@ namespace Travelogue.Repository.Migrations
                     b.HasIndex("LocationId")
                         .IsUnique();
 
+                    b.HasIndex("OwnerId");
+
                     b.ToTable("craft_villages");
                 });
 
-            modelBuilder.Entity("Travelogue.Repository.Entities.CraftVillageInterest", b =>
+            modelBuilder.Entity("Travelogue.Repository.Entities.CraftVillageRequest", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)")
                         .HasColumnName("id");
 
-                    b.Property<Guid>("CraftVillageId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("craft_village_id");
+                    b.Property<string>("Address")
+                        .HasColumnType("longtext")
+                        .HasColumnName("address");
+
+                    b.Property<TimeSpan?>("CloseTime")
+                        .HasColumnType("time(6)")
+                        .HasColumnName("close_time");
+
+                    b.Property<string>("Content")
+                        .HasColumnType("longtext")
+                        .HasColumnName("content");
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("longtext")
@@ -416,9 +519,17 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("deleted_time");
 
-                    b.Property<Guid>("InterestId")
+                    b.Property<string>("Description")
+                        .HasColumnType("longtext")
+                        .HasColumnName("description");
+
+                    b.Property<Guid?>("DistrictId")
                         .HasColumnType("char(36)")
-                        .HasColumnName("interest_id");
+                        .HasColumnName("district_id");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("longtext")
+                        .HasColumnName("email");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
@@ -428,6 +539,10 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_deleted");
 
+                    b.Property<bool>("IsRecognizedByUnesco")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_recognized_by_unesco");
+
                     b.Property<string>("LastUpdatedBy")
                         .HasColumnType("longtext")
                         .HasColumnName("last_updated_by");
@@ -436,13 +551,67 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_updated_time");
 
+                    b.Property<double>("Latitude")
+                        .HasColumnType("double")
+                        .HasColumnName("latitude");
+
+                    b.Property<double>("Longitude")
+                        .HasColumnType("double")
+                        .HasColumnName("longitude");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("name");
+
+                    b.Property<TimeSpan?>("OpenTime")
+                        .HasColumnType("time(6)")
+                        .HasColumnName("open_time");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("owner_id");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasColumnType("longtext")
+                        .HasColumnName("phone_number");
+
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("longtext")
+                        .HasColumnName("rejection_reason");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("reviewed_by");
+
+                    b.Property<string>("SignatureProduct")
+                        .HasColumnType("longtext")
+                        .HasColumnName("signature_product");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Website")
+                        .HasColumnType("longtext")
+                        .HasColumnName("website");
+
+                    b.Property<bool>("WorkshopsAvailable")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("workshops_available");
+
+                    b.Property<int?>("YearsOfHistory")
+                        .HasColumnType("int")
+                        .HasColumnName("years_of_history");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("CraftVillageId");
-
-                    b.HasIndex("InterestId");
-
-                    b.ToTable("craft_village_interests");
+                    b.ToTable("craft_village_requests");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.Cuisine", b =>
@@ -518,62 +687,6 @@ namespace Travelogue.Repository.Migrations
                         .IsUnique();
 
                     b.ToTable("cuisines");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.CuisineInterest", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<Guid>("CuisineId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("cuisine_id");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<Guid>("InterestId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("interest_id");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CuisineId");
-
-                    b.HasIndex("InterestId");
-
-                    b.ToTable("cuisine_interests");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.District", b =>
@@ -705,341 +818,6 @@ namespace Travelogue.Repository.Migrations
                     b.ToTable("district_medias");
                 });
 
-            modelBuilder.Entity("Travelogue.Repository.Entities.Event", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Content")
-                        .HasColumnType("longtext")
-                        .HasColumnName("content");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("longtext")
-                        .HasColumnName("description");
-
-                    b.Property<Guid?>("DistrictId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("district_id");
-
-                    b.Property<DateTime?>("EndDate")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("end_date");
-
-                    b.Property<TimeSpan?>("EndTime")
-                        .HasColumnType("time(6)")
-                        .HasColumnName("end_time");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<bool>("IsHighlighted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_highlighted");
-
-                    b.Property<bool>("IsRecurring")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_recurring");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<Guid?>("LocationId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("location_id");
-
-                    b.Property<string>("LunarEndDate")
-                        .HasColumnType("longtext")
-                        .HasColumnName("lunar_end_date");
-
-                    b.Property<string>("LunarStartDate")
-                        .HasColumnType("longtext")
-                        .HasColumnName("lunar_start_date");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("name");
-
-                    b.Property<string>("RecurrencePattern")
-                        .HasColumnType("longtext")
-                        .HasColumnName("recurrence_pattern");
-
-                    b.Property<DateTime?>("StartDate")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("start_date");
-
-                    b.Property<TimeSpan?>("StartTime")
-                        .HasColumnType("time(6)")
-                        .HasColumnName("start_time");
-
-                    b.Property<Guid>("TypeEventId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("type_event_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DistrictId");
-
-                    b.HasIndex("LocationId");
-
-                    b.HasIndex("TypeEventId");
-
-                    b.ToTable("events");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.EventMedia", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<Guid>("EventId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("event_id");
-
-                    b.Property<string>("FileName")
-                        .HasColumnType("longtext")
-                        .HasColumnName("file_name");
-
-                    b.Property<string>("FileType")
-                        .HasColumnType("longtext")
-                        .HasColumnName("file_type");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<bool>("IsThumbnail")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_thumbnail");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<string>("MediaUrl")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("media_url");
-
-                    b.Property<float>("SizeInBytes")
-                        .HasColumnType("float")
-                        .HasColumnName("size_in_bytes");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EventId");
-
-                    b.ToTable("event_medias");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.Experience", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Content")
-                        .HasColumnType("longtext")
-                        .HasColumnName("content");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("longtext")
-                        .HasColumnName("description");
-
-                    b.Property<Guid?>("DistrictId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("district_id");
-
-                    b.Property<Guid?>("EventId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("event_id");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<Guid?>("LocationId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("location_id");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)")
-                        .HasColumnName("title");
-
-                    b.Property<Guid?>("TypeExperienceId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("type_experience_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DistrictId");
-
-                    b.HasIndex("EventId");
-
-                    b.HasIndex("LocationId");
-
-                    b.HasIndex("TypeExperienceId");
-
-                    b.ToTable("experiences");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.ExperienceMedia", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<Guid>("ExperienceId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("experience_id");
-
-                    b.Property<string>("FileName")
-                        .HasColumnType("longtext")
-                        .HasColumnName("file_name");
-
-                    b.Property<string>("FileType")
-                        .HasColumnType("longtext")
-                        .HasColumnName("file_type");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<bool>("IsThumbnail")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_thumbnail");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<string>("MediaUrl")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("media_url");
-
-                    b.Property<float>("SizeInBytes")
-                        .HasColumnType("float")
-                        .HasColumnName("size_in_bytes");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ExperienceId");
-
-                    b.ToTable("experience_medias");
-                });
-
             modelBuilder.Entity("Travelogue.Repository.Entities.FavoriteLocation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1159,59 +937,6 @@ namespace Travelogue.Repository.Migrations
                     b.ToTable("historical_locations");
                 });
 
-            modelBuilder.Entity("Travelogue.Repository.Entities.Interest", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("longtext")
-                        .HasColumnName("description");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("name");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("interests");
-                });
-
             modelBuilder.Entity("Travelogue.Repository.Entities.Location", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1300,126 +1025,6 @@ namespace Travelogue.Repository.Migrations
                     b.ToTable("locations");
                 });
 
-            modelBuilder.Entity("Travelogue.Repository.Entities.LocationCraftVillageSuggestion", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<Guid>("CraftVillageId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("craft_village_id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<Guid>("LocationId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("location_id");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("longtext")
-                        .HasColumnName("note");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CraftVillageId");
-
-                    b.HasIndex("LocationId");
-
-                    b.ToTable("location_craft_village_suggestions");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.LocationCuisineSuggestion", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<Guid>("CuisineId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("cuisine_id");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<Guid>("LocationId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("location_id");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("longtext")
-                        .HasColumnName("note");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CuisineId");
-
-                    b.HasIndex("LocationId");
-
-                    b.ToTable("location_cuisine_suggestions");
-                });
-
             modelBuilder.Entity("Travelogue.Repository.Entities.LocationInterest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1443,9 +1048,9 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("deleted_time");
 
-                    b.Property<Guid>("InterestId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("interest_id");
+                    b.Property<int>("Interest")
+                        .HasColumnType("int")
+                        .HasColumnName("interest");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
@@ -1468,8 +1073,6 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnName("location_id");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("InterestId");
 
                     b.HasIndex("LocationId");
 
@@ -1644,10 +1247,6 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("longtext")
                         .HasColumnName("description");
 
-                    b.Property<Guid?>("EventId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("event_id");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
@@ -1672,9 +1271,9 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("char(36)")
                         .HasColumnName("location_id");
 
-                    b.Property<Guid?>("NewsCategoryId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("news_category_id");
+                    b.Property<int?>("NewsCategory")
+                        .HasColumnType("int")
+                        .HasColumnName("news_category");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -1684,62 +1283,9 @@ namespace Travelogue.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EventId");
-
                     b.HasIndex("LocationId");
 
-                    b.HasIndex("NewsCategoryId");
-
                     b.ToTable("news");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.NewsCategory", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("category");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("news_categories");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.NewsMedia", b =>
@@ -2300,62 +1846,6 @@ namespace Travelogue.Repository.Migrations
                     b.ToTable("roles");
                 });
 
-            modelBuilder.Entity("Travelogue.Repository.Entities.RoleDistrict", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<Guid>("DistrictId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("district_id");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("role_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DistrictId");
-
-                    b.HasIndex("RoleId");
-
-                    b.ToTable("role_districts");
-                });
-
             modelBuilder.Entity("Travelogue.Repository.Entities.SystemSetting", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2473,13 +1963,11 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("int")
                         .HasColumnName("total_days");
 
-                    b.Property<Guid>("TourTypeId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("tour_type_id");
+                    b.Property<int?>("TourType")
+                        .HasColumnType("int")
+                        .HasColumnName("tour_type");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("TourTypeId");
 
                     b.ToTable("tours");
                 });
@@ -2728,6 +2216,140 @@ namespace Travelogue.Repository.Migrations
                     b.ToTable("tour_guide_mapping");
                 });
 
+            modelBuilder.Entity("Travelogue.Repository.Entities.TourGuideRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("CreatedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_time");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("deleted_by");
+
+                    b.Property<DateTimeOffset?>("DeletedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_time");
+
+                    b.Property<string>("Introduction")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("introduction");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("last_updated_by");
+
+                    b.Property<DateTimeOffset>("LastUpdatedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_updated_time");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(65,30)")
+                        .HasColumnName("price");
+
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("longtext")
+                        .HasColumnName("rejection_reason");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<Guid?>("ReviewedBy")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("reviewed_by");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("tour_guide_requests");
+                });
+
+            modelBuilder.Entity("Travelogue.Repository.Entities.TourGuideRequestCertification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CertificateUrl")
+                        .HasColumnType("longtext")
+                        .HasColumnName("certificate_url");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("CreatedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_time");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("deleted_by");
+
+                    b.Property<DateTimeOffset?>("DeletedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_time");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("last_updated_by");
+
+                    b.Property<DateTimeOffset>("LastUpdatedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_updated_time");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("TourGuideRequestId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("tour_guide_request_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TourGuideRequestId");
+
+                    b.ToTable("tour_guide_request_certifications");
+                });
+
             modelBuilder.Entity("Travelogue.Repository.Entities.TourGuideSchedule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2816,9 +2438,9 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("deleted_time");
 
-                    b.Property<Guid>("InterestId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("interest_id");
+                    b.Property<int>("Interest")
+                        .HasColumnType("int")
+                        .HasColumnName("interest");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
@@ -2841,8 +2463,6 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnName("tour_id");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("InterestId");
 
                     b.HasIndex("TourId");
 
@@ -2928,6 +2548,77 @@ namespace Travelogue.Repository.Migrations
                     b.HasIndex("ToBookingId");
 
                     b.ToTable("tour_join_requests");
+                });
+
+            modelBuilder.Entity("Travelogue.Repository.Entities.TourMedia", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("CreatedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_time");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("deleted_by");
+
+                    b.Property<DateTimeOffset?>("DeletedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_time");
+
+                    b.Property<string>("FileName")
+                        .HasColumnType("longtext")
+                        .HasColumnName("file_name");
+
+                    b.Property<string>("FileType")
+                        .HasColumnType("longtext")
+                        .HasColumnName("file_type");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsThumbnail")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_thumbnail");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("last_updated_by");
+
+                    b.Property<DateTimeOffset>("LastUpdatedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_updated_time");
+
+                    b.Property<string>("MediaUrl")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("media_url");
+
+                    b.Property<float>("SizeInBytes")
+                        .HasColumnType("float")
+                        .HasColumnName("size_in_bytes");
+
+                    b.Property<Guid>("TourId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("tour_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TourId");
+
+                    b.ToTable("tour_medias");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.TourPlanLocation", b =>
@@ -3148,61 +2839,6 @@ namespace Travelogue.Repository.Migrations
                     b.ToTable("tour_schedule_guide");
                 });
 
-            modelBuilder.Entity("Travelogue.Repository.Entities.TourType", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)")
-                        .HasColumnName("description");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)")
-                        .HasColumnName("name");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("tour_types");
-                });
-
             modelBuilder.Entity("Travelogue.Repository.Entities.Transaction", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3297,6 +2933,10 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("end_date");
 
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("longtext")
+                        .HasColumnName("image_url");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
@@ -3336,177 +2976,6 @@ namespace Travelogue.Repository.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("trip_plans");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanExchange", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<DateTimeOffset>("RequestedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("requested_at");
-
-                    b.Property<DateTimeOffset?>("RespondedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("responded_at");
-
-                    b.Property<string>("ResponseMessage")
-                        .HasMaxLength(1000)
-                        .HasColumnType("varchar(1000)")
-                        .HasColumnName("response_message");
-
-                    b.Property<Guid>("SessionId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("session_id");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int")
-                        .HasColumnName("status");
-
-                    b.Property<Guid?>("SuggestedTripPlanVersionId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("suggested_trip_plan_version_id");
-
-                    b.Property<Guid>("TourGuideId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("tour_guide_id");
-
-                    b.Property<Guid>("TripPlanId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("trip_plan_id");
-
-                    b.Property<Guid>("TripPlanVersionId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("trip_plan_version_id");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SessionId");
-
-                    b.HasIndex("SuggestedTripPlanVersionId");
-
-                    b.HasIndex("TourGuideId");
-
-                    b.HasIndex("TripPlanId");
-
-                    b.HasIndex("TripPlanVersionId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("trip_plan_exchanges");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanExchangeSession", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<DateTimeOffset?>("ClosedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("closed_at");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("created_by_user_id");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<int>("FinalStatus")
-                        .HasColumnType("int")
-                        .HasColumnName("final_status");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<Guid>("TourGuideId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("tour_guide_id");
-
-                    b.Property<Guid>("TripPlanId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("trip_plan_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedByUserId");
-
-                    b.HasIndex("TourGuideId");
-
-                    b.HasIndex("TripPlanId");
-
-                    b.ToTable("trip_plan_exchange_sessions");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanLocation", b =>
@@ -3568,251 +3037,17 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("start_time");
 
-                    b.Property<Guid>("TripPlanVersionId")
+                    b.Property<Guid>("TripPlanId")
                         .HasColumnType("char(36)")
-                        .HasColumnName("trip_plan_version_id");
+                        .HasColumnName("trip_plan_id");
 
                     b.HasKey("Id");
 
                     b.HasIndex("LocationId");
 
-                    b.HasIndex("TripPlanVersionId");
+                    b.HasIndex("TripPlanId");
 
                     b.ToTable("trip_plan_locations");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanShare", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<int>("Permission")
-                        .HasColumnType("int")
-                        .HasColumnName("permission");
-
-                    b.Property<Guid>("TripPlanId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("trip_plan_id");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TripPlanId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("trip_plan_shares");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanVersion", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("description");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<bool>("IsFromTourGuide")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_from_tour_guide");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("longtext")
-                        .HasColumnName("notes");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("status");
-
-                    b.Property<Guid>("TripPlanId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("trip_plan_id");
-
-                    b.Property<DateTimeOffset>("VersionDate")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("version_date");
-
-                    b.Property<int>("VersionNumber")
-                        .HasColumnType("int")
-                        .HasColumnName("version_number");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TripPlanId");
-
-                    b.ToTable("trip_plan_versions");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TypeEvent", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<string>("TypeName")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("type_name");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("type_events");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TypeExperience", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<string>("TypeName")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("type_name");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("type_experiences");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.User", b =>
@@ -3830,10 +3065,6 @@ namespace Travelogue.Repository.Migrations
                     b.Property<string>("AvatarUrl")
                         .HasColumnType("longtext")
                         .HasColumnName("avatar_url");
-
-                    b.Property<Guid?>("CraftVillageId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("craft_village_id");
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("longtext")
@@ -3939,8 +3170,6 @@ namespace Travelogue.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CraftVillageId");
-
                     b.ToTable("users");
                 });
 
@@ -4002,62 +3231,6 @@ namespace Travelogue.Repository.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("user_announcements");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.UserInterest", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<Guid>("InterestId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("interest_id");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("InterestId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("user_interests");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.UserRole", b =>
@@ -4345,6 +3518,77 @@ namespace Travelogue.Repository.Migrations
                     b.ToTable("workshop_activities");
                 });
 
+            modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopMedia", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("CreatedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_time");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("deleted_by");
+
+                    b.Property<DateTimeOffset?>("DeletedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_time");
+
+                    b.Property<string>("FileName")
+                        .HasColumnType("longtext")
+                        .HasColumnName("file_name");
+
+                    b.Property<string>("FileType")
+                        .HasColumnType("longtext")
+                        .HasColumnName("file_type");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsThumbnail")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_thumbnail");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("last_updated_by");
+
+                    b.Property<DateTimeOffset>("LastUpdatedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_updated_time");
+
+                    b.Property<string>("MediaUrl")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("media_url");
+
+                    b.Property<float>("SizeInBytes")
+                        .HasColumnType("float")
+                        .HasColumnName("size_in_bytes");
+
+                    b.Property<Guid>("WorkshopId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("workshop_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkshopId");
+
+                    b.ToTable("workshop_medias");
+                });
+
             modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopSchedule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4462,10 +3706,6 @@ namespace Travelogue.Repository.Migrations
                         .WithMany("Bookings")
                         .HasForeignKey("TripPlanId");
 
-                    b.HasOne("Travelogue.Repository.Entities.TripPlanVersion", "TripPlanVersion")
-                        .WithMany()
-                        .HasForeignKey("TripPlanVersionId");
-
                     b.HasOne("Travelogue.Repository.Entities.User", "User")
                         .WithMany("Bookings")
                         .HasForeignKey("UserId")
@@ -4485,8 +3725,6 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("TourSchedule");
 
                     b.Navigation("TripPlan");
-
-                    b.Navigation("TripPlanVersion");
 
                     b.Navigation("User");
 
@@ -4523,6 +3761,17 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("WithdrawalRequest");
                 });
 
+            modelBuilder.Entity("Travelogue.Repository.Entities.Certification", b =>
+                {
+                    b.HasOne("Travelogue.Repository.Entities.TourGuide", "TourGuide")
+                        .WithMany("Certifications")
+                        .HasForeignKey("TourGuideId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TourGuide");
+                });
+
             modelBuilder.Entity("Travelogue.Repository.Entities.CraftVillage", b =>
                 {
                     b.HasOne("Travelogue.Repository.Entities.Location", "Location")
@@ -4531,26 +3780,15 @@ namespace Travelogue.Repository.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Location");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.CraftVillageInterest", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.CraftVillage", "CraftVillage")
+                    b.HasOne("Travelogue.Repository.Entities.User", "Owner")
                         .WithMany()
-                        .HasForeignKey("CraftVillageId")
+                        .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Travelogue.Repository.Entities.Interest", "Interest")
-                        .WithMany("CraftVillageInterests")
-                        .HasForeignKey("InterestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Navigation("Location");
 
-                    b.Navigation("CraftVillage");
-
-                    b.Navigation("Interest");
+                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.Cuisine", b =>
@@ -4562,25 +3800,6 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("Location");
                 });
 
-            modelBuilder.Entity("Travelogue.Repository.Entities.CuisineInterest", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.Cuisine", "Cuisine")
-                        .WithMany()
-                        .HasForeignKey("CuisineId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Travelogue.Repository.Entities.Interest", "Interest")
-                        .WithMany("CuisineInterests")
-                        .HasForeignKey("InterestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Cuisine");
-
-                    b.Navigation("Interest");
-                });
-
             modelBuilder.Entity("Travelogue.Repository.Entities.DistrictMedia", b =>
                 {
                     b.HasOne("Travelogue.Repository.Entities.District", "District")
@@ -4590,81 +3809,6 @@ namespace Travelogue.Repository.Migrations
                         .IsRequired();
 
                     b.Navigation("District");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.Event", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.District", "District")
-                        .WithMany("Events")
-                        .HasForeignKey("DistrictId");
-
-                    b.HasOne("Travelogue.Repository.Entities.Location", "Location")
-                        .WithMany("Activities")
-                        .HasForeignKey("LocationId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Travelogue.Repository.Entities.TypeEvent", "TypeEvent")
-                        .WithMany("Events")
-                        .HasForeignKey("TypeEventId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("District");
-
-                    b.Navigation("Location");
-
-                    b.Navigation("TypeEvent");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.EventMedia", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.Event", "Event")
-                        .WithMany("EventMedias")
-                        .HasForeignKey("EventId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Event");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.Experience", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.District", "District")
-                        .WithMany("Experiences")
-                        .HasForeignKey("DistrictId");
-
-                    b.HasOne("Travelogue.Repository.Entities.Event", "Event")
-                        .WithMany("Experiences")
-                        .HasForeignKey("EventId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Travelogue.Repository.Entities.Location", "Location")
-                        .WithMany("Experiences")
-                        .HasForeignKey("LocationId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Travelogue.Repository.Entities.TypeExperience", "TypeExperience")
-                        .WithMany("Experiences")
-                        .HasForeignKey("TypeExperienceId");
-
-                    b.Navigation("District");
-
-                    b.Navigation("Event");
-
-                    b.Navigation("Location");
-
-                    b.Navigation("TypeExperience");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.ExperienceMedia", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.Experience", "Experience")
-                        .WithMany("ExperienceMedias")
-                        .HasForeignKey("ExperienceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Experience");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.FavoriteLocation", b =>
@@ -4706,59 +3850,13 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("District");
                 });
 
-            modelBuilder.Entity("Travelogue.Repository.Entities.LocationCraftVillageSuggestion", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.CraftVillage", "CraftVillage")
-                        .WithMany("LocationCraftVillageSuggestions")
-                        .HasForeignKey("CraftVillageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Travelogue.Repository.Entities.Location", "Location")
-                        .WithMany("LocationCraftVillageSuggestions")
-                        .HasForeignKey("LocationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CraftVillage");
-
-                    b.Navigation("Location");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.LocationCuisineSuggestion", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.Cuisine", "Cuisine")
-                        .WithMany("LocationCuisineSuggestions")
-                        .HasForeignKey("CuisineId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Travelogue.Repository.Entities.Location", "Location")
-                        .WithMany("LocationCuisineSuggestions")
-                        .HasForeignKey("LocationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Cuisine");
-
-                    b.Navigation("Location");
-                });
-
             modelBuilder.Entity("Travelogue.Repository.Entities.LocationInterest", b =>
                 {
-                    b.HasOne("Travelogue.Repository.Entities.Interest", "Interest")
-                        .WithMany("LocationInterests")
-                        .HasForeignKey("InterestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Travelogue.Repository.Entities.Location", "Location")
                         .WithMany("LocationInterests")
                         .HasForeignKey("LocationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Interest");
 
                     b.Navigation("Location");
                 });
@@ -4795,23 +3893,11 @@ namespace Travelogue.Repository.Migrations
 
             modelBuilder.Entity("Travelogue.Repository.Entities.News", b =>
                 {
-                    b.HasOne("Travelogue.Repository.Entities.Event", "Event")
-                        .WithMany()
-                        .HasForeignKey("EventId");
-
                     b.HasOne("Travelogue.Repository.Entities.Location", "Location")
                         .WithMany()
                         .HasForeignKey("LocationId");
 
-                    b.HasOne("Travelogue.Repository.Entities.NewsCategory", "NewsCategory")
-                        .WithMany("News")
-                        .HasForeignKey("NewsCategoryId");
-
-                    b.Navigation("Event");
-
                     b.Navigation("Location");
-
-                    b.Navigation("NewsCategory");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.NewsMedia", b =>
@@ -4932,36 +4018,6 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Travelogue.Repository.Entities.RoleDistrict", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.District", "District")
-                        .WithMany("RoleDistricts")
-                        .HasForeignKey("DistrictId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Travelogue.Repository.Entities.Role", "Role")
-                        .WithMany("RoleDistricts")
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("District");
-
-                    b.Navigation("Role");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.Tour", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.TourType", "TourType")
-                        .WithMany("Tours")
-                        .HasForeignKey("TourTypeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("TourType");
-                });
-
             modelBuilder.Entity("Travelogue.Repository.Entities.TourGroup", b =>
                 {
                     b.HasOne("Travelogue.Repository.Entities.Tour", "Tour")
@@ -5030,6 +4086,28 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("TourGuide");
                 });
 
+            modelBuilder.Entity("Travelogue.Repository.Entities.TourGuideRequest", b =>
+                {
+                    b.HasOne("Travelogue.Repository.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Travelogue.Repository.Entities.TourGuideRequestCertification", b =>
+                {
+                    b.HasOne("Travelogue.Repository.Entities.TourGuideRequest", "TourGuideRequest")
+                        .WithMany("Certifications")
+                        .HasForeignKey("TourGuideRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TourGuideRequest");
+                });
+
             modelBuilder.Entity("Travelogue.Repository.Entities.TourGuideSchedule", b =>
                 {
                     b.HasOne("Travelogue.Repository.Entities.Booking", "Booking")
@@ -5049,19 +4127,11 @@ namespace Travelogue.Repository.Migrations
 
             modelBuilder.Entity("Travelogue.Repository.Entities.TourInterest", b =>
                 {
-                    b.HasOne("Travelogue.Repository.Entities.Interest", "Interest")
-                        .WithMany("TourInterests")
-                        .HasForeignKey("InterestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Travelogue.Repository.Entities.Tour", "Tour")
-                        .WithMany()
+                        .WithMany("TourInterests")
                         .HasForeignKey("TourId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Interest");
 
                     b.Navigation("Tour");
                 });
@@ -5083,6 +4153,17 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("FromBooking");
 
                     b.Navigation("ToBooking");
+                });
+
+            modelBuilder.Entity("Travelogue.Repository.Entities.TourMedia", b =>
+                {
+                    b.HasOne("Travelogue.Repository.Entities.Tour", "Tour")
+                        .WithMany()
+                        .HasForeignKey("TourId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tour");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.TourPlanLocation", b =>
@@ -5156,82 +4237,6 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanExchange", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.TripPlanExchangeSession", "Session")
-                        .WithMany("Exchanges")
-                        .HasForeignKey("SessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Travelogue.Repository.Entities.TripPlanVersion", "SuggestedTripPlanVersion")
-                        .WithMany()
-                        .HasForeignKey("SuggestedTripPlanVersionId");
-
-                    b.HasOne("Travelogue.Repository.Entities.TourGuide", "TourGuide")
-                        .WithMany()
-                        .HasForeignKey("TourGuideId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Travelogue.Repository.Entities.TripPlan", "TripPlan")
-                        .WithMany()
-                        .HasForeignKey("TripPlanId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Travelogue.Repository.Entities.TripPlanVersion", "TripPlanVersion")
-                        .WithMany()
-                        .HasForeignKey("TripPlanVersionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Travelogue.Repository.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Session");
-
-                    b.Navigation("SuggestedTripPlanVersion");
-
-                    b.Navigation("TourGuide");
-
-                    b.Navigation("TripPlan");
-
-                    b.Navigation("TripPlanVersion");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanExchangeSession", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.User", "CreatedByUser")
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Travelogue.Repository.Entities.TourGuide", "TourGuide")
-                        .WithMany()
-                        .HasForeignKey("TourGuideId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Travelogue.Repository.Entities.TripPlan", "TripPlan")
-                        .WithMany()
-                        .HasForeignKey("TripPlanId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CreatedByUser");
-
-                    b.Navigation("TourGuide");
-
-                    b.Navigation("TripPlan");
-                });
-
             modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanLocation", b =>
                 {
                     b.HasOne("Travelogue.Repository.Entities.Location", "Location")
@@ -5240,54 +4245,15 @@ namespace Travelogue.Repository.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Travelogue.Repository.Entities.TripPlanVersion", "TripPlanVersion")
+                    b.HasOne("Travelogue.Repository.Entities.TripPlan", "TripPlan")
                         .WithMany("TripPlanLocations")
-                        .HasForeignKey("TripPlanVersionId")
+                        .HasForeignKey("TripPlanId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Location");
 
-                    b.Navigation("TripPlanVersion");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanShare", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.TripPlan", "TripPlan")
-                        .WithMany("Shares")
-                        .HasForeignKey("TripPlanId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Travelogue.Repository.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("TripPlan");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanVersion", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.TripPlan", "TripPlan")
-                        .WithMany("TripPlanVersions")
-                        .HasForeignKey("TripPlanId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("TripPlan");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.User", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.CraftVillage", "CraftVillage")
-                        .WithMany("Managers")
-                        .HasForeignKey("CraftVillageId");
-
-                    b.Navigation("CraftVillage");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.UserAnnouncement", b =>
@@ -5305,25 +4271,6 @@ namespace Travelogue.Repository.Migrations
                         .IsRequired();
 
                     b.Navigation("Announcement");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.UserInterest", b =>
-                {
-                    b.HasOne("Travelogue.Repository.Entities.Interest", "Interest")
-                        .WithMany("UserInterests")
-                        .HasForeignKey("InterestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Travelogue.Repository.Entities.User", "User")
-                        .WithMany("UserInterests")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Interest");
 
                     b.Navigation("User");
                 });
@@ -5388,6 +4335,17 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("Workshop");
                 });
 
+            modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopMedia", b =>
+                {
+                    b.HasOne("Travelogue.Repository.Entities.Workshop", "Workshop")
+                        .WithMany()
+                        .HasForeignKey("WorkshopId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Workshop");
+                });
+
             modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopSchedule", b =>
                 {
                     b.HasOne("Travelogue.Repository.Entities.Workshop", "Workshop")
@@ -5409,82 +4367,26 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("Participants");
                 });
 
-            modelBuilder.Entity("Travelogue.Repository.Entities.CraftVillage", b =>
-                {
-                    b.Navigation("LocationCraftVillageSuggestions");
-
-                    b.Navigation("Managers");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.Cuisine", b =>
-                {
-                    b.Navigation("LocationCuisineSuggestions");
-                });
-
             modelBuilder.Entity("Travelogue.Repository.Entities.District", b =>
                 {
-                    b.Navigation("Events");
-
-                    b.Navigation("Experiences");
-
                     b.Navigation("Locations");
-
-                    b.Navigation("RoleDistricts");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.Event", b =>
-                {
-                    b.Navigation("EventMedias");
-
-                    b.Navigation("Experiences");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.Experience", b =>
-                {
-                    b.Navigation("ExperienceMedias");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.Interest", b =>
-                {
-                    b.Navigation("CraftVillageInterests");
-
-                    b.Navigation("CuisineInterests");
-
-                    b.Navigation("LocationInterests");
-
-                    b.Navigation("TourInterests");
-
-                    b.Navigation("UserInterests");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.Location", b =>
                 {
-                    b.Navigation("Activities");
-
                     b.Navigation("CraftVillage");
 
                     b.Navigation("Cuisine");
 
-                    b.Navigation("Experiences");
-
                     b.Navigation("FavoriteLocations");
 
                     b.Navigation("HistoricalLocation");
-
-                    b.Navigation("LocationCraftVillageSuggestions");
-
-                    b.Navigation("LocationCuisineSuggestions");
 
                     b.Navigation("LocationInterests");
 
                     b.Navigation("LocationMedias");
 
                     b.Navigation("TripPlanLocations");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.NewsCategory", b =>
-                {
-                    b.Navigation("News");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.Promotion", b =>
@@ -5499,8 +4401,6 @@ namespace Travelogue.Repository.Migrations
 
             modelBuilder.Entity("Travelogue.Repository.Entities.Role", b =>
                 {
-                    b.Navigation("RoleDistricts");
-
                     b.Navigation("UserRoles");
                 });
 
@@ -5516,6 +4416,8 @@ namespace Travelogue.Repository.Migrations
 
                     b.Navigation("TourGuideMappings");
 
+                    b.Navigation("TourInterests");
+
                     b.Navigation("TourPlanLocations");
 
                     b.Navigation("TourSchedules");
@@ -5528,11 +4430,18 @@ namespace Travelogue.Repository.Migrations
 
             modelBuilder.Entity("Travelogue.Repository.Entities.TourGuide", b =>
                 {
+                    b.Navigation("Certifications");
+
                     b.Navigation("PromotionApplicables");
 
                     b.Navigation("TourGuideMappings");
 
                     b.Navigation("TourGuideSchedules");
+                });
+
+            modelBuilder.Entity("Travelogue.Repository.Entities.TourGuideRequest", b =>
+                {
+                    b.Navigation("Certifications");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.TourSchedule", b =>
@@ -5542,38 +4451,11 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("TourScheduleGuides");
                 });
 
-            modelBuilder.Entity("Travelogue.Repository.Entities.TourType", b =>
-                {
-                    b.Navigation("Tours");
-                });
-
             modelBuilder.Entity("Travelogue.Repository.Entities.TripPlan", b =>
                 {
                     b.Navigation("Bookings");
 
-                    b.Navigation("Shares");
-
-                    b.Navigation("TripPlanVersions");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanExchangeSession", b =>
-                {
-                    b.Navigation("Exchanges");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TripPlanVersion", b =>
-                {
                     b.Navigation("TripPlanLocations");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TypeEvent", b =>
-                {
-                    b.Navigation("Events");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.TypeExperience", b =>
-                {
-                    b.Navigation("Experiences");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.User", b =>
@@ -5597,8 +4479,6 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("TripPlans");
 
                     b.Navigation("UserAnnouncements");
-
-                    b.Navigation("UserInterests");
 
                     b.Navigation("UserRoles");
                 });

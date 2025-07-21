@@ -8,8 +8,7 @@ public class TripPlanDataModel : BaseDataModel
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
 
-    public Guid? TripPlanVersionId { get; set; }
-    public bool IsFromTourGuide { get; set; } = false;
+    public Guid? TripPlanId { get; set; }
     public Guid UserId { get; set; }
     public string OwnerName { get; set; } = string.Empty;
 }

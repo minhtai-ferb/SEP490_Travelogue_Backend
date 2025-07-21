@@ -1,4 +1,5 @@
-﻿using Travelogue.Service.BusinessModels.TourGuideModels;
+﻿using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.TourGuideModels;
 
 namespace Travelogue.Service.BusinessModels.TourModels;
 
@@ -14,7 +15,7 @@ public class TourDetailResponse
     public decimal ChildrenPrice { get; set; }
     public decimal FinalPrice { get; set; }
     public bool IsDiscount { get; set; }
-    public Guid TourTypeId { get; set; }
+    public TourType TourType { get; set; }
     public string? TourTypeText { get; set; }
     public List<PromotionDto>? Promotions { get; set; } = new List<PromotionDto>();
     public Guid? CurrentVersionId { get; set; }

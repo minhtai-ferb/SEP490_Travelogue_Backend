@@ -8,7 +8,6 @@ public class BookingMappingProfile : Profile
 {
     public BookingMappingProfile()
     {
-        CreateMap<TripPlanExchange, Booking>().ReverseMap();
         // CreateMap<OrderUpdateModel, Order>()
         //     .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
         CreateMap<BookingDataModel, Booking>().ReverseMap();

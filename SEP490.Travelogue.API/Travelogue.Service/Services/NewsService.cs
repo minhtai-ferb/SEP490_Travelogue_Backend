@@ -15,15 +15,13 @@ namespace Travelogue.Service.Services;
 
 public interface INewsService
 {
-    //Task<NewsDataModel?> GetNewsByIdAsync(Guid id, CancellationToken cancellationToken);
     Task<NewsDataDetailModel?> GetNewsByIdAsync(Guid id, CancellationToken cancellationToken);
-    Task<List<NewsDataModel>> GetAllNewssAsync(CancellationToken cancellationToken);
+    Task<List<NewsDataModel>> GetAllNewsAsync(CancellationToken cancellationToken);
     Task<NewsDataModel> AddNewsAsync(NewsCreateModel newsCreateModel, CancellationToken cancellationToken);
     Task UpdateNewsAsync(Guid id, NewsUpdateModel newsUpdateModel, CancellationToken cancellationToken);
     Task DeleteNewsAsync(Guid id, CancellationToken cancellationToken);
-    Task<PagedResult<NewsDataModel>> GetPagedNewssAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
-    Task<PagedResult<NewsDataModel>> GetPagedNewsWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken);
-    Task<PagedResult<NewsDataModel>> GetPagedNewsWithSearchAsync(string? title, string? categoryName, Guid? categoryId, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<PagedResult<NewsDataModel>> GetPagedNewsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<PagedResult<NewsDataModel>> GetPagedNewsWithSearchAsync(string? title, int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<NewsMediaResponse> AddNewsWithMediaAsync(NewsCreateWithMediaFileModel newsCreateModel, string? thumbnailSelected, CancellationToken cancellationToken);
     Task UpdateNewsAsync(Guid id, NewsUpdateWithMediaFileModel newsUpdateModel, string? thumbnailSelected, CancellationToken cancellationToken);
     Task<bool> DeleteMediaAsync(Guid id, List<string> deletedImages, CancellationToken cancellationToken);
@@ -43,14 +41,16 @@ public class NewsService : INewsService
     private readonly IUserContextService _userContextService;
     private readonly ITimeService _timeService;
     private readonly ICloudinaryService _cloudinaryService;
+    private readonly IEnumService _enumService;
 
-    public NewsService(IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService, ICloudinaryService cloudinaryService)
+    public NewsService(IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService, ICloudinaryService cloudinaryService, IEnumService enumService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _userContextService = userContextService;
         _timeService = timeService;
         _cloudinaryService = cloudinaryService;
+        _enumService = enumService;
     }
 
     public async Task<NewsDataModel> AddNewsAsync(NewsCreateModel newsCreateModel, CancellationToken cancellationToken)
@@ -128,7 +128,7 @@ public class NewsService : INewsService
         }
     }
 
-    public async Task<List<NewsDataModel>> GetAllNewssAsync(CancellationToken cancellationToken)
+    public async Task<List<NewsDataModel>> GetAllNewsAsync(CancellationToken cancellationToken)
     {
         try
         {
@@ -148,16 +148,7 @@ public class NewsService : INewsService
                     .Where(x => x.Id == item.LocationId)
                     .Select(x => x.Name)
                     .FirstOrDefaultAsync(cancellationToken);
-                item.EventName = await _unitOfWork.EventRepository
-                    .ActiveEntities
-                    .Where(x => x.Id == item.EventId)
-                    .Select(x => x.Name)
-                    .FirstOrDefaultAsync(cancellationToken);
-                item.CategoryName = await _unitOfWork.NewsCategoryRepository
-                    .ActiveEntities
-                    .Where(x => x.Id == item.NewsCategoryId)
-                    .Select(x => x.Category)
-                    .FirstOrDefaultAsync(cancellationToken);
+                item.CategoryName = _enumService.GetEnumDisplayName(item.NewsCategory);
             }
 
             return result;
@@ -176,32 +167,6 @@ public class NewsService : INewsService
         }
     }
 
-    //public async Task<NewsDataModel?> GetNewsByIdAsync(Guid id, CancellationToken cancellationToken)
-    //{
-    //    try
-    //    {
-    //        var existingNews = await _unitOfWork.NewsRepository.GetByIdAsync(id, cancellationToken);
-    //        if (existingNews == null || existingNews.IsDeleted)
-    //        {
-    //            throw CustomExceptionFactory.CreateNotFoundError("news");
-    //        }
-
-    //        return _mapper.Map<NewsDataModel>(existingNews);
-    //    }
-    //    catch (CustomException)
-    //    {
-    //        throw;
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-    //    }
-    //    finally
-    //    {
-    //       //  _unitOfWork.Dispose();
-    //    }
-    //}
-
     public async Task<NewsDataDetailModel?> GetNewsByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         try
@@ -210,8 +175,6 @@ public class NewsService : INewsService
                 .ActiveEntities
                 .Where(x => x.Id == id)
                 .Include(x => x.Location)
-                .Include(x => x.Event)
-                .Include(x => x.NewsCategory)
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (existingNews == null || existingNews.IsDeleted)
@@ -222,8 +185,10 @@ public class NewsService : INewsService
             var result = _mapper.Map<NewsDataDetailModel>(existingNews);
 
             result.LocationName = existingNews.Location?.Name;
-            result.EventName = existingNews.Event?.Name;
-            result.CategoryName = existingNews.NewsCategory?.Category;
+
+            result.CategoryName = result.NewsCategory.HasValue
+    ? _enumService.GetEnumDisplayName(result.NewsCategory.Value)
+    : null;
 
             result.Medias = await GetMediaByIdAsync(result.Id, cancellationToken);
 
@@ -233,18 +198,6 @@ public class NewsService : INewsService
                 .Select(x => x.Name)
                 .FirstOrDefaultAsync(cancellationToken);
 
-            result.EventName = await _unitOfWork.EventRepository
-                .ActiveEntities
-                .Where(x => x.Id == result.EventId)
-                .Select(x => x.Name)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            result.CategoryName = await _unitOfWork.NewsCategoryRepository
-                .ActiveEntities
-                .Where(x => x.Id == result.NewsCategoryId)
-                .Select(x => x.Category)
-                .FirstOrDefaultAsync(cancellationToken);
-
             var relatedNewsQuery = _unitOfWork.NewsRepository
                 .ActiveEntities
                 .Where(x => !x.IsDeleted && x.Id != id);
@@ -252,16 +205,6 @@ public class NewsService : INewsService
             if (existingNews.LocationId.HasValue)
             {
                 relatedNewsQuery = relatedNewsQuery.Where(x => x.LocationId == existingNews.LocationId);
-            }
-
-            if (existingNews.EventId.HasValue)
-            {
-                relatedNewsQuery = relatedNewsQuery.Where(x => x.EventId == existingNews.EventId);
-            }
-
-            if (existingNews.NewsCategoryId.HasValue)
-            {
-                relatedNewsQuery = relatedNewsQuery.Where(x => x.NewsCategoryId == existingNews.NewsCategoryId);
             }
 
             var relatedNews = await relatedNewsQuery
@@ -280,8 +223,9 @@ public class NewsService : INewsService
                     Title = x.Title,
                     Description = x.Description,
                     LocationName = x.Location?.Name,
-                    EventName = x.Event?.Name,
-                    CategoryName = x.NewsCategory?.Category,
+                    CategoryName = x.NewsCategory.HasValue
+                        ? _enumService.GetEnumDisplayName(x.NewsCategory.Value)
+                        : null,
                     Medias = media
                 });
             }
@@ -330,7 +274,7 @@ public class NewsService : INewsService
         }
     }
 
-    public async Task<PagedResult<NewsDataModel>> GetPagedNewssAsync(int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<NewsDataModel>> GetPagedNewsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
@@ -353,16 +297,7 @@ public class NewsService : INewsService
                     .Where(x => x.Id == item.LocationId)
                     .Select(x => x.Name)
                     .FirstOrDefaultAsync(cancellationToken);
-                item.EventName = await _unitOfWork.EventRepository
-                    .ActiveEntities
-                    .Where(x => x.Id == item.EventId)
-                    .Select(x => x.Name)
-                    .FirstOrDefaultAsync(cancellationToken);
-                item.CategoryName = await _unitOfWork.NewsCategoryRepository
-                    .ActiveEntities
-                    .Where(x => x.Id == item.NewsCategoryId)
-                    .Select(x => x.Category)
-                    .FirstOrDefaultAsync(cancellationToken);
+                item.CategoryName = _enumService.GetEnumDisplayName(item.NewsCategory);
             }
 
             return result;
@@ -381,41 +316,11 @@ public class NewsService : INewsService
         }
     }
 
-    public async Task<PagedResult<NewsDataModel>> GetPagedNewsWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken)
+    public async Task<PagedResult<NewsDataModel>> GetPagedNewsWithSearchAsync(string? title, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
-            var pagedResult = await _unitOfWork.NewsRepository.GetPageWithSearchAsync(pageNumber, pageSize, name, cancellationToken);
-
-            var newsDataModels = _mapper.Map<List<NewsDataModel>>(pagedResult.Items);
-
-            return new PagedResult<NewsDataModel>
-            {
-                Items = newsDataModels,
-                TotalCount = pagedResult.TotalCount,
-                PageNumber = pageNumber,
-                PageSize = pageSize
-            };
-        }
-        catch (CustomException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-        finally
-        {
-            //  _unitOfWork.Dispose();
-        }
-    }
-
-    public async Task<PagedResult<NewsDataModel>> GetPagedNewsWithSearchAsync(string? title, string? categoryName, Guid? categoryId, int pageNumber, int pageSize, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var pagedResult = await _unitOfWork.NewsRepository.GetPageWithSearchAsync(title, categoryName, categoryId, pageNumber, pageSize, cancellationToken);
+            var pagedResult = await _unitOfWork.NewsRepository.GetPageWithSearchAsync(title, pageNumber, pageSize, cancellationToken);
 
             var newsDataModels = _mapper.Map<List<NewsDataModel>>(pagedResult.Items);
 
@@ -434,16 +339,7 @@ public class NewsService : INewsService
                     .Where(x => x.Id == item.LocationId)
                     .Select(x => x.Name)
                     .FirstOrDefaultAsync(cancellationToken);
-                item.EventName = await _unitOfWork.EventRepository
-                    .ActiveEntities
-                    .Where(x => x.Id == item.EventId)
-                    .Select(x => x.Name)
-                    .FirstOrDefaultAsync(cancellationToken);
-                item.CategoryName = await _unitOfWork.NewsCategoryRepository
-                    .ActiveEntities
-                    .Where(x => x.Id == item.NewsCategoryId)
-                    .Select(x => x.Category)
-                    .FirstOrDefaultAsync(cancellationToken);
+                item.CategoryName = _enumService.GetEnumDisplayName(item.NewsCategory);
             }
 
             return result;

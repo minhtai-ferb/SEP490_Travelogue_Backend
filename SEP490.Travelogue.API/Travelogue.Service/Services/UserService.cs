@@ -1,10 +1,18 @@
-﻿using AutoMapper;
+﻿using System.Security.Cryptography;
+using System.Text;
+using AutoMapper;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Bases.Responses;
+using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
+using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.CraftVillageModels;
+using Travelogue.Service.BusinessModels.TourGuideModels;
+using Travelogue.Service.BusinessModels.UserModels;
 using Travelogue.Service.BusinessModels.UserModels.Requests;
 using Travelogue.Service.BusinessModels.UserModels.Responses;
 using Travelogue.Service.Commons.Const;
@@ -15,8 +23,10 @@ namespace Travelogue.Service.Services;
 
 public interface IUserService
 {
+    Task<UserResponseModel> CreateUserAsync(CreateUserDto model, CancellationToken cancellationToken = default);
+    Task<UserResponseModel> AssignModeratorRoleAsync(Guid userId, UpdateUserRoleDto model, CancellationToken cancellationToken = default);
     Task<UserResponseModel> GetUserByIdAsync(Guid id, CancellationToken cancellationToken);
-    Task<List<UserResponseModel>> GetAllUsersAsync(string? searchFullName = null, CancellationToken cancellationToken = default);
+    Task<List<UserResponseModel>> GetAllUsersAsync(string? searchFullName = null, string? role = null, CancellationToken cancellationToken = default);
     Task<PagedResult<UserResponseModel>> GetPagedUsersAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<PagedResult<UserResponseModel>> GetPagedUsersAsync(string? email, string? phoneNumber, string? fullName, int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<bool> BlockUserAsync(Guid userId);
@@ -28,6 +38,9 @@ public interface IUserService
     Task<bool> UpdateUserAsync(Guid id, UserUpdateModel model, CancellationToken cancellationToken);
     Task<bool> RemoveUserFromRole(Guid userId, Guid roleId, CancellationToken cancellationToken);
     Task<bool> SendFeedbackAsync(FeedbackModel model, CancellationToken cancellationToken);
+    Task<TourGuideRequestResponseDto> CreateTourGuideRequestAsync(CreateTourGuideRequestDto model, CancellationToken cancellationToken = default);
+    Task<List<TourGuideRequestResponseDto>> GetTourGuideRequestsAsync(TourGuideRequestStatus? status, CancellationToken cancellationToken = default);
+    Task<TourGuideRequestResponseDto> ReviewTourGuideRequestAsync(Guid requestId, ReviewTourGuideRequestDto model, CancellationToken cancellationToken = default);
     //Task GetPagedUsersWithSearchAsync(int pageNumber, int pageSize, string email, string phoneNumber, string fullName, CancellationToken cancellationToken);
 }
 
@@ -47,6 +60,116 @@ public class UserService : IUserService
         _mapper = mapper;
         _userContextService = userContextService;
         _emailService = emailService;
+    }
+    public async Task<UserResponseModel> CreateUserAsync(CreateUserDto model, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var existingUser = await _unitOfWork.UserRepository.GetUserByEmailAsync(model.Email);
+            if (existingUser != null)
+            {
+                throw new CustomException(StatusCodes.Status400BadRequest, ResponseCodeConstants.BAD_REQUEST, "Email already exists");
+            }
+
+            var temporaryPassword = GenerateRandomPassword();
+
+            var user = new User
+            {
+                Email = model.Email,
+                FullName = model.FullName,
+                EmailConfirmed = false,
+                IsActive = true,
+                CreatedTime = DateTimeOffset.UtcNow,
+                LastUpdatedTime = DateTimeOffset.UtcNow,
+                CreatedBy = "System",
+                LastUpdatedBy = "System"
+            };
+            user.SetPassword(temporaryPassword);
+
+            await _unitOfWork.UserRepository.AddAsync(user);
+            await _unitOfWork.SaveAsync();
+
+            if (model.RoleId != Guid.Empty)
+            {
+                var role = await _unitOfWork.RoleRepository.GetByIdAsync(model.RoleId, cancellationToken);
+                if (role == null)
+                {
+                    throw new CustomException(
+                        StatusCodes.Status400BadRequest,
+                        ResponseCodeConstants.BAD_REQUEST,
+                        "Invalid role");
+                }
+
+                var userRole = new UserRole
+                {
+                    UserId = user.Id,
+                    RoleId = role.Id
+                };
+
+                await _unitOfWork.UserRoleRepository.AddAsync(userRole);
+                await _unitOfWork.SaveAsync();
+            }
+
+            await _emailService.SendEmailAsync(
+                new[] { user.Email },
+                $"mat khau tam ",
+                $"mat khau tam {temporaryPassword}"
+            );
+
+            var userResponse = _mapper.Map<UserResponseModel>(user);
+            userResponse.Roles = (await _unitOfWork.UserRepository.GetRolesByUserIdAsync(user.Id))
+                .Select(r => r.Name).ToList();
+
+            return userResponse;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<UserResponseModel> AssignModeratorRoleAsync(Guid userId, UpdateUserRoleDto model, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId, cancellationToken)
+                ?? throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "User not found");
+
+            var role = await _unitOfWork.RoleRepository.GetByNameAsync(model.Role)
+                ?? throw new CustomException(StatusCodes.Status400BadRequest, ResponseCodeConstants.BAD_REQUEST, "Invalid role");
+
+            var newUserRole = new UserRole
+            {
+                UserId = userId,
+                RoleId = role.Id
+            };
+            await _unitOfWork.UserRoleRepository.AddAsync(newUserRole);
+            await _unitOfWork.SaveAsync();
+
+            await _emailService.SendEmailAsync(
+                new[] { user.Email },
+                $"nâng cấp role moderator",
+                $"nâng cấp role moderator"
+            );
+
+            var userResponse = _mapper.Map<UserResponseModel>(user);
+            userResponse.Roles = (await _unitOfWork.UserRepository.GetRolesByUserIdAsync(user.Id))
+                .Select(r => r.Name).ToList();
+
+            return userResponse;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
     }
 
     public async Task<UserResponseModel> GetUserByIdAsync(Guid id, CancellationToken cancellationToken)
@@ -84,18 +207,37 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<List<UserResponseModel>> GetAllUsersAsync(string? searchFullName = null, CancellationToken cancellationToken = default)
+    public async Task<List<UserResponseModel>> GetAllUsersAsync(string? searchFullName = null, string? role = null, CancellationToken cancellationToken = default)
     {
         try
         {
             var users = await _unitOfWork.UserRepository.GetAllAsync(cancellationToken);
+
+            if (users == null || !users.Any())
+            {
+                return new List<UserResponseModel>();
+            }
 
             if (!string.IsNullOrEmpty(searchFullName))
             {
                 users = users.Where(u => u.FullName.Contains(searchFullName, StringComparison.OrdinalIgnoreCase)).ToList();
             }
 
-            if (users == null || !users.Any())
+            if (!string.IsNullOrEmpty(role))
+            {
+                var filteredUsers = new List<User>();
+                foreach (var user in users)
+                {
+                    var roles = await _unitOfWork.UserRepository.GetRolesByUserIdAsync(user.Id);
+                    if (roles != null && roles.Any(r => r.Name.Contains(role, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        filteredUsers.Add(user);
+                    }
+                }
+                users = filteredUsers;
+            }
+
+            if (!users.Any())
             {
                 return new List<UserResponseModel>();
             }
@@ -105,13 +247,12 @@ public class UserService : IUserService
             foreach (var user in userDataModels)
             {
                 var roles = await _unitOfWork.UserRepository.GetRolesByUserIdAsync(user.Id);
-                if (roles == null)
+                if (roles == null || !roles.Any())
                 {
-                    throw new CustomException(StatusCodes.Status403Forbidden, ResponseCodeConstants.UNAUTHORIZED, "Nguời dùng chưa được cấp quyền");
+                    throw new CustomException(StatusCodes.Status403Forbidden, ResponseCodeConstants.UNAUTHORIZED, "Người dùng chưa được cấp quyền");
                 }
 
                 var roleNames = roles.Select(r => r.Name).ToList();
-
                 user.Roles = roleNames;
             }
 
@@ -127,7 +268,7 @@ public class UserService : IUserService
         }
         finally
         {
-            //  _unitOfWork.Dispose();
+            // _unitOfWork.Dispose();
         }
     }
 
@@ -551,5 +692,550 @@ public class UserService : IUserService
         {
             //  _unitOfWork.Dispose();
         }
+    }
+
+    public async Task<TourGuideRequestResponseDto> CreateTourGuideRequestAsync(CreateTourGuideRequestDto model, CancellationToken cancellationToken = default)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentTime = _timeService.SystemTimeNow;
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId, cancellationToken);
+            if (user == null)
+            {
+                throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "User");
+            }
+
+            var existingTourGuide = await _unitOfWork.TourGuideRepository.GetByUserIdAsync(Guid.Parse(currentUserId));
+            if (existingTourGuide != null)
+            {
+                throw new CustomException(StatusCodes.Status400BadRequest, ResponseCodeConstants.BAD_REQUEST, "User is already a TourGuide");
+            }
+
+            var tourGuideRequest = new TourGuideRequest
+            {
+                UserId = Guid.Parse(currentUserId),
+                Introduction = model.Introduction,
+                Price = model.Price,
+                Status = TourGuideRequestStatus.Pending,
+                CreatedTime = currentTime,
+                LastUpdatedTime = currentTime,
+                CreatedBy = currentUserId,
+                LastUpdatedBy = currentUserId
+            };
+
+            foreach (var cert in model.Certifications)
+            {
+                tourGuideRequest.Certifications.Add(new TourGuideRequestCertification
+                {
+                    Name = cert.Name,
+                    CertificateUrl = cert.CertificateUrl,
+                    CreatedTime = currentTime,
+                    LastUpdatedTime = currentTime,
+                    CreatedBy = currentUserId,
+                    LastUpdatedBy = currentUserId
+                });
+            }
+
+            await _unitOfWork.TourGuideRequestRepository.AddAsync(tourGuideRequest);
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+
+            // Gửi email thông báo cho Moderator
+            var moderators = await _unitOfWork.UserRepository.GetUsersByRoleAsync(AppRole.MODERATOR);
+            foreach (var moderator in moderators)
+            {
+                await _emailService.SendEmailAsync(
+                   new[] { moderator.Email },
+                    "Có người dùng cần đăng ký role",
+                    "Có người dùng cần đăng ký role"
+                );
+            }
+
+            var response = new TourGuideRequestResponseDto
+            {
+                Id = tourGuideRequest.Id,
+                UserId = tourGuideRequest.UserId,
+                Email = tourGuideRequest.User.Email,
+                FullName = tourGuideRequest.User.FullName,
+                Introduction = tourGuideRequest.Introduction,
+                Price = tourGuideRequest.Price,
+                Status = tourGuideRequest.Status,
+                RejectionReason = tourGuideRequest.RejectionReason,
+                Certifications = tourGuideRequest.Certifications
+                .Select(c => new CertificationDto
+                {
+                    Name = c.Name,
+                    CertificateUrl = c.CertificateUrl
+                })
+                .ToList()
+            };
+
+            response.Email = user.Email;
+            response.FullName = user.FullName;
+            // response.Certifications = _mapper.Map<List<CertificationDto>>(tourGuideRequest.Certifications);
+
+            return response;
+
+        }
+        catch (CustomException)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<TourGuideRequestResponseDto>> GetTourGuideRequestsAsync(TourGuideRequestStatus? status, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var requests = await _unitOfWork.TourGuideRequestRepository
+                .ActiveEntities
+                .Where(x => x.Status == status)
+                .ToListAsync();
+            var response = new List<TourGuideRequestResponseDto>();
+
+            foreach (var request in requests)
+            {
+                var user = await _unitOfWork.UserRepository.GetByIdAsync(request.UserId, cancellationToken);
+                var requestDto = new TourGuideRequestResponseDto
+                {
+                    Id = request.Id,
+                    UserId = request.UserId,
+                    Email = request.User.Email,
+                    FullName = request.User.FullName,
+                    Introduction = request.Introduction,
+                    Price = request.Price,
+                    Status = request.Status,
+                    RejectionReason = request.RejectionReason,
+                    Certifications = request.Certifications
+                .Select(c => new CertificationDto
+                {
+                    Name = c.Name,
+                    CertificateUrl = c.CertificateUrl
+                })
+                .ToList()
+                };
+                requestDto.Email = user?.Email ?? string.Empty;
+                requestDto.FullName = user?.FullName ?? string.Empty;
+                // requestDto.Certifications = _mapper.Map<List<CertificationDto>>(request.Certifications);
+                response.Add(requestDto);
+            }
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<TourGuideRequestResponseDto> ReviewTourGuideRequestAsync(Guid requestId, ReviewTourGuideRequestDto model, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentTime = _timeService.SystemTimeNow;
+
+            var request = await _unitOfWork.TourGuideRequestRepository.GetByIdAsync(requestId, cancellationToken);
+            if (request == null)
+            {
+                throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "TourGuide request not found");
+            }
+
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(request.UserId, cancellationToken);
+            if (user == null)
+            {
+                throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "User not found");
+            }
+
+            request.Status = model.Status;
+            request.ReviewedAt = currentTime;
+            request.ReviewedBy = Guid.Parse(currentUserId);
+            request.LastUpdatedTime = currentTime;
+            request.LastUpdatedBy = currentUserId;
+
+            if (model.Status == TourGuideRequestStatus.Rejected)
+            {
+                request.RejectionReason = model.RejectionReason;
+            }
+            else if (model.Status == TourGuideRequestStatus.Approved)
+            {
+                var tourGuide = new TourGuide
+                {
+                    UserId = request.UserId,
+                    Rating = 0,
+                    Price = request.Price,
+                    Introduction = request.Introduction,
+                    CreatedTime = currentTime,
+                    LastUpdatedTime = currentTime,
+                    CreatedBy = currentUserId,
+                    LastUpdatedBy = currentUserId
+                };
+
+                foreach (var cert in request.Certifications)
+                {
+                    tourGuide.Certifications.Add(new Certification
+                    {
+                        Name = cert.Name,
+                        CertificateUrl = cert.CertificateUrl,
+                        CreatedTime = currentTime,
+                        LastUpdatedBy = currentUserId,
+                        CreatedBy = currentUserId,
+                        LastUpdatedTime = currentTime
+                    });
+                }
+
+                await _unitOfWork.TourGuideRepository.AddAsync(tourGuide);
+
+                // Gán vai trò TourGuide
+                var role = await _unitOfWork.RoleRepository.GetByNameAsync("TourGuide");
+                if (role == null)
+                {
+                    throw new CustomException(StatusCodes.Status400BadRequest, ResponseCodeConstants.BAD_REQUEST, "TourGuide role not found");
+                }
+
+                var userRole = new UserRole
+                {
+                    UserId = request.UserId,
+                    RoleId = role.Id
+                };
+                await _unitOfWork.UserRoleRepository.AddAsync(userRole);
+            }
+
+            _unitOfWork.TourGuideRequestRepository.Update(request);
+            await _unitOfWork.SaveAsync();
+
+            await _emailService.SendEmailAsync(
+                new[] { user.Email },
+                $"Nâng cấp role thành công Tour guide",
+                $"Tour guide"
+            );
+
+            var response = MapToTourGuideRequestResponseDto(request, user);
+            response.Email = user.Email;
+            response.FullName = user.FullName;
+            // response.Certifications = _mapper.Map<List<CertificationDto>>(request.Certifications);
+
+            return response;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<CraftVillageRequestResponseDto> CreateCraftVillageRequestAsync(CreateCraftVillageRequestDto model, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(Guid.Parse(currentUserId), cancellationToken);
+            if (user == null)
+            {
+                throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "User not found");
+            }
+
+            var existingCraftVillage = await _unitOfWork.CraftVillageRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(cv => cv.OwnerId == user.Id);
+            if (existingCraftVillage != null)
+            {
+                throw new CustomException(StatusCodes.Status400BadRequest, ResponseCodeConstants.BAD_REQUEST, "User is already associated with a CraftVillage");
+            }
+
+            var craftVillageRequest = new CraftVillageRequest
+            {
+                Name = model.Name,
+                Description = model.Description,
+                Content = model.Content,
+                Address = model.Address,
+                Latitude = model.Latitude,
+                Longitude = model.Longitude,
+                OpenTime = model.OpenTime,
+                CloseTime = model.CloseTime,
+                DistrictId = model.DistrictId,
+                PhoneNumber = model.PhoneNumber,
+                Email = model.Email,
+                Website = model.Website,
+                OwnerId = user.Id,
+                WorkshopsAvailable = model.WorkshopsAvailable,
+                SignatureProduct = model.SignatureProduct,
+                YearsOfHistory = model.YearsOfHistory,
+                IsRecognizedByUnesco = model.IsRecognizedByUnesco,
+                Status = CraftVillageRequestStatus.Pending,
+                CreatedTime = DateTimeOffset.UtcNow,
+                LastUpdatedTime = DateTimeOffset.UtcNow,
+                CreatedBy = currentUserId,
+                LastUpdatedBy = currentUserId
+            };
+
+            await _unitOfWork.CraftVillageRequestRepository.AddAsync(craftVillageRequest);
+            await _unitOfWork.SaveAsync();
+
+            var moderators = await _unitOfWork.UserRepository.GetUsersByRoleAsync(AppRole.MODERATOR);
+            foreach (var moderator in moderators)
+            {
+                await _emailService.SendEmailAsync(
+                    new[] { moderator.Email },
+                    "Yêu cầu duyệt làng nghề",
+                    "Yêu cầu duyệt làng nghề"
+                );
+            }
+
+            var response = MapToCraftVillageRequestResponseDto(craftVillageRequest, user);
+
+            return response;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<CraftVillageRequestResponseDto>> GetCraftVillageRequestsAsync(Guid? id, CraftVillageRequestStatus? status, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var query = _unitOfWork.CraftVillageRequestRepository
+                .ActiveEntities
+                .AsQueryable();
+
+            if (id.HasValue)
+            {
+                query = query.Where(x => x.Id == id);
+            }
+            else if (status.HasValue)
+            {
+                query = query.Where(x => x.Status == status);
+            }
+
+            var requests = await query.ToListAsync(cancellationToken);
+            var response = new List<CraftVillageRequestResponseDto>();
+
+            foreach (var request in requests)
+            {
+                var user = await _unitOfWork.UserRepository.GetByIdAsync(request.OwnerId, cancellationToken);
+                var requestDto = MapToCraftVillageRequestResponseDto(request, user);
+                // requestDto.OwnerEmail = user.Email ?? string.Empty;
+                // requestDto.OwnerFullName = user.FullName ?? string.Empty;
+                response.Add(requestDto);
+            }
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<CraftVillageRequestResponseDto> ReviewCraftVillageRequestAsync(Guid requestId, ReviewCraftVillageRequestDto model, string moderatorId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+
+            var request = await _unitOfWork.CraftVillageRequestRepository.GetByIdAsync(requestId, cancellationToken);
+            if (request == null)
+            {
+                throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "CraftVillage request not found");
+            }
+
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(request.OwnerId, cancellationToken);
+            if (user == null)
+            {
+                throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "User not found");
+            }
+
+            request.Status = model.Status;
+            request.ReviewedAt = DateTimeOffset.UtcNow;
+            request.ReviewedBy = currentUserId;
+            request.LastUpdatedTime = DateTimeOffset.UtcNow;
+            request.LastUpdatedBy = currentUserId;
+            if (model.Status == CraftVillageRequestStatus.Approved)
+            {
+                var location = new Location
+                {
+                    Name = request.Name,
+                    LocationType = LocationType.CraftVillage,
+                    Latitude = request.Latitude,
+                    Longitude = request.Longitude,
+                    Address = request.Address,
+                    DistrictId = request.DistrictId,
+                    CreatedTime = DateTimeOffset.UtcNow,
+                    LastUpdatedTime = DateTimeOffset.UtcNow,
+                    CreatedBy = currentUserId,
+                    LastUpdatedBy = currentUserId
+                };
+
+                await _unitOfWork.LocationRepository.AddAsync(location);
+
+                var craftVillage = new CraftVillage
+                {
+                    PhoneNumber = request.PhoneNumber,
+                    Email = request.Email,
+                    Website = request.Website,
+                    LocationId = location.Id,
+                    OwnerId = request.OwnerId,
+                    WorkshopsAvailable = request.WorkshopsAvailable,
+                    SignatureProduct = request.SignatureProduct,
+                    YearsOfHistory = request.YearsOfHistory,
+                    IsRecognizedByUnesco = request.IsRecognizedByUnesco,
+                    CreatedTime = DateTimeOffset.UtcNow,
+                    LastUpdatedTime = DateTimeOffset.UtcNow,
+                    CreatedBy = moderatorId,
+                    LastUpdatedBy = moderatorId
+                };
+
+                await _unitOfWork.CraftVillageRepository.AddAsync(craftVillage);
+
+                var role = await _unitOfWork.RoleRepository.GetByNameAsync("CraftVillage");
+                if (role == null)
+                {
+                    throw new CustomException(StatusCodes.Status400BadRequest, ResponseCodeConstants.BAD_REQUEST, "CraftVillage role not found");
+                }
+
+                var userRole = new UserRole
+                {
+                    UserId = request.OwnerId,
+                    RoleId = role.Id
+                };
+                await _unitOfWork.UserRoleRepository.AddAsync(userRole);
+            }
+
+            _unitOfWork.CraftVillageRequestRepository.Update(request);
+            await _unitOfWork.SaveAsync();
+
+            await _emailService.SendEmailAsync(
+                    new[] { user.Email },
+                    "Yêu cầu duyệt làng nghề được chấp nhận",
+                    "Yêu cầu duyệt làng nghề được chấp nhận"
+                );
+
+            var response = MapToCraftVillageRequestResponseDto(request, user);
+            response.OwnerEmail = user.Email;
+            response.OwnerFullName = user.FullName;
+
+            return response;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<CraftVillageRequestResponseDto> GetCraftVillageRequestAsync(string requestId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var request = await _unitOfWork.CraftVillageRequestRepository.GetByIdAsync(requestId, cancellationToken);
+            if (request == null)
+            {
+                throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "CraftVillage request not found");
+            }
+
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(request.OwnerId, cancellationToken);
+            var response = MapToCraftVillageRequestResponseDto(request, user);
+            response.OwnerEmail = user?.Email ?? string.Empty;
+            response.OwnerFullName = user?.FullName ?? string.Empty;
+
+            return response;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public TourGuideRequestResponseDto MapToTourGuideRequestResponseDto(TourGuideRequest tourGuideRequest, User user)
+    {
+        return new TourGuideRequestResponseDto
+        {
+            Id = tourGuideRequest.Id,
+            UserId = tourGuideRequest.UserId,
+            Email = user.Email,
+            FullName = user.FullName,
+            Introduction = tourGuideRequest.Introduction,
+            Price = tourGuideRequest.Price,
+            Status = tourGuideRequest.Status,
+            RejectionReason = tourGuideRequest.RejectionReason,
+            Certifications = tourGuideRequest.Certifications.Select(c => new CertificationDto
+            {
+                Name = c.Name,
+                CertificateUrl = c.CertificateUrl
+            }).ToList()
+        };
+    }
+
+    public CraftVillageRequestResponseDto MapToCraftVillageRequestResponseDto(CraftVillageRequest request, User user)
+    {
+        return new CraftVillageRequestResponseDto
+        {
+            Id = request.Id,
+            OwnerId = request.OwnerId,
+            OwnerEmail = user.Email,
+            OwnerFullName = user.FullName,
+            Name = request.Name,
+            Description = request.Description,
+            Content = request.Content,
+            Address = request.Address,
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
+            OpenTime = request.OpenTime,
+            CloseTime = request.CloseTime,
+            DistrictId = request.DistrictId,
+            PhoneNumber = request.PhoneNumber,
+            Email = request.Email,
+            Website = request.Website,
+            WorkshopsAvailable = request.WorkshopsAvailable,
+            SignatureProduct = request.SignatureProduct,
+            YearsOfHistory = request.YearsOfHistory,
+            IsRecognizedByUnesco = request.IsRecognizedByUnesco,
+            Status = request.Status,
+            RejectionReason = request.RejectionReason,
+            ReviewedAt = request.ReviewedAt,
+            ReviewedBy = request.ReviewedBy
+        };
+    }
+
+
+    private string GenerateRandomPassword()
+    {
+        const string validChars = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
+        var random = new Random();
+        var password = new StringBuilder();
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            byte[] bytes = new byte[12];
+            rng.GetBytes(bytes);
+            foreach (var b in bytes)
+            {
+                password.Append(validChars[b % validChars.Length]);
+            }
+        }
+        return password.ToString();
     }
 }

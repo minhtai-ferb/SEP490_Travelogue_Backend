@@ -37,8 +37,8 @@ public sealed class NewsMediaRepository : GenericRepository<NewsMedia>, INewsMed
             {
                 return Task.FromResult<NewsMedia?>(null);
             }
-            var events = _context.NewsMedias.FirstOrDefaultAsync(a => a.FileName != null && a.FileName.Contains(title), cancellationToken);
-            return events;
+            var newsMedias = _context.NewsMedias.FirstOrDefaultAsync(a => a.FileName != null && a.FileName.Contains(title), cancellationToken);
+            return newsMedias;
         }
         catch (CustomException)
         {

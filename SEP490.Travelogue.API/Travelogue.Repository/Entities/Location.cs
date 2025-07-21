@@ -30,9 +30,6 @@ public sealed class Location : BaseEntity
     public Cuisine? Cuisine { get; set; }
     public District? District { get; set; }
     public LocationType LocationType { get; set; }
-    // public ICollection<LocationTypeMapping> LocationTypes { get; set; } = new List<LocationTypeMapping>();
-    public ICollection<Experience> Experiences { get; set; } = new List<Experience>();
-    public ICollection<Event> Activities { get; set; } = new List<Event>();
     public ICollection<LocationMedia> LocationMedias { get; set; } = new List<LocationMedia>();
     public ICollection<TripPlanLocation> TripPlanLocations { get; set; } = new List<TripPlanLocation>();
     public ICollection<FavoriteLocation> FavoriteLocations { get; set; } = new List<FavoriteLocation>();

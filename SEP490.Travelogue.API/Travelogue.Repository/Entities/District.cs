@@ -10,7 +10,5 @@ public sealed class District : BaseEntity
     public string? FileKey { get; set; }
     public string? Description { get; set; }
     public float? Area { get; set; }
-    public ICollection<Event>? Events { get; set; }
-    public ICollection<Experience>? Experiences { get; set; }
     public ICollection<Location>? Locations { get; set; }
 }

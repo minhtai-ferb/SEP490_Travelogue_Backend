@@ -259,7 +259,7 @@ public class TourGuideService : ITourGuideService
 
             if (tourGuide == null)
             {
-                return null; // Hoặc ném một ngoại lệ nếu cần
+                return null;
             }
 
             var tourGuideDetailResponse = _mapper.Map<TourGuideDataModel>(tourGuide);

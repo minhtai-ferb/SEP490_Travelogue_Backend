@@ -89,35 +89,13 @@ public class OrderService : IOrderService
             }
             else
             {
-                // Custom trip plan: Validate trip plan version
-                var bookingRequest = await _unitOfWork.TripPlanExchangeRepository
-                    .ActiveEntities
-                    .Include(b => b.Session)
-                    .FirstOrDefaultAsync(
-                        b => b.SuggestedTripPlanVersionId == request.TripPlanVersionId
-                        && b.TourGuideId == request.TourGuideId,
-                        cancellationToken)
-                    ?? throw CustomExceptionFactory.CreateNotFoundError("Booking request not found for the specified trip plan version and tour guide.");
+                var tripPlan = await _unitOfWork.TripPlanRepository.GetAsync(
+                    tp => tp.Id == request.TripPlanId,
+                    cancellationToken: cancellationToken)
+                    ?? throw CustomExceptionFactory.CreateNotFoundError("Trip plan not found.");
 
-                // Check if the user sent this booking request
-                if (bookingRequest.UserId != Guid.Parse(currentUserId))
-                {
-                    throw CustomExceptionFactory.CreateBadRequestError("You are not the user who sent this booking request.");
-                }
 
-                if (bookingRequest.Session.FinalStatus != ExchangeSessionStatus.AcceptedByUser)
-                    throw CustomExceptionFactory.CreateBadRequestError("This booking request has not been accepted by the user yet.");
-
-                var tripPlanVersion = await _unitOfWork.TripPlanVersionRepository.GetAsync(
-                    tp => tp.Id == request.TripPlanVersionId,
-                    q => q.Include(tp => tp.TripPlan),
-                    cancellationToken)
-                    ?? throw CustomExceptionFactory.CreateNotFoundError("Trip plan version not found.");
-
-                if (tripPlanVersion.TripPlan == null)
-                    throw CustomExceptionFactory.CreateNotFoundError("Trip plan not found for the specified trip plan version.");
-
-                int tripTotalDays = (int)(tripPlanVersion.TripPlan.EndDate.Date - tripPlanVersion.TripPlan.StartDate.Date).TotalDays + 1;
+                int tripTotalDays = (int)(tripPlan.EndDate.Date - tripPlan.StartDate.Date).TotalDays + 1;
 
                 if (tripTotalDays <= 0)
                     throw CustomExceptionFactory.CreateBadRequestError("Total days must be greater than zero for custom trip plans.");

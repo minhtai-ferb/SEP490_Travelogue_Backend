@@ -10,8 +10,8 @@ public class TourDetailsResponseDto
     public string? Description { get; set; }
     public string? Content { get; set; }
     public int TotalDays { get; set; }
-    public Guid TourTypeId { get; set; }
-    public string? TourTypeName { get; set; }
+    public TourType? TourType { get; set; }
+    public string? TourTypeText { get; set; }
     public string? TotalDaysText { get; set; }
     public decimal AdultPrice { get; set; }
     public decimal ChildrenPrice { get; set; }

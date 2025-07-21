@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using Travelogue.Repository.Bases.BaseEntities;
 using Travelogue.Repository.Entities.Enums;
 
@@ -18,11 +17,9 @@ public sealed class Tour : BaseEntity
 
     public TourStatus Status { get; set; } = TourStatus.Draft;
 
-    [Required]
-    public Guid TourTypeId { get; set; }
     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     public ICollection<TourPlanLocation> TourPlanLocations { get; set; } = new List<TourPlanLocation>();
-    public TourType TourType { get; set; } = default!;
+    public TourType? TourType { get; set; }
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
     public ICollection<TourGroup> TourGroups { get; set; } = new List<TourGroup>();
     public ICollection<TourSchedule> TourSchedules { get; set; } = new List<TourSchedule>();
@@ -30,4 +27,5 @@ public sealed class Tour : BaseEntity
 
     public ICollection<TourGuideMapping> TourGuideMappings { get; set; } = new List<TourGuideMapping>();
     public ICollection<PromotionApplicable> PromotionApplicables { get; set; } = new List<PromotionApplicable>();
+    public ICollection<TourInterest> TourInterests { get; set; } = new List<TourInterest>();
 }

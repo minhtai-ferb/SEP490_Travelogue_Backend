@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Service.BusinessModels.TourModels;
 
@@ -14,6 +15,5 @@ public class CreateTourDto
     [Range(1, int.MaxValue)]
     public int TotalDays { get; set; }
 
-    [Required]
-    public Guid TourTypeId { get; set; }
+    public TourType TourType { get; set; }
 }

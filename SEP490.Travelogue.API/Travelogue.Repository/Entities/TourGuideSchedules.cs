@@ -18,5 +18,5 @@ public sealed class TourGuideSchedule : BaseEntity
     // Navigation property
     public TourGuide TourGuide { get; set; } = null!;
 
-    public Booking Booking { get; set; }
+    public Booking? Booking { get; set; }
 }

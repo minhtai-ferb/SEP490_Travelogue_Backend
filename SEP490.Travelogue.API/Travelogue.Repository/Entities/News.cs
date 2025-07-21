@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Travelogue.Repository.Bases.BaseEntities;
+using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Repository.Entities;
 
@@ -14,10 +15,6 @@ public sealed class News : BaseEntity
     public Guid? LocationId { get; set; }
     public Location? Location { get; set; }
 
-    public Guid? EventId { get; set; }
-    public Event? Event { get; set; }
-
-    public Guid? NewsCategoryId { get; set; }
     public NewsCategory? NewsCategory { get; set; }
 
     public bool IsHighlighted { get; set; } = false;

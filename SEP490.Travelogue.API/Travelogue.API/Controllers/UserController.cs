@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Travelogue.Repository.Bases.Responses;
+using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.TourGuideModels;
+using Travelogue.Service.BusinessModels.UserModels;
 using Travelogue.Service.BusinessModels.UserModels.Requests;
 using Travelogue.Service.BusinessModels.UserModels.Responses;
 using Travelogue.Service.Commons.BaseResponses;
@@ -90,9 +93,9 @@ public class UserController : ControllerBase
     /// </summary>
     /// <returns></returns>
     [HttpGet]
-    public async Task<IActionResult> GetAllUsers()
+    public async Task<IActionResult> GetAllUsers(string? searchFullName = null, string? role = null)
     {
-        var users = await _userService.GetAllUsersAsync();
+        var users = await _userService.GetAllUsersAsync(searchFullName, role);
         return Ok(ResponseModel<List<UserResponseModel>>.OkResponseModel(
             data: users,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "user")
@@ -152,4 +155,65 @@ public class UserController : ControllerBase
             pageNumber: pageNumber
         ));
     }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateUser([FromBody] CreateUserDto model)
+    {
+        var result = await _userService.CreateUserAsync(model);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "user")
+        ));
+    }
+
+    [HttpPut("{userId}/role")]
+    public async Task<IActionResult> AssignModeratorRole(Guid userId, [FromBody] UpdateUserRoleDto model)
+    {
+        var result = await _userService.AssignModeratorRoleAsync(userId, model);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "user")
+        ));
+    }
+
+    [HttpPost("tour-guide-request")]
+    public async Task<IActionResult> CreateTourGuideRequest([FromBody] CreateTourGuideRequestDto model, CancellationToken cancellationToken = default)
+    {
+        var result = await _userService.CreateTourGuideRequestAsync(model, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "user")
+        ));
+    }
+
+    [HttpGet("tour-guide-request")]
+    public async Task<IActionResult> GetTourGuideRequests([FromQuery] TourGuideRequestStatus? status, CancellationToken cancellationToken = default)
+    {
+        var result = await _userService.GetTourGuideRequestsAsync(status, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "user")
+        ));
+    }
+
+    [HttpPut("{requestId}/review")]
+    public async Task<IActionResult> ReviewTourGuideRequest(Guid requestId, [FromBody] ReviewTourGuideRequestDto model, CancellationToken cancellationToken = default)
+    {
+        var result = await _userService.ReviewTourGuideRequestAsync(requestId, model, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "user")
+        ));
+    }
+
+    // [HttpGet("{requestId}")]
+    // public async Task<IActionResult> GetTourGuideRequest(Guid requestId, CancellationToken cancellationToken = default)
+    // {
+    //     var result = await _userService.GetTourGuideRequestsAsync(requestId, cancellationToken); // Giả định có phương thức này
+    //     if (result == null)
+    //     {
+    //         return NotFound(new { Message = "TourGuide request not found" });
+    //     }
+    //     return Ok(result);
+    // }
 }

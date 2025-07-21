@@ -1,4 +1,5 @@
-﻿using Travelogue.Service.BusinessModels.MediaModel;
+﻿using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.MediaModel;
 
 namespace Travelogue.Service.BusinessModels.NewsModels;
 
@@ -12,10 +13,7 @@ public class NewsDataDetailModel : BaseDataModel
     public Guid? LocationId { get; set; }
     public string? LocationName { get; set; }
 
-    public Guid? EventId { get; set; }
-    public string? EventName { get; set; }
-
-    public Guid? NewsCategoryId { get; set; }
+    public NewsCategory? NewsCategory { get; set; }
     public string? CategoryName { get; set; }
     public bool IsHighlighted { get; set; }
 
@@ -32,10 +30,7 @@ public class RelatedNewsModel
     public Guid? LocationId { get; set; }
     public string? LocationName { get; set; }
 
-    public Guid? EventId { get; set; }
-    public string? EventName { get; set; }
-
-    public Guid? NewsCategoryId { get; set; }
+    public NewsCategory NewsCategory { get; set; }
     public string? CategoryName { get; set; }
     public List<MediaResponse> Medias { get; set; } = new List<MediaResponse>();
 }

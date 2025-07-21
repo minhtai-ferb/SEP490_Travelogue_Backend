@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
 namespace Travelogue.Service.BusinessModels.TripPlanModels;
+
 public class TripPlanCreateModel
 {
     [Required, MaxLength(100)]
