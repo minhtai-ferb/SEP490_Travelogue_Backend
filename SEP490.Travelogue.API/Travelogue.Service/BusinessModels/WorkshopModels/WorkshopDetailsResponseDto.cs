@@ -19,8 +19,8 @@ public class WorkshopDetailsResponseDto
             return Status switch
             {
                 WorkshopStatus.Draft => "Draft",
-                WorkshopStatus.Confirmed => "Confirmed",
-                WorkshopStatus.Cancelled => "Cancelled",
+                WorkshopStatus.Approved => "Confirmed",
+                WorkshopStatus.Rejected => "Cancelled",
                 _ => "Unknown"
             };
         }

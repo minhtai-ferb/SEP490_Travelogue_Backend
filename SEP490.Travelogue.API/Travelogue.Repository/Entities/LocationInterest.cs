@@ -1,13 +1,12 @@
-﻿using Travelogue.Repository.Bases.BaseEntities;
+using Travelogue.Repository.Bases.BaseEntities;
+using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Repository.Entities;
 
 public sealed class LocationInterest : BaseEntity
 {
     public Guid LocationId { get; set; }
-    public Guid InterestId { get; set; }
+    public Location Location { get; set; } = null!;
 
-    public Interest? Interest { get; set; }
-    public Location? Location { get; set; }
+    public Interest Interest { get; set; }
 }
-

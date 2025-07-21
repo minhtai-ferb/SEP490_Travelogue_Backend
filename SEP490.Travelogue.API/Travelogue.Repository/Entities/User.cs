@@ -21,9 +21,6 @@ public sealed class User : BaseEntity
     public string? EmailCode { get; set; }
     public string? AvatarUrl { get; set; }
 
-    public Guid? CraftVillageId { get; set; }
-    public CraftVillage CraftVillage { get; set; }
-
     public Gender Sex { get; set; }
 
     [StringLength(200)]
@@ -82,8 +79,51 @@ public sealed class User : BaseEntity
         return PasswordHash.SequenceEqual(hashed);
     }
 
-    // Navigation properties
+    // public void SetPassword(string password)
+    // {
+    //     var passwordSalt = new byte[0];
+    //     var passwordHash = new byte[0];
 
+    //     using (var hmac = new HMACSHA512())
+    //     {
+    //         passwordSalt = hmac.Key;
+    //         passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+    //     }
+
+    //     PasswordSalt = passwordSalt;
+    //     PasswordHash = passwordHash;
+
+    //     //using var rng = RandomNumberGenerator.Create();
+    //     //var saltBytes = new byte[16];
+    //     //rng.GetBytes(saltBytes);
+    //     //PasswordSalt = saltBytes;
+
+    //     //PasswordHash = KeyDerivation.Pbkdf2(
+    //     //    password: password,
+    //     //    salt: saltBytes,
+    //     //    prf: KeyDerivationPrf.HMACSHA256,
+    //     //    iterationCount: 10000,
+    //     //    numBytesRequested: 32);
+    // }
+
+    // public bool VerifyPassword(string password)
+    // {
+    //     if (PasswordSalt == null || PasswordHash == null)
+    //     {
+    //         return false;
+    //     }
+
+    //     var hashed = KeyDerivation.Pbkdf2(
+    //         password: password,
+    //         salt: PasswordSalt,
+    //         prf: KeyDerivationPrf.HMACSHA256,
+    //         iterationCount: 10000,
+    //         numBytesRequested: 32);
+
+    //     return PasswordHash.SequenceEqual(hashed);
+    // }
+
+    // Navigation properties
     public ICollection<TripPlan> TripPlans { get; set; } = new List<TripPlan>();
     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     public ICollection<Report> Reports { get; set; } = new List<Report>();
@@ -92,16 +132,5 @@ public sealed class User : BaseEntity
     public ICollection<TourGuide> TourGuides { get; set; } = new List<TourGuide>();
     public ICollection<Message> SentMessages { get; set; } = new List<Message>();
     public ICollection<Message> ReceivedMessages { get; set; } = new List<Message>();
-    public ICollection<UserInterest> UserInterests { get; set; } = new List<UserInterest>();
     public ICollection<UserAnnouncement> UserAnnouncements { get; set; } = new List<UserAnnouncement>();
-
-    // Base Entity
-    //public DateTimeOffset CreatedTime { get; set; }
-    //public DateTimeOffset LastUpdatedTime { get; set; }
-    //public DateTimeOffset? DeletedTime { get; set; }
-    //public required string CreatedBy { get; set; } = string.Empty;
-    //public required string LastUpdatedBy { get; set; } = string.Empty;
-    //public string? DeletedBy { get; set; }
-    //public bool IsActive { get; set; }
-    //public bool IsDeleted { get; set; }
 }

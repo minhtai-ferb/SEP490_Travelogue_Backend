@@ -11,7 +11,6 @@ public sealed class Booking : BaseEntity
     public Guid? TourScheduleId { get; set; }
     public Guid? TourGuideId { get; set; }
     public Guid UserId { get; set; }
-    public Guid? TripPlanVersionId { get; set; }
     public Guid TourVersionId { get; set; }
     public string? PaymentLinkId { get; set; }
 
@@ -48,7 +47,6 @@ public sealed class Booking : BaseEntity
     public TourGuide? TourGuide { get; set; }
     public Workshop? Workshop { get; set; }
     public TripPlan? TripPlan { get; set; }
-    public TripPlanVersion? TripPlanVersion { get; set; }
     public TourSchedule? TourSchedule { get; set; }
 
     [ForeignKey("PromotionId")]

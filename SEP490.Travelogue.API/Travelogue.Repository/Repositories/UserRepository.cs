@@ -9,6 +9,7 @@ namespace Travelogue.Repository.Repositories;
 
 public interface IUserRepository : IGenericRepository<User>
 {
+    Task<List<User>> GetUsersByRoleAsync(string roleName);
     Task<IEnumerable<User>> GetUsersByFullNameAsync(string fullName);
     Task<string> GetUserEmailByIdAsync(string userId);
     Task UpdateAsync(User user);
@@ -289,6 +290,33 @@ public class UserRepository : GenericRepository<User>, IUserRepository
                 return null;
             }
             return user;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<User>> GetUsersByRoleAsync(string roleName)
+    {
+        try
+        {
+            var users = await _context.Users
+                .Where(u => !u.IsDeleted)
+                .Join(_context.UserRoles,
+                      u => u.Id,
+                      ur => ur.UserId,
+                      (u, ur) => new { User = u, UserRole = ur })
+                .Join(_context.Roles,
+                      u_ur => u_ur.UserRole.RoleId,
+                      r => r.Id,
+                      (u_ur, r) => new { User = u_ur.User, Role = r })
+                .Where(u_r => u_r.Role.Name.Equals(roleName, StringComparison.OrdinalIgnoreCase))
+                .Select(u_r => u_r.User)
+                .Distinct()
+                .ToListAsync();
+
+            return users;
         }
         catch (Exception ex)
         {

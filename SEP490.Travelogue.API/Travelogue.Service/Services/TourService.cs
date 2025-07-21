@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.TourGuideModels;
 using Travelogue.Service.BusinessModels.TourModels;
+using Travelogue.Service.BusinessModels.WorkshopModels;
 using Travelogue.Service.Commons.Implementations;
 
 namespace Travelogue.Service.Services;
@@ -26,17 +28,24 @@ public interface ITourService
 
     Task AddTourGuidesAsync(Guid tourId, List<Guid> guideIds);
     Task RemoveTourGuideAsync(Guid tourId, Guid guideId);
+
+    Task<List<TourMedia>> AddTourMediasAsync(Guid tourId, List<TourMediaCreateDto> createDtos);
+    Task<bool> DeleteTourMediaAsync(Guid tourMediaId);
+
+    Task<PagedResult<TourResponseDto>> GetPagedToursByGuideEmailAsync(string email, int pageNumber, int pageSize, CancellationToken cancellationToken);
 }
 
 public class TourService : ITourService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IEmailService _emailService;
+    private readonly IEnumService _enumService;
 
-    public TourService(IUnitOfWork unitOfWork, IEmailService emailService)
+    public TourService(IUnitOfWork unitOfWork, IEmailService emailService, IEnumService enumService)
     {
         _unitOfWork = unitOfWork;
         _emailService = emailService;
+        _enumService = enumService;
     }
 
     public async Task<TourResponseDto> CreateTourAsync(CreateTourDto dto)
@@ -45,15 +54,8 @@ public class TourService : ITourService
         {
             if (string.IsNullOrWhiteSpace(dto.Name))
                 throw CustomExceptionFactory.CreateBadRequestError("Tên tour là bắt buộc.");
-            if (dto.TourTypeId == Guid.Empty)
-                throw CustomExceptionFactory.CreateBadRequestError("Mã loại tour là bắt buộc.");
             if (dto.TotalDays <= 0)
                 throw CustomExceptionFactory.CreateBadRequestError("Số ngày phải lớn hơn 0.");
-
-            var tourType = await _unitOfWork.TourTypeRepository
-                .ActiveEntities
-                .FirstOrDefaultAsync(t => t.Id == dto.TourTypeId)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Tour type");
 
             var tour = new Tour
             {
@@ -61,7 +63,7 @@ public class TourService : ITourService
                 Description = dto.Description,
                 Content = dto.Content,
                 TotalDays = dto.TotalDays,
-                TourTypeId = dto.TourTypeId,
+                TourType = dto.TourType,
                 Status = TourStatus.Draft
             };
 
@@ -75,8 +77,8 @@ public class TourService : ITourService
                 Description = dto.Description,
                 Content = dto.Content,
                 TotalDays = dto.TotalDays,
-                TourTypeId = dto.TourTypeId,
-                TourTypeText = tourType.Name,
+                TourType = dto.TourType,
+                TourTypeText = _enumService.GetEnumDisplayName(dto.TourType),
                 Status = tour.Status
             };
         }
@@ -96,26 +98,22 @@ public class TourService : ITourService
         {
             if (string.IsNullOrWhiteSpace(dto.Name))
                 throw CustomExceptionFactory.CreateBadRequestError("Tên tour là bắt buộc.");
-            if (dto.TourTypeId == Guid.Empty)
-                throw CustomExceptionFactory.CreateBadRequestError("Mã loại tour là bắt buộc.");
             if (dto.TotalDays <= 0)
                 throw CustomExceptionFactory.CreateBadRequestError("Số ngày phải lớn hơn 0.");
 
             var tour = await _unitOfWork.TourRepository
                 .ActiveEntities
                 .Include(t => t.Bookings)
-                .ThenInclude(b => b.User)
+                    .ThenInclude(b => b.User)
                 .Include(t => t.TourPlanLocations)
                 .FirstOrDefaultAsync(t => t.Id == tourId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Tour");
 
-            var tourType = await _unitOfWork.TourTypeRepository
-                .ActiveEntities
-                .FirstOrDefaultAsync(t => t.Id == dto.TourTypeId)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Tour type");
-
             if (tour.Status == TourStatus.Cancelled)
                 throw CustomExceptionFactory.CreateBadRequestError("Không thể cập nhật tour đã bị hủy.");
+
+            if (tour.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
+                throw CustomExceptionFactory.CreateBadRequestError("Không thể cập nhật tour đã có người đặt.");
 
             // Validate TotalDays
             var maxDayOrder = tour.TourPlanLocations.Any() ? tour.TourPlanLocations.Max(l => l.DayOrder) : 0;
@@ -129,7 +127,7 @@ public class TourService : ITourService
             tour.Name = dto.Name;
             tour.Description = dto.Description;
             tour.Content = dto.Content;
-            tour.TourTypeId = dto.TourTypeId;
+            tour.TourType = dto.TourType;
             tour.TotalDays = dto.TotalDays;
             tour.LastUpdatedTime = DateTimeOffset.UtcNow;
 
@@ -139,18 +137,18 @@ public class TourService : ITourService
                 {
                     await _unitOfWork.SaveAsync();
 
-                    if (tour.Bookings.Any(b => b.Status == BookingStatus.Confirmed) && changes.Any())
-                    {
-                        var changeSummary = string.Join("\n", changes);
-                        foreach (var booking in tour.Bookings)
-                        {
-                            await _emailService.SendEmailAsync(
-                                new[] { booking.User.Email },
-                                $"Cập nhật thông tin Tour {tour.Name}",
-                                $"Tour {tour.Name} đã có các thay đổi sau:\n{changeSummary}\nVui lòng kiểm tra chi tiết."
-                            );
-                        }
-                    }
+                    // if (tour.Bookings.Any(b => b.Status == BookingStatus.Confirmed) && changes.Any())
+                    // {
+                    //     var changeSummary = string.Join("\n", changes);
+                    //     foreach (var booking in tour.Bookings)
+                    //     {
+                    //         await _emailService.SendEmailAsync(
+                    //             new[] { booking.User.Email },
+                    //             $"Cập nhật thông tin Tour {tour.Name}",
+                    //             $"Tour {tour.Name} đã có các thay đổi sau:\n{changeSummary}\nVui lòng kiểm tra chi tiết."
+                    //         );
+                    //     }
+                    // }
 
                     await transaction.CommitAsync();
                 }
@@ -167,7 +165,7 @@ public class TourService : ITourService
                 Name = dto.Name,
                 Description = dto.Description,
                 Content = dto.Content,
-                TourTypeId = dto.TourTypeId,
+                TourType = dto.TourType,
                 TotalDays = dto.TotalDays,
                 Status = tour.Status
             };
@@ -255,7 +253,6 @@ public class TourService : ITourService
         {
             var tours = await _unitOfWork.TourRepository
                 .ActiveEntities
-                .Include(t => t.TourType)
                 .Include(t => t.TourPlanLocations)
                     .ThenInclude(l => l.Location)
                 .Include(t => t.TourSchedules)
@@ -299,8 +296,10 @@ public class TourService : ITourService
                     Content = tour.Content,
                     TotalDays = tour.TotalDays,
                     TotalDaysText = tour.TotalDays == 1 ? "1 ngày" : $"{tour.TotalDays} ngày {tour.TotalDays - 1} đêm",
-                    TourTypeId = tour.TourTypeId,
-                    TourTypeText = tour.TourType?.Name ?? "Unknown",
+                    TourType = tour.TourType,
+                    TourTypeText = tour.TourType != null
+                        ? _enumService.GetEnumDisplayName(tour.TourType.Value)
+                        : null,
                     AdultPrice = adultPrice,
                     ChildrenPrice = childrenPrice,
                     FinalPrice = finalPrice,
@@ -326,7 +325,6 @@ public class TourService : ITourService
         {
             var tour = await _unitOfWork.TourRepository
                 .ActiveEntities
-                .Include(t => t.TourType)
                 .Include(t => t.TourPlanLocations)
                     .ThenInclude(l => l.Location)
                 .Include(t => t.TourSchedules)
@@ -379,8 +377,10 @@ public class TourService : ITourService
                 Content = tour.Content,
                 TotalDays = tour.TotalDays,
                 TotalDaysText = tour.TotalDays == 1 ? "1 ngày" : $"{tour.TotalDays} ngày {tour.TotalDays - 1} đêm",
-                TourTypeId = tour.TourTypeId,
-                TourTypeName = tour.TourType?.Name ?? "Unknown",
+                TourType = tour.TourType,
+                TourTypeText = tour.TourType != null
+                    ? _enumService.GetEnumDisplayName(tour.TourType.Value)
+                    : null,
                 AdultPrice = adultPrice,
                 ChildrenPrice = childrenPrice,
                 FinalPrice = finalPrice,
@@ -429,7 +429,6 @@ public class TourService : ITourService
         {
             var tour = await _unitOfWork.TourRepository
                 .ActiveEntities
-                .Include(t => t.TourType)
                 .Include(t => t.TourPlanLocations)
                     .ThenInclude(l => l.Location)
                 .Include(t => t.TourSchedules)
@@ -489,8 +488,10 @@ public class TourService : ITourService
                 Content = tour.Content,
                 TotalDays = tour.TotalDays,
                 TotalDaysText = tour.TotalDays == 1 ? "1 ngày" : $"{tour.TotalDays} ngày {tour.TotalDays - 1} đêm",
-                TourTypeId = tour.TourTypeId,
-                TourTypeName = tour.TourType?.Name ?? "Unknown",
+                TourType = tour.TourType,
+                TourTypeText = tour.TourType != null
+                    ? _enumService.GetEnumDisplayName(tour.TourType.Value)
+                    : null,
                 AdultPrice = adultPrice,
                 ChildrenPrice = childrenPrice,
                 FinalPrice = finalPrice,
@@ -1218,12 +1219,10 @@ public class TourService : ITourService
         var changes = new List<string>();
         if (tour.Name != dto.Name)
             changes.Add($"Tên thay đổi từ '{tour.Name}' → '{dto.Name}'");
-        if (tour.Description != dto.Description)
-            changes.Add($"Mô tả thay đổi từ '{tour.Description}' → '{dto.Description}'");
-        if (tour.Content != dto.Content)
-            changes.Add($"Nội dung thay đổi từ '{tour.Content}' → '{dto.Content}'");
-        if (tour.TourTypeId != dto.TourTypeId)
-            changes.Add($"Loại tour thay đổi từ '{tour.TourTypeId}' → '{dto.TourTypeId}'");
+        // if (tour.Description != dto.Description)
+        //     changes.Add($"Mô tả thay đổi từ '{tour.Description}' → '{dto.Description}'");
+        // if (tour.Content != dto.Content)
+        //     changes.Add($"Nội dung thay đổi từ '{tour.Content}' → '{dto.Content}'");
         if (tour.TotalDays != dto.TotalDays)
             changes.Add($"Số ngày thay đổi từ '{tour.TotalDays}' → '{dto.TotalDays}'");
         return changes;
@@ -1296,4 +1295,144 @@ public class TourService : ITourService
         if (dto.StartTime >= dto.EndTime)
             throw CustomExceptionFactory.CreateBadRequestError($"End time must be after start time for destination {dto.LocationId}.");
     }
+
+    public async Task<PagedResult<TourResponseDto>> GetPagedToursByGuideEmailAsync(string email, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Email cannot be empty.");
+            }
+
+            var tours = _unitOfWork.TourRepository.ActiveEntities
+                .Include(t => t.TourGuideMappings)
+                    .ThenInclude(tgm => tgm.TourGuide)
+                        .ThenInclude(tg => tg.User)
+                .Include(t => t.TourSchedules)
+                .Where(t => t.TourGuideMappings.Any(tgm => tgm.TourGuide.User.Email.ToLower() == email.ToLower()));
+
+            if (tours == null || !await tours.AnyAsync(cancellationToken))
+            {
+                return new PagedResult<TourResponseDto>
+                {
+                    Items = new List<TourResponseDto>(),
+                    TotalCount = 0,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize
+                };
+            }
+
+            var totalCount = await tours.CountAsync(cancellationToken);
+
+            var tourResponses = new List<TourResponseDto>();
+            var tourItems = await tours
+                .OrderBy(t => t.Name)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            foreach (var tour in tourItems)
+            {
+                var activeSchedules = tour.TourSchedules?.Where(s => !s.IsDeleted).ToList() ?? new List<TourSchedule>();
+                var adultPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.AdultPrice) : 0m;
+                var childrenPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.ChildrenPrice) : 0m;
+                var finalPrice = adultPrice;
+
+                tourResponses.Add(new TourResponseDto
+                {
+                    TourId = tour.Id,
+                    Name = tour.Name,
+                    Description = tour.Description,
+                    Content = tour.Content,
+                    TotalDays = tour.TotalDays,
+                    TotalDaysText = tour.TotalDays == 1 ? "1 ngày" : $"{tour.TotalDays} ngày {tour.TotalDays - 1} đêm",
+                    TourType = tour.TourType,
+                    TourTypeText = tour.TourType.HasValue ? _enumService.GetEnumDisplayName(tour.TourType.Value) : null,
+                    AdultPrice = adultPrice,
+                    ChildrenPrice = childrenPrice,
+                    FinalPrice = finalPrice,
+                    Status = tour.Status
+                });
+            }
+
+            return new PagedResult<TourResponseDto>
+            {
+                Items = tourResponses,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    #region Tour Media
+    public async Task<bool> DeleteTourMediaAsync(Guid tourMediaId)
+    {
+        try
+        {
+            var tourMedia = await _unitOfWork.TourMediaRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(tm => tm.Id == tourMediaId);
+
+            if (tourMedia == null)
+            {
+                return false;
+            }
+
+            _unitOfWork.TourMediaRepository.Remove(tourMedia);
+            await _unitOfWork.SaveAsync();
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    public async Task<List<TourMedia>> AddTourMediasAsync(Guid tourId, List<TourMediaCreateDto> createDtos)
+    {
+        try
+        {
+            var tour = await _unitOfWork.TourRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(t => t.Id == tourId);
+
+            if (tour == null)
+            {
+                return new List<TourMedia>();
+            }
+
+            var newMedias = createDtos.Select(dto => new TourMedia
+            {
+                Id = Guid.NewGuid(),
+                TourId = tourId,
+                MediaUrl = dto.MediaUrl,
+                FileName = dto.FileName,
+                FileType = dto.FileType,
+                SizeInBytes = dto.SizeInBytes,
+                IsThumbnail = dto.IsThumbnail,
+                CreatedTime = DateTime.UtcNow,
+                LastUpdatedTime = DateTime.UtcNow
+            }).ToList();
+
+            await _unitOfWork.TourMediaRepository.AddRangeAsync(newMedias);
+            await _unitOfWork.SaveAsync();
+            return newMedias;
+        }
+        catch (Exception)
+        {
+            return new List<TourMedia>();
+        }
+    }
+
+    #endregion
 }

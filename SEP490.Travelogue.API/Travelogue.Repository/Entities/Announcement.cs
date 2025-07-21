@@ -1,11 +1,14 @@
-﻿namespace Travelogue.Repository.Entities;
+﻿using Travelogue.Repository.Bases.BaseEntities;
 
-public class Announcement
+namespace Travelogue.Repository.Entities;
+
+public sealed class Announcement : BaseEntity
 {
-    public Guid Id { get; set; }
     public string Title { get; set; } = null!;
     public string Content { get; set; } = null!;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public Guid UserId { get; set; }
 
     public Guid? TourId { get; set; }
     public Tour? Tour { get; set; }

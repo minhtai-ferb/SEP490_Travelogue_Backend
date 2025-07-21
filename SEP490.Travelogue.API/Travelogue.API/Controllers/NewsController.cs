@@ -5,6 +5,7 @@ using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 
 namespace Travelogue.API.Controllers;
+
 [Route("api/[controller]")]
 [ApiController]
 public class NewsController : ControllerBase
@@ -53,7 +54,7 @@ public class NewsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAllNewss()
     {
-        var newss = await _newsService.GetAllNewssAsync(new CancellationToken());
+        var newss = await _newsService.GetAllNewsAsync(new CancellationToken());
         return Ok(ResponseModel<List<NewsDataModel>>.OkResponseModel(
             data: newss,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "news")
@@ -100,7 +101,7 @@ public class NewsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPagedNews(int pageNumber = 1, int pageSize = 10)
     {
-        var newss = await _newsService.GetPagedNewssAsync(pageNumber, pageSize, new CancellationToken());
+        var newss = await _newsService.GetPagedNewsAsync(pageNumber, pageSize, new CancellationToken());
         return Ok(PagedResponseModel<object>.OkResponseModel(
             data: newss.Items,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "news"),
@@ -116,14 +117,12 @@ public class NewsController : ControllerBase
     /// <param name="pageNumber">Số trang</param>
     /// <param name="pageSize">Kích thước trang</param>
     /// <param name="title">Tiêu đề cần tìm kiếm</param>
-    /// <param name="categoryName">Tên thể loại cần tìm kiếm</param>
-    /// <param name="categoryId">Tiêu đề cần tìm kiếm</param>
     /// <returns>Trả về danh sách các news</returns>
     [HttpGet("search-paged")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetPagedNewsWithSearch(string? title, string? categoryName, Guid? categoryId, int pageNumber = 1, int pageSize = 10)
+    public async Task<IActionResult> GetPagedNewsWithSearch(string? title, int pageNumber = 1, int pageSize = 10)
     {
-        var newss = await _newsService.GetPagedNewsWithSearchAsync(title, categoryName, categoryId, pageNumber, pageSize, new CancellationToken());
+        var newss = await _newsService.GetPagedNewsWithSearchAsync(title, pageNumber, pageSize, new CancellationToken());
         return Ok(PagedResponseModel<object>.OkResponseModel(
             data: newss.Items,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "news"),

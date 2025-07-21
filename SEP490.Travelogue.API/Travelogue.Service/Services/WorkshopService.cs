@@ -1,11 +1,14 @@
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases.Exceptions;
+using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.TourModels;
 using Travelogue.Service.BusinessModels.WorkshopModels;
 using Travelogue.Service.Commons.Implementations;
+using Travelogue.Service.Commons.Interfaces;
 
 namespace Travelogue.Service.Services;
 
@@ -13,6 +16,7 @@ public interface IWorkshopService
 {
     Task<WorkshopResponseDto> CreateWorkshopAsync(CreateWorkshopDto dto);
     Task<WorkshopResponseDto> UpdateWorkshopAsync(Guid workshopId, UpdateWorkshopDto dto);
+    Task<WorkshopResponseDto> SubmitWorkshopForReviewAsync(Guid workshopId, CancellationToken cancellationToken);
     Task<WorkshopResponseDto> ConfirmWorkshopAsync(Guid workshopId, ConfirmWorkshopDto dto);
     Task<WorkshopDetailsResponseDto> GetWorkshopDetailsAsync(Guid workshopId);
     Task<WorkshopDetailsResponseDto> GetWorkshopDetailsAsync(Guid workshopId, Guid? scheduleId = null);
@@ -25,17 +29,26 @@ public interface IWorkshopService
     Task<List<ScheduleResponseDto>> GetSchedulesAsync(Guid workshopId);
     Task<ScheduleResponseDto> UpdateScheduleAsync(Guid workshopId, Guid scheduleId, CreateScheduleDto dto);
     Task DeleteScheduleAsync(Guid workshopId, Guid scheduleId);
+
+    Task<List<WorkshopMedia>> AddWorkshopMediasAsync(Guid workshopId, List<WorkshopMediaCreateDto> createDtos);
+    Task<bool> DeleteWorkshopMediaAsync(Guid workshopMediaId);
 }
 
 public class WorkshopService : IWorkshopService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IEmailService _emailService;
+    private readonly IUserContextService _userContextService;
+    private readonly ITimeService _timeService;
+    private readonly IMapper _mapper;
 
-    public WorkshopService(IUnitOfWork unitOfWork, IEmailService emailService)
+    public WorkshopService(IUnitOfWork unitOfWork, IEmailService emailService, IUserContextService userContextService, ITimeService timeService, IMapper mapper)
     {
         _unitOfWork = unitOfWork;
         _emailService = emailService;
+        _userContextService = userContextService;
+        _timeService = timeService;
+        _mapper = mapper;
     }
 
     public async Task<WorkshopResponseDto> CreateWorkshopAsync(CreateWorkshopDto dto)
@@ -67,8 +80,12 @@ public class WorkshopService : IWorkshopService
 
             return new WorkshopResponseDto
             {
-                WorkshopId = workshop.Id,
-                Status = workshop.Status
+                Id = workshop.Id,
+                Name = workshop.Name,
+                Description = workshop.Description,
+                Content = workshop.Content,
+                Status = workshop.Status,
+                CraftVillageId = workshop.CraftVillageId
             };
         }
         catch (CustomException)
@@ -103,7 +120,7 @@ public class WorkshopService : IWorkshopService
                 .FirstOrDefaultAsync(c => c.Id == dto.CraftVillageId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Craft village");
 
-            if (workshop.Status == WorkshopStatus.Cancelled)
+            if (workshop.Status == WorkshopStatus.Rejected)
                 throw new InvalidOperationException("Không thể cập nhật một workshop đã bị hủy.");
 
             // thay đổi những gì
@@ -154,8 +171,12 @@ public class WorkshopService : IWorkshopService
 
             return new WorkshopResponseDto
             {
-                WorkshopId = workshop.Id,
-                Status = workshop.Status
+                Id = workshop.Id,
+                Name = workshop.Name,
+                Description = workshop.Description,
+                Content = workshop.Content,
+                Status = workshop.Status,
+                CraftVillageId = workshop.CraftVillageId
             };
         }
         catch (CustomException)
@@ -182,15 +203,19 @@ public class WorkshopService : IWorkshopService
         if (workshop.WorkshopSchedules.Count < maxDayOrder)
             throw CustomExceptionFactory.CreateBadRequestError($"Không đủ lịch trình ({workshop.WorkshopSchedules.Count}) để đáp ứng DayOrder ({maxDayOrder}).");
 
-        workshop.Status = WorkshopStatus.Confirmed;
+        workshop.Status = WorkshopStatus.Approved;
         workshop.LastUpdatedTime = DateTimeOffset.UtcNow;
 
         await _unitOfWork.SaveAsync();
 
         return new WorkshopResponseDto
         {
-            WorkshopId = workshop.Id,
-            Status = workshop.Status
+            Id = workshop.Id,
+            Name = workshop.Name,
+            Description = workshop.Description,
+            Content = workshop.Content,
+            Status = workshop.Status,
+            CraftVillageId = workshop.CraftVillageId
         };
     }
 
@@ -204,6 +229,18 @@ public class WorkshopService : IWorkshopService
             .Include(w => w.WorkshopSchedules)
             .FirstOrDefaultAsync(w => w.Id == workshopId)
             ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
+
+        if (workshop.Status == WorkshopStatus.Draft || workshop.Status == WorkshopStatus.Pending)
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var checkRoleCraftVillageOwner = _userContextService.HasRole(AppRole.CRAFT_VILLAGE_OWNER);
+            if (!checkRoleCraftVillageOwner)
+                throw CustomExceptionFactory.CreateForbiddenError();
+
+            var checkRoleModerator = _userContextService.HasRole(AppRole.MODERATOR);
+            if (!checkRoleModerator)
+                throw CustomExceptionFactory.CreateForbiddenError();
+        }
 
         var dayDetails = BuildDayDetails(workshop);
 
@@ -323,6 +360,144 @@ public class WorkshopService : IWorkshopService
             }).ToList(),
             Days = dayDetails
         };
+    }
+
+    public async Task<WorkshopResponseDto> SubmitWorkshopForReviewAsync(Guid workshopId, CancellationToken cancellationToken)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentTime = _timeService.SystemTimeNow;
+            var checkRole = _userContextService.HasRole(AppRole.CRAFT_VILLAGE_OWNER);
+            if (!checkRole)
+                throw CustomExceptionFactory.CreateForbiddenError();
+
+            var workshop = await _unitOfWork.WorkshopRepository
+                .ActiveEntities
+                .Include(ws => ws.CraftVillage)
+                    .ThenInclude(cv => cv.Owner)
+                .FirstOrDefaultAsync(w => w.Id == workshopId, cancellationToken);
+            if (workshop == null)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("Workshop not found or not owned by user.");
+            }
+
+            if (workshop.Status != WorkshopStatus.Draft)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Workshop is not in Draft status.");
+            }
+
+            workshop.Status = WorkshopStatus.Pending;
+            workshop.LastUpdatedBy = currentUserId;
+            workshop.LastUpdatedTime = currentTime;
+            _unitOfWork.WorkshopRepository.Update(workshop);
+
+            var ownerEmail = workshop.CraftVillage.Owner.Email;
+            if (ownerEmail == null)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("No user found to notify.");
+            }
+            await _emailService.SendEmailAsync(
+               new[] { ownerEmail },
+                "Cập nhật trạng thái workshop",
+                "Cập nhật trạng thái workshop"
+            );
+
+
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+
+            return new WorkshopResponseDto
+            {
+                Id = workshop.Id,
+                Name = workshop.Name,
+                Description = workshop.Description,
+                Content = workshop.Content,
+                Status = workshop.Status,
+                CraftVillageId = workshop.CraftVillageId
+            };
+        }
+        catch (CustomException)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<WorkshopResponseDto> ModerateWorkshopAsync(ModerateWorkshopRequest request, CancellationToken cancellationToken)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentTime = _timeService.SystemTimeNow;
+            var checkRole = _userContextService.HasRole(AppRole.MODERATOR);
+            if (!checkRole)
+                throw CustomExceptionFactory.CreateForbiddenError();
+
+            var workshop = await _unitOfWork.WorkshopRepository
+                .ActiveEntities
+                .Include(ws => ws.CraftVillage)
+                .FirstOrDefaultAsync(w => w.Id == request.WorkshopId, cancellationToken);
+            if (workshop == null || workshop.CraftVillage.OwnerId != Guid.Parse(currentUserId))
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("Workshop not found or not owned by user.");
+            }
+
+            if (workshop.Status != WorkshopStatus.Pending)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Workshop is not in Pending status.");
+            }
+
+
+            workshop.Status = WorkshopStatus.Pending;
+            workshop.LastUpdatedBy = currentUserId;
+            workshop.LastUpdatedTime = currentTime;
+            _unitOfWork.WorkshopRepository.Update(workshop);
+
+            var moderators = await _unitOfWork.UserRepository.GetUsersByRoleAsync(AppRole.MODERATOR);
+            if (!moderators.Any())
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("No moderators found to notify.");
+            }
+            foreach (var moderator in moderators)
+            {
+                await _emailService.SendEmailAsync(
+                   new[] { moderator.Email },
+                    "Có người dùng cần đăng workshop",
+                    "Có người dùng cần đđăng workshop"
+                );
+            }
+
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+
+            return new WorkshopResponseDto
+            {
+                Id = workshop.Id,
+                Name = workshop.Name,
+                Description = workshop.Description,
+                Content = workshop.Content,
+                Status = workshop.Status,
+                CraftVillageId = workshop.CraftVillageId
+            };
+        }
+        catch (CustomException)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
     }
 
     #region WorkshopActivityService
@@ -1048,4 +1223,67 @@ public class WorkshopService : IWorkshopService
 
         return dayDetails;
     }
+
+    #region Workshop Media
+
+    public async Task<bool> DeleteWorkshopMediaAsync(Guid workshopMediaId)
+    {
+        try
+        {
+            var workshopMedia = await _unitOfWork.WorkshopMediaRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(wm => wm.Id == workshopMediaId);
+
+            if (workshopMedia == null)
+            {
+                return false;
+            }
+
+            _unitOfWork.WorkshopMediaRepository.Remove(workshopMedia);
+            await _unitOfWork.SaveAsync();
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    public async Task<List<WorkshopMedia>> AddWorkshopMediasAsync(Guid workshopId, List<WorkshopMediaCreateDto> createDtos)
+    {
+        try
+        {
+            var workshop = await _unitOfWork.WorkshopMediaRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(w => w.Id == workshopId);
+
+            if (workshop == null)
+            {
+                return new List<WorkshopMedia>();
+            }
+
+            var newMedias = createDtos.Select(dto => new WorkshopMedia
+            {
+                Id = Guid.NewGuid(),
+                WorkshopId = workshopId,
+                MediaUrl = dto.MediaUrl,
+                FileName = dto.FileName,
+                FileType = dto.FileType,
+                SizeInBytes = dto.SizeInBytes,
+                IsThumbnail = dto.IsThumbnail,
+                CreatedTime = DateTime.UtcNow,
+                LastUpdatedTime = DateTime.UtcNow
+            }).ToList();
+
+            await _unitOfWork.WorkshopMediaRepository.AddRangeAsync(newMedias);
+            await _unitOfWork.SaveAsync();
+            return newMedias;
+        }
+        catch (Exception)
+        {
+            return new List<WorkshopMedia>();
+        }
+    }
+
+    #endregion
 }

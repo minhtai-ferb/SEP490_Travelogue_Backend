@@ -17,13 +17,14 @@ public sealed class TripPlan : BaseEntity
     [DataType(DataType.Date)]
     public DateTime EndDate { get; set; }
 
+    public string? ImageUrl { get; set; }
+
     [Required]
     public Guid UserId { get; set; }
 
     public Guid? UserTripPlanVersionId { get; set; }
 
     public User? User { get; set; }
-    public ICollection<TripPlanVersion> TripPlanVersions { get; set; } = new List<TripPlanVersion>();
-    public ICollection<TripPlanShare> Shares { get; set; } = new List<TripPlanShare>();
+    public ICollection<TripPlanLocation> TripPlanLocations { get; set; } = new List<TripPlanLocation>();
     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 }

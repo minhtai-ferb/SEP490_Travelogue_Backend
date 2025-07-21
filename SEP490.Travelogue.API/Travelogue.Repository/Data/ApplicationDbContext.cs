@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Org.BouncyCastle.Asn1.Pkcs;
 using Travelogue.Repository.Entities;
 
 namespace Travelogue.Repository.Data;
@@ -11,62 +12,51 @@ public class ApplicationDbContext : DbContext
     public DbSet<Role> Roles { get; set; }
     public DbSet<UserRole> UserRoles { get; set; }
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
-    public DbSet<UserInterest> UserInterests { get; set; }
     public DbSet<UserAnnouncement> UserAnnouncements { get; set; }
+
+    // Interest
+    public DbSet<LocationInterest> locationInterests { get; set; }
+    public DbSet<TourInterest> TourInterests { get; set; }
 
     // Location Management
     public DbSet<Location> Locations { get; set; }
     public DbSet<District> Districts { get; set; }
     public DbSet<DistrictMedia> DistrictMedias { get; set; }
     public DbSet<LocationMedia> LocationMedias { get; set; }
-    public DbSet<LocationInterest> LocationInterests { get; set; }
     public DbSet<FavoriteLocation> FavoriteLocations { get; set; }
     public DbSet<HistoricalLocation> HistoricalLocations { get; set; }
 
     // Craft Village Management
     public DbSet<CraftVillage> CraftVillages { get; set; }
-    public DbSet<CraftVillageInterest> CraftVillageInterests { get; set; }
     public DbSet<Workshop> Workshops { get; set; }
     public DbSet<WorkshopSchedule> WorkshopSchedules { get; set; }
     public DbSet<WorkshopActivity> WorkshopActivities { get; set; }
+    public DbSet<WorkshopMedia> WorkshopMedias { get; set; }
+    public DbSet<CraftVillageRequest> CraftVillageRequests { get; set; }
 
     // Cuisine Management
     public DbSet<Cuisine> Cuisines { get; set; }
-    public DbSet<CuisineInterest> CuisineInterests { get; set; }
 
     // Tour Management
+    public DbSet<TourGuide> TourGuides { get; set; }
+    public DbSet<Certification> Certifications { get; set; }
+    public DbSet<TourGuideRequest> TourGuideRequests { get; set; }
+    public DbSet<TourGuideRequestCertification> TourGuideRequestCertifications { get; set; }
     public DbSet<Tour> Tours { get; set; }
-    public DbSet<TourType> TourTypes { get; set; }
-    public DbSet<TourInterest> TourInterests { get; set; }
     public DbSet<TourSchedule> TourSchedules { get; set; }
     public DbSet<TourPlanLocation> TourPlanLocations { get; set; }
-    public DbSet<TourGuide> TourGuides { get; set; }
     public DbSet<TourGuideSchedule> TourGuideSchedules { get; set; }
     public DbSet<TourGroup> TourGroups { get; set; }
     public DbSet<TourGroupMember> TourGroupMembers { get; set; }
     public DbSet<TourJoinRequest> TourJoinRequests { get; set; }
+    public DbSet<TourMedia> TourMedias { get; set; }
 
     // Trip Plan Management
     public DbSet<TripPlan> TripPlans { get; set; }
-    public DbSet<TripPlanVersion> TripPlanVersions { get; set; }
     public DbSet<TripPlanLocation> TripPlanLocations { get; set; }
-    public DbSet<TripPlanShare> TripPlanShares { get; set; }
-    public DbSet<TripPlanExchange> TripPlanExchanges { get; set; }
-    public DbSet<TripPlanExchangeSession> TripPlanExchangeSessions { get; set; }
-
-    // Event Management
-    public DbSet<Event> Events { get; set; }
-    public DbSet<TypeEvent> TypeEvents { get; set; }
-    public DbSet<EventMedia> EventMedias { get; set; }
-
-    // Experience Management
-    public DbSet<Experience> Experiences { get; set; }
-    public DbSet<TypeExperience> TypeExperiences { get; set; }
-    public DbSet<ExperienceMedia> ExperienceMedias { get; set; }
 
     // News Management
     public DbSet<News> News { get; set; }
-    public DbSet<NewsCategory> NewsCategories { get; set; }
     public DbSet<NewsMedia> NewsMedias { get; set; }
 
     // Announcement Management
@@ -90,9 +80,6 @@ public class ApplicationDbContext : DbContext
     // System Configuration
     public DbSet<SystemSetting> SystemSettings { get; set; }
 
-    // General
-    public DbSet<Interest> Interests { get; set; }
-
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
@@ -101,24 +88,6 @@ public class ApplicationDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
-        modelBuilder.Entity<Experience>()
-            .HasOne(a => a.Location)
-            .WithMany(l => l.Experiences)
-            .HasForeignKey(a => a.LocationId)
-            .OnDelete(DeleteBehavior.Restrict); // Hoặc DeleteBehavior.NoAction
-
-        modelBuilder.Entity<Experience>()
-            .HasOne(a => a.Event)
-            .WithMany(act => act.Experiences)
-            .HasForeignKey(a => a.EventId)
-            .OnDelete(DeleteBehavior.Restrict); // Hoặc DeleteBehavior.NoAction
-
-        modelBuilder.Entity<Event>()
-            .HasOne(a => a.Location)
-            .WithMany(l => l.Activities)
-            .HasForeignKey(a => a.LocationId)
-            .OnDelete(DeleteBehavior.Restrict); // Tránh vòng lặp xóa
 
         modelBuilder.Entity<Message>()
             .HasOne(m => m.Sender)

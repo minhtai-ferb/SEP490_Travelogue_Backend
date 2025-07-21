@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Travelogue.Repository.Bases.Responses;
-using Travelogue.Service.BusinessModels.ExchangeSessionModels;
 using Travelogue.Service.BusinessModels.TripPlanModels;
 using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
@@ -12,12 +11,10 @@ namespace Travelogue.API.Controllers;
 public class TripPlansController : ControllerBase
 {
     private readonly ITripPlanService _tripPlanService;
-    private readonly IExchangeSessionService _exchangeSessionService;
 
-    public TripPlansController(ITripPlanService tripPlanService, IExchangeSessionService exchangeSessionService)
+    public TripPlansController(ITripPlanService tripPlanService)
     {
         _tripPlanService = tripPlanService;
-        _exchangeSessionService = exchangeSessionService;
     }
 
     /// <summary>
@@ -83,65 +80,18 @@ public class TripPlansController : ControllerBase
         ));
     }
 
-    /// <summary>
-    /// Người dùng gửi request --> tạo phiên bản mới từ phiên bản gốc --> gán vào trip plan version trong request để biết được version nào là phiên bản mà họ gửi cho tour guide
-    /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
-    [HttpPost("version/{id}")]
-    public async Task<IActionResult> CloneTripPlanVersion(Guid id)
+    [HttpPut("{tripPlanId}/image-url")]
+    public async Task<IActionResult> UpdateTripPlanImageUrl(Guid tripPlanId, [FromBody] UpdateImageUrlRequest request, CancellationToken cancellationToken)
     {
-        // var result = await _tripPlanService.CreateVersionFromTripPlanAsync(id, string.Empty);
-        var result = await _tripPlanService.CreateVersionFromTripPlanAsync(id, string.Empty);
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "trip plan version")
-        ));
-    }
-
-    // [HttpPost("{tripPlanId}/exchanges/sessions")]
-    // public async Task<IActionResult> CreateExchangeSession(Guid tripPlanId, [FromBody] CreateExchangeSessionRequest request)
-    // {
-    //     if (tripPlanId == Guid.Empty)
-    //     {
-    //         return BadRequest("Trip plan ID cannot be empty.");
-    //     }
-
-    //     if (request == null)
-    //     {
-    //         return BadRequest("Request body cannot be null.");
-    //     }
-
-    //     await _tripPlanService.CreateExchangeSessionAsync(tripPlanId, request, new CancellationToken());
-    //     return Ok(ResponseModel<object>.OkResponseModel(
-    //         data: true,
-    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "request exchange session")
-    //     ));
-    // }
-
-    /// <summary>
-    /// Tạo phiên trao đổi mới (tự động tạo trip plan version mới)
-    /// </summary>
-    /// <param name="tripPlanId"></param>
-    /// <param name="request"></param>
-    /// <returns></returns>
-    [HttpPost("{tripPlanId}/exchanges/sessions")]
-    public async Task<IActionResult> CreateExchangeSessionWithoutTripPlanVersion(Guid tripPlanId, [FromBody] CreateExchangeSessionRequest request)
-    {
-        if (tripPlanId == Guid.Empty)
+        var result = await _tripPlanService.UpdateTripPlanImageUrlAsync(tripPlanId, request.ImageUrl, cancellationToken);
+        if (!result)
         {
-            return BadRequest("Trip plan ID cannot be empty.");
+            return NotFound("Trip plan not found or update failed.");
         }
 
-        if (request == null)
-        {
-            return BadRequest("Request body cannot be null.");
-        }
-
-        var result = await _tripPlanService.CreateExchangeSessionWithNewVersionAsync(tripPlanId, request, new CancellationToken());
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "request exchange session")
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "trip plan")
         ));
     }
 }

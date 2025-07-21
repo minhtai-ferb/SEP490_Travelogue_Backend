@@ -3,11 +3,9 @@ using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
-using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
-using Travelogue.Service.BusinessModels.ExchangeSessionModels;
 using Travelogue.Service.BusinessModels.TripPlanModels;
 using Travelogue.Service.Commons.Interfaces;
 
@@ -52,19 +50,7 @@ public interface ITripPlanService
     /// <param name="pageNumber">Trang hiện tại.</param>
     /// <param name="pageSize">Số lượng phần tử mỗi trang.</param>
     Task<PagedResult<TripPlanDataModel>> GetPagedTripPlanWithSearchAsync(string? title, int pageNumber, int pageSize, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Tạo một phiên bản mới từ TripPlan hiện tại (copy) khi người dùng gửi yêu cầu đặt lịch hướng dẫn viên.
-    /// Hành động này thường xảy ra khi hướng dẫn viên muốn đề xuất phiên bản khác với lịch trình hiện tại.
-    /// </summary>
-    /// <param name="tripPlanId">ID của kế hoạch chuyến đi gốc.</param>
-    /// <param name="guideNote">Ghi chú từ hướng dẫn viên.</param>
-    Task<object> CreateVersionFromTripPlanAsync(Guid tripPlanId, string guideNote);
-
-    Task<ExchangeSessionDataModel> CreateExchangeSessionAsync(Guid tripPlanId, CreateExchangeSessionRequest request, CancellationToken cancellationToken);
-
-    Task<ExchangeSessionDataModel> CreateExchangeSessionWithNewVersionAsync(
-            Guid tripPlanId, CreateExchangeSessionRequest request, CancellationToken cancellationToken);
+    Task<bool> UpdateTripPlanImageUrlAsync(Guid tripPlanId, string imageUrl, CancellationToken cancellationToken);
 }
 
 public class TripPlanService : ITripPlanService
@@ -81,164 +67,6 @@ public class TripPlanService : ITripPlanService
         _userContextService = userContextService;
         _timeService = timeService;
     }
-
-    public async Task<ExchangeSessionDataModel> CreateExchangeSessionAsync(Guid tripPlanId, CreateExchangeSessionRequest request, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-            var currentTime = _timeService.SystemTimeNow;
-
-            var tourGuide = await _unitOfWork.TourGuideRepository.GetByIdAsync(request.TourGuideId, cancellationToken)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Tour guide");
-
-            var tripPlan = await _unitOfWork.TripPlanRepository.GetByIdAsync(tripPlanId, cancellationToken)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Trip plan");
-
-            var tripPlanVersion = await _unitOfWork.TripPlanVersionRepository.GetByIdAsync(request.TripPlanVersionId, cancellationToken)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Trip plan version");
-
-            var newSession = new TripPlanExchangeSession
-            {
-                // TourGuideId = tourGuide.Id,
-                TourGuideId = request.TourGuideId,
-                // TripPlanId = tripPlan.Id,
-                TripPlanId = tripPlanId,
-                CreatedByUserId = Guid.Parse(currentUserId),
-                FinalStatus = ExchangeSessionStatus.Pending,
-                CreatedBy = currentUserId,
-                CreatedAt = currentTime,
-                LastUpdatedBy = currentUserId,
-                LastUpdatedTime = currentTime
-            };
-
-            newSession.Exchanges.Add(new TripPlanExchange
-            {
-                UserId = Guid.Parse(currentUserId),
-                TripPlanId = tripPlan.Id,
-                TripPlanVersionId = tripPlanVersion.Id,
-                TourGuideId = tourGuide.Id,
-                SessionId = newSession.Id,
-                Status = ExchangeSessionStatus.Pending,
-                RequestedAt = currentTime,
-                CreatedBy = currentUserId,
-                CreatedTime = currentTime,
-                LastUpdatedBy = currentUserId,
-                LastUpdatedTime = currentTime
-            });
-
-            var result = _mapper.Map<ExchangeSessionDataModel>(newSession);
-
-            await _unitOfWork.TripPlanExchangeSessionRepository.AddAsync(newSession);
-            await _unitOfWork.SaveAsync();
-
-            return result;
-        }
-        catch (CustomException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"-----------------Error creating exchange session: {ex.Message}");
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
-    public async Task<ExchangeSessionDataModel> CreateExchangeSessionWithNewVersionAsync(
-        Guid tripPlanId, CreateExchangeSessionRequest request, CancellationToken cancellationToken)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-            var currentTime = _timeService.SystemTimeNow;
-
-            // Lấy TripPlan và TourGuide
-            var tourGuide = await _unitOfWork.TourGuideRepository.GetByIdAsync(request.TourGuideId, cancellationToken)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Tour guide");
-            var tripPlan = await _unitOfWork.TripPlanRepository.GetWithIncludeAsync(
-                tripPlanId,
-                include => include.Include(tp => tp.TripPlanVersions)
-                                  .ThenInclude(v => v.TripPlanLocations)
-            ) ?? throw CustomExceptionFactory.CreateNotFoundError("Trip plan");
-
-            var latestVersion = tripPlan.TripPlanVersions.OrderByDescending(v => v.VersionNumber).FirstOrDefault()
-                ?? throw CustomExceptionFactory.CreateNotFoundError("No versions found for this trip plan");
-
-            // Tạo TripPlanVersion mới
-            var newVersion = new TripPlanVersion
-            {
-                TripPlanId = tripPlanId,
-                Notes = request.GuideNote,
-                CreatedTime = currentTime,
-                VersionDate = currentTime,
-                VersionNumber = latestVersion.VersionNumber + 1,
-                Status = "Draft",
-                TripPlanLocations = (latestVersion.TripPlanLocations ?? new List<TripPlanLocation>())
-                    .Select(loc => new TripPlanLocation
-                    {
-                        LocationId = loc.LocationId,
-                        StartTime = loc.StartTime,
-                        EndTime = loc.EndTime,
-                        Notes = loc.Notes,
-                        Order = loc.Order
-                    }).ToList()
-            };
-
-            await _unitOfWork.TripPlanVersionRepository.AddAsync(newVersion);
-
-            // Tạo Exchange Session
-            var newSession = new TripPlanExchangeSession
-            {
-                TourGuideId = tourGuide.Id,
-                TripPlanId = tripPlan.Id,
-                CreatedByUserId = Guid.Parse(currentUserId),
-                FinalStatus = ExchangeSessionStatus.Pending,
-                CreatedBy = currentUserId,
-                CreatedAt = currentTime,
-                LastUpdatedBy = currentUserId,
-                LastUpdatedTime = currentTime,
-                Exchanges = new List<TripPlanExchange>
-            {
-                new TripPlanExchange
-                {
-                    UserId = Guid.Parse(currentUserId),
-                    TripPlanId = tripPlan.Id,
-                    TripPlanVersionId = newVersion.Id,
-                    TourGuideId = tourGuide.Id,
-                    SessionId = Guid.Empty,
-                    Status = ExchangeSessionStatus.Pending,
-                    RequestedAt = currentTime,
-                    CreatedBy = currentUserId,
-                    CreatedTime = currentTime,
-                    LastUpdatedBy = currentUserId,
-                    LastUpdatedTime = currentTime
-                }
-            }
-            };
-
-            await _unitOfWork.TripPlanExchangeSessionRepository.AddAsync(newSession);
-            await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync();
-
-            var result = _mapper.Map<ExchangeSessionDataModel>(newSession);
-            result.TripPlanVersionId = newVersion.Id;
-
-            return _mapper.Map<ExchangeSessionDataModel>(newSession);
-        }
-        catch (CustomException)
-        {
-            await _unitOfWork.RollBackAsync();
-            throw;
-        }
-        catch (Exception ex)
-        {
-            await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
     public async Task DeleteTripPlanAsync(Guid id, CancellationToken cancellationToken)
     {
         try
@@ -360,18 +188,14 @@ public class TripPlanService : ITripPlanService
 
         var tripPlan = await _unitOfWork.TripPlanRepository
             .ActiveEntities
-            .Include(x => x.TripPlanVersions)
-                .ThenInclude(x => x.TripPlanLocations)
+            .Include(x => x.TripPlanLocations)
             .FirstOrDefaultAsync(x => x.Id == tripPlanId);
 
         if (tripPlan == null || tripPlan.UserTripPlanVersionId == null)
             throw CustomExceptionFactory.CreateNotFoundError("Trip plan hoặc version");
 
-        var version = tripPlan.TripPlanVersions.FirstOrDefault(v => v.Id == tripPlan.UserTripPlanVersionId)
-            ?? throw CustomExceptionFactory.CreateNotFoundError("Trip plan version");
-
         // Locations
-        foreach (var tpl in version.TripPlanLocations ?? new List<TripPlanLocation>())
+        foreach (var tpl in tripPlan.TripPlanLocations ?? new List<TripPlanLocation>())
         {
             var location = await _unitOfWork.LocationRepository.GetByIdAsync(tpl.LocationId, cancellationToken: CancellationToken.None);
             if (location == null) continue;
@@ -578,48 +402,21 @@ public class TripPlanService : ITripPlanService
         {
             var tripPlan = await _unitOfWork.TripPlanRepository
                 .ActiveEntities
-                .Include(tp => tp.TripPlanVersions)
-                    .ThenInclude(v => v.TripPlanLocations)
+                .Include(v => v.TripPlanLocations)
                 .FirstOrDefaultAsync(tp => tp.Id == id, cancellationToken)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Trip plan");
 
             var currentUserId = _userContextService.GetCurrentUserId();
             var userRoles = await _userContextService.GetCurrentUserRolesAsync();
-            var isTourGuide = userRoles.Contains(AppRole.TOUR_GUIDE);
 
-            bool shouldCreateNewVersion = isTourGuide || !tripPlan.TripPlanVersions.Any();
-
-            TripPlanVersion? newVersion = null;
-
-            if (shouldCreateNewVersion)
+            // Update vào version con
+            if (tripPlanUpdateModel.Locations == null)
             {
-                newVersion = new TripPlanVersion
-                {
-                    TripPlanId = tripPlan.Id,
-                    VersionDate = _timeService.SystemTimeNow,
-                    Description = "Cập nhật lịch trình",
-                    VersionNumber = tripPlan.TripPlanVersions.Count + 1,
-                    Status = "Draft",
-                    IsFromTourGuide = isTourGuide
-                };
-
-                await _unitOfWork.TripPlanVersionRepository.AddAsync(newVersion);
-                await _unitOfWork.SaveAsync();
-
-                // Update vào version con
-                if (tripPlanUpdateModel.Locations == null)
-                {
-                    tripPlanUpdateModel.Locations = new List<TripPlanLocationModel>();
-                }
-
-                await UpdateTripPlanLocationsAsync(newVersion, tripPlanUpdateModel.Locations);
-
-                // Gán lại version mới cho user nếu là user tạo
-                if (!isTourGuide)
-                {
-                    tripPlan.UserTripPlanVersionId = newVersion.Id;
-                }
+                tripPlanUpdateModel.Locations = new List<TripPlanLocationModel>();
             }
+
+            await UpdateTripPlanLocationsAsync(tripPlan, tripPlanUpdateModel.Locations);
+
 
             _mapper.Map(tripPlanUpdateModel, tripPlan);
 
@@ -628,8 +425,7 @@ public class TripPlanService : ITripPlanService
 
             var result = _mapper.Map<TripPlanDataModel>(tripPlan);
 
-            result.TripPlanVersionId = newVersion != null ? newVersion.Id : (tripPlan.UserTripPlanVersionId ?? Guid.Empty);
-            result.IsFromTourGuide = isTourGuide;
+            result.TripPlanId = tripPlan != null ? tripPlan.Id : (tripPlan.UserTripPlanVersionId ?? Guid.Empty);
 
             return result;
         }
@@ -694,7 +490,7 @@ public class TripPlanService : ITripPlanService
     // }
 
     private async Task UpdateTripPlanLocationsAsync(
-        TripPlanVersion tripPlanVersion,
+        TripPlan tripPlan,
         List<TripPlanLocationModel> locationModels)
     {
         var existingIds = locationModels
@@ -705,7 +501,7 @@ public class TripPlanService : ITripPlanService
         if (existingIds.Count != 0)
         {
             // Loại bỏ các món không còn tồn tại trong input
-            var locationsToRemove = (tripPlanVersion.TripPlanLocations ?? new List<TripPlanLocation>())
+            var locationsToRemove = (tripPlan.TripPlanLocations ?? new List<TripPlanLocation>())
                 .Where(c => !existingIds.Contains(c.Id))
                 .ToList();
 
@@ -716,7 +512,7 @@ public class TripPlanService : ITripPlanService
         {
             if (locationModel.Id.HasValue)
             {
-                var existingLocation = (tripPlanVersion.TripPlanLocations ?? new List<TripPlanLocation>())
+                var existingLocation = (tripPlan.TripPlanLocations ?? new List<TripPlanLocation>())
                     .FirstOrDefault(c => c.Id == locationModel.Id.Value);
 
                 if (existingLocation != null)
@@ -731,7 +527,7 @@ public class TripPlanService : ITripPlanService
             {
                 var newLocation = new TripPlanLocation
                 {
-                    TripPlanVersionId = tripPlanVersion.Id,
+                    TripPlanId = tripPlan.Id,
                     LocationId = locationModel.LocationId,
                     StartTime = locationModel.StartTime ?? DateTime.Now,
                     EndTime = locationModel.EndTime ?? DateTime.Now,
@@ -964,57 +760,42 @@ public class TripPlanService : ITripPlanService
         return result;
     }
 
-    public async Task<object> CreateVersionFromTripPlanAsync(Guid tripPlanId, string guideNote)
+    public async Task<bool> UpdateTripPlanImageUrlAsync(Guid tripPlanId, string imageUrl, CancellationToken cancellationToken)
     {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
-            // var currentUserId = _userContextService.GetCurrentUserId();
-            var currentUserId = _userContextService.GetCurrentUserId();
-            var currentTime = _timeService.SystemTimeNow;
-
-            // Lấy phiên bản TripPlan hiện tại từ tripPlanId
-            var tripPlan = await _unitOfWork.TripPlanRepository
-                .GetWithIncludeAsync(tripPlanId, include => include.Include(tp => tp.TripPlanVersions)
-                    .ThenInclude(v => v.TripPlanLocations)) ?? throw CustomExceptionFactory.CreateNotFoundError("Trip plan not found");
-            var version = tripPlan.TripPlanVersions.OrderByDescending(v => v.VersionNumber).FirstOrDefault() ?? throw CustomExceptionFactory.CreateNotFoundError("No versions found for this trip plan");
-
-            // Tạo phiên bản mới từ TripPlan hiện tại
-            var newVersion = new TripPlanVersion
+            if (string.IsNullOrWhiteSpace(imageUrl))
             {
-                TripPlanId = version.TripPlanId,
-                Notes = guideNote,
-                CreatedTime = currentTime,
-                VersionDate = currentTime,
-                VersionNumber = version.VersionNumber + 1,
-                Status = "Draft"
-            };
+                throw CustomExceptionFactory.CreateBadRequestError("Image URL cannot be empty.");
+            }
 
-            // Sao chép các địa điểm, món ăn, làng nghề từ phiên bản cũ sang phiên bản mới
-            newVersion.TripPlanLocations = (version.TripPlanLocations ?? new List<TripPlanLocation>())
-                .Select(loc => new TripPlanLocation
-                {
-                    LocationId = loc.LocationId,
-                    StartTime = loc.StartTime,
-                    EndTime = loc.EndTime,
-                    Notes = loc.Notes,
-                    Order = loc.Order
-                }).ToList();
+            var tripPlan = await _unitOfWork.TripPlanRepository.ActiveEntities
+                .FirstOrDefaultAsync(tp => tp.Id == tripPlanId, cancellationToken);
 
-            await _unitOfWork.TripPlanVersionRepository.AddAsync(newVersion);
-            await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync();
+            if (tripPlan == null)
+            {
+                return false;
+            }
 
-            return new { VersionId = newVersion.Id, VersionNumber = newVersion.VersionNumber };
+            tripPlan.ImageUrl = imageUrl;
+            tripPlan.LastUpdatedTime = DateTime.UtcNow;
+
+            try
+            {
+                await _unitOfWork.SaveAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
         catch (CustomException)
         {
-            await _unitOfWork.RollBackAsync();
             throw;
         }
         catch (Exception ex)
         {
-            await _unitOfWork.RollBackAsync();
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }

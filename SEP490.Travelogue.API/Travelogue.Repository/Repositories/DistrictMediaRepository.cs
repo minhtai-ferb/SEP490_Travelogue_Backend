@@ -24,8 +24,8 @@ public sealed class DistrictMediaRepository : GenericRepository<DistrictMedia>, 
     {
         try
         {
-            var events = _context.DistrictMedias.FirstOrDefaultAsync(a => a.FileName != null && a.FileName.Contains(title), cancellationToken);
-            return events;
+            var districtMedias = _context.DistrictMedias.FirstOrDefaultAsync(a => a.FileName != null && a.FileName.Contains(title), cancellationToken);
+            return districtMedias;
         }
         catch (CustomException)
         {

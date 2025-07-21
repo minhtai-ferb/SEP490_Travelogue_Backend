@@ -889,11 +889,7 @@ public class LocationService : ILocationService
                 throw CustomExceptionFactory.CreateNotFoundError("location");
             }
 
-            var isInUsing = await _unitOfWork.ExperienceRepository.ActiveEntities
-                .AnyAsync(e => e.LocationId == id, cancellationToken) ||
-                await _unitOfWork.EventRepository.ActiveEntities
-                .AnyAsync(e => e.LocationId == id, cancellationToken) ||
-                await _unitOfWork.NewsRepository.ActiveEntities
+            var isInUsing = await _unitOfWork.NewsRepository.ActiveEntities
                 .AnyAsync(e => e.LocationId == id, cancellationToken);
 
             if (isInUsing)

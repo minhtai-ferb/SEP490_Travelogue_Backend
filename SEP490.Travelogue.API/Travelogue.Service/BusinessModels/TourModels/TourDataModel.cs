@@ -1,4 +1,6 @@
-﻿namespace Travelogue.Service.BusinessModels.TourModels;
+﻿using Travelogue.Repository.Entities.Enums;
+
+namespace Travelogue.Service.BusinessModels.TourModels;
 
 public class TourDataModel : BaseDataModel
 {
@@ -14,7 +16,7 @@ public class TourDataModel : BaseDataModel
     public decimal PriceFinal { get; set; }
     public bool IsDiscount { get; set; }
 
-    public Guid TourTypeId { get; set; }
+    public TourType TourType { get; set; }
     public string? TourTypeText { get; set; }
 
     public Guid? CurrentVersionId { get; set; }
