@@ -5,6 +5,7 @@ using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
+using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.BusinessModels.NewsModels;
 using Travelogue.Service.Commons.Helpers;
@@ -32,6 +33,8 @@ public interface INewsService
         List<IFormFile>? imageUploads,
         string? thumbnailSelected,
         CancellationToken cancellationToken);
+
+    Task<List<NewsDataModel>> GetNewsByCategoryAsync(NewsCategory? category, CancellationToken cancellationToken);
 }
 
 public class NewsService : INewsService
@@ -164,6 +167,47 @@ public class NewsService : INewsService
         finally
         {
             //  _unitOfWork.Dispose();
+        }
+    }
+
+    public async Task<List<NewsDataModel>> GetNewsByCategoryAsync(NewsCategory? category, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var existingNews = await _unitOfWork.NewsRepository
+                .GetAllAsync(cancellationToken);
+
+            if (existingNews == null || !existingNews.Any())
+            {
+                return new List<NewsDataModel>();
+            }
+
+            var filteredNews = category.HasValue
+                ? existingNews.Where(x => x.NewsCategory == category.Value).ToList()
+                : existingNews.ToList();
+
+            var result = _mapper.Map<List<NewsDataModel>>(filteredNews);
+
+            foreach (var item in result)
+            {
+                item.Medias = await GetMediaByIdAsync(item.Id, cancellationToken);
+                item.LocationName = await _unitOfWork.LocationRepository
+                    .ActiveEntities
+                    .Where(x => x.Id == item.LocationId)
+                    .Select(x => x.Name)
+                    .FirstOrDefaultAsync(cancellationToken);
+                item.CategoryName = _enumService.GetEnumDisplayName(item.NewsCategory);
+            }
+
+            return result;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -910,8 +954,8 @@ public class NewsService : INewsService
 
     //        if (string.IsNullOrEmpty(currentUserId))
     //        {
-    //            var allNewss = await _unitOfWork.NewsRepository.GetAllAsync();
-    //            var allNewsDataModels = _mapper.Map<List<NewsDataModel>>(allNewss);
+    //            var allNews = await _unitOfWork.NewsRepository.GetAllAsync();
+    //            var allNewsDataModels = _mapper.Map<List<NewsDataModel>>(allNews);
     //            await EnrichNewsDataModelsAsync(allNewsDataModels, new CancellationToken());
     //            return allNewsDataModels;
     //        }

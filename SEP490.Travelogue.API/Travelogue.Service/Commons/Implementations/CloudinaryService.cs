@@ -19,6 +19,7 @@ public interface ICloudinaryService
 {
     Task<string> UploadImageAsync(IFormFile file);
     Task<List<string>> UploadImagesAsync(List<IFormFile> files);
+    Task<string> UploadImageAsync(IFormFile file, CancellationToken cancellationToken);
     //Task<string> UploadImageAsync(IFormFile file, string fileName);
     Task<List<string>> UploadVideoAsync(List<IFormFile> files);
 
@@ -52,6 +53,31 @@ public class CloudinaryService : ICloudinaryService
                     File = new FileDescription(file.FileName, file.OpenReadStream())
                 };
                 var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                return uploadResult.Url.ToString();
+            }
+            throw new Exception("File is empty");
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<string> UploadImageAsync(IFormFile file, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (file.Length > 0)
+            {
+                var uploadParams = new ImageUploadParams
+                {
+                    File = new FileDescription(file.FileName, file.OpenReadStream())
+                };
+                var uploadResult = await _cloudinary.UploadAsync(uploadParams, cancellationToken);
                 return uploadResult.Url.ToString();
             }
             throw new Exception("File is empty");
