@@ -1,6 +1,7 @@
 ﻿using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Service.BusinessModels.UserModels.Responses;
+
 public class UserResponseModel : BaseDataModel
 {
     public Guid Id { get; set; }
@@ -12,6 +13,7 @@ public class UserResponseModel : BaseDataModel
     public string FullName { get; set; } = string.Empty;
     //public string? ProfilePictureUrl { get; set; }
 
+    public string? AvatarUrl { get; set; }
     public List<string> Roles { get; set; }
 
     public Gender Sex { get; set; }

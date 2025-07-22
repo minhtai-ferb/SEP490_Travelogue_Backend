@@ -36,6 +36,7 @@ public interface IUserService
     Task<bool> AssignRoleToUserAsync(Guid userId, Guid districtId, string roleName);
     Task<UserResponseModel> GetByEmailAsync(string email, CancellationToken cancellationToken);
     Task<bool> UpdateUserAsync(Guid id, UserUpdateModel model, CancellationToken cancellationToken);
+    Task<bool> UpdateAvatarAsync(string avatarUrl, CancellationToken cancellationToken);
     Task<bool> RemoveUserFromRole(Guid userId, Guid roleId, CancellationToken cancellationToken);
     Task<bool> SendFeedbackAsync(FeedbackModel model, CancellationToken cancellationToken);
     Task<TourGuideRequestResponseDto> CreateTourGuideRequestAsync(CreateTourGuideRequestDto model, CancellationToken cancellationToken = default);
@@ -139,7 +140,7 @@ public class UserService : IUserService
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId, cancellationToken)
                 ?? throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "User not found");
 
-            var role = await _unitOfWork.RoleRepository.GetByNameAsync(model.Role)
+            var role = await _unitOfWork.RoleRepository.GetByIdAsync(model.RoleId, cancellationToken)
                 ?? throw new CustomException(StatusCodes.Status400BadRequest, ResponseCodeConstants.BAD_REQUEST, "Invalid role");
 
             var newUserRole = new UserRole
@@ -152,8 +153,8 @@ public class UserService : IUserService
 
             await _emailService.SendEmailAsync(
                 new[] { user.Email },
-                $"nâng cấp role moderator",
-                $"nâng cấp role moderator"
+                $"nâng cấp role",
+                $"nâng cấp role {role.Name}"
             );
 
             var userResponse = _mapper.Map<UserResponseModel>(user);
@@ -593,6 +594,39 @@ public class UserService : IUserService
 
             _unitOfWork.UserRepository.Update(existingUser);
 
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+
+            return true;
+        }
+        catch (CustomException)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<bool> UpdateAvatarAsync(string avatarUrl, CancellationToken cancellationToken)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+
+            var existingUser = await _unitOfWork.UserRepository.GetByIdAsync(Guid.Parse(currentUserId), cancellationToken);
+            if (existingUser == null || existingUser.IsDeleted)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("user");
+            }
+
+            existingUser.AvatarUrl = avatarUrl;
+
+            _unitOfWork.UserRepository.Update(existingUser);
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);
 

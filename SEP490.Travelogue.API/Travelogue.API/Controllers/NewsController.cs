@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Travelogue.Repository.Bases.Responses;
+using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.NewsModels;
 using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
@@ -52,11 +53,21 @@ public class NewsController : ControllerBase
     /// </summary>
     /// <returns></returns>
     [HttpGet]
-    public async Task<IActionResult> GetAllNewss()
+    public async Task<IActionResult> GetAllNews()
     {
         var newss = await _newsService.GetAllNewsAsync(new CancellationToken());
         return Ok(ResponseModel<List<NewsDataModel>>.OkResponseModel(
             data: newss,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "news")
+        ));
+    }
+
+    [HttpGet("by-category")]
+    public async Task<IActionResult> GetByCategory([FromQuery] NewsCategory? category, CancellationToken cancellationToken)
+    {
+        var result = await _newsService.GetNewsByCategoryAsync(category, cancellationToken);
+        return Ok(ResponseModel<List<NewsDataModel>>.OkResponseModel(
+            data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "news")
         ));
     }
@@ -97,19 +108,19 @@ public class NewsController : ControllerBase
     /// <param name="pageNumber">Số trang</param>
     /// <param name="pageSize">Kích thước trang</param>
     /// <returns>Trả về danh sách các news</returns>
-    [HttpGet("get-paged")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetPagedNews(int pageNumber = 1, int pageSize = 10)
-    {
-        var newss = await _newsService.GetPagedNewsAsync(pageNumber, pageSize, new CancellationToken());
-        return Ok(PagedResponseModel<object>.OkResponseModel(
-            data: newss.Items,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "news"),
-            totalCount: newss.TotalCount,
-            pageSize: pageSize,
-            pageNumber: pageNumber
-        ));
-    }
+    // [HttpGet("get-paged")]
+    // [ProducesResponseType(StatusCodes.Status200OK)]
+    // public async Task<IActionResult> GetPagedNews(int pageNumber = 1, int pageSize = 10)
+    // {
+    //     var newss = await _newsService.GetPagedNewsAsync(pageNumber, pageSize, new CancellationToken());
+    //     return Ok(PagedResponseModel<object>.OkResponseModel(
+    //         data: newss.Items,
+    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "news"),
+    //         totalCount: newss.TotalCount,
+    //         pageSize: pageSize,
+    //         pageNumber: pageNumber
+    //     ));
+    // }
 
     /// <summary>
     /// Lấy danh sách news phân trang theo tiêu đề

@@ -7,6 +7,7 @@ using Travelogue.Service.BusinessModels.UserModels;
 using Travelogue.Service.BusinessModels.UserModels.Requests;
 using Travelogue.Service.BusinessModels.UserModels.Responses;
 using Travelogue.Service.Commons.BaseResponses;
+using Travelogue.Service.Commons.Implementations;
 using Travelogue.Service.Services;
 
 namespace Travelogue.API.Controllers;
@@ -16,9 +17,11 @@ namespace Travelogue.API.Controllers;
 public class UserController : ControllerBase
 {
     private readonly IUserService _userService;
-    public UserController(IUserService userService)
+    private readonly ICloudinaryService _cloudinaryService;
+    public UserController(IUserService userService, ICloudinaryService cloudinaryService)
     {
         _userService = userService;
+        _cloudinaryService = cloudinaryService;
     }
 
     //[HttpGet("profile")]
@@ -35,16 +38,16 @@ public class UserController : ControllerBase
     /// <param name="userId">Id người dùng muốn cập nhật role</param>
     /// <param name="request">danh sách role mới của người dùng</param>
     /// <returns></returns>
-    [HttpPost("update-role")]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> UpdateRole(Guid userId, [FromBody] UserRoleUpdateModel request)
-    {
-        var result = await _userService.UpdateUserRolesAsync(userId, request.RoleIds);
-        return Ok(ResponseModel<bool>.OkResponseModel(
-            data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "user - role")
-        ));
-    }
+    // [HttpPost("update-role")]
+    // [Authorize(Roles = "Admin")]
+    // public async Task<IActionResult> UpdateRole(Guid userId, [FromBody] UserRoleUpdateModel request)
+    // {
+    //     var result = await _userService.UpdateUserRolesAsync(userId, request.RoleIds);
+    //     return Ok(ResponseModel<bool>.OkResponseModel(
+    //         data: result,
+    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "user - role")
+    //     ));
+    // }
 
     /// <summary>
     /// Gán vai trò cho người dùng
@@ -78,10 +81,52 @@ public class UserController : ControllerBase
         ));
     }
 
+    /// <summary>
+    /// Mobile - gửi mail ý kiến
+    /// </summary>
+    /// <param name="model"></param>
+    /// <returns></returns>
     [HttpPost("send-feedback")]
     public async Task<IActionResult> SendFeedback([FromBody] FeedbackModel model)
     {
         await _userService.SendFeedbackAsync(model, new CancellationToken());
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: true,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUBMIT_SUCCESS, "feedback")
+        ));
+    }
+
+    /// <summary>
+    /// Upload ảnh lên Cloudinary --> link ảnh cho api sau
+    /// </summary>
+    /// <param name="file"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    [HttpPost("upload-avatar")]
+    [Authorize]
+    public async Task<IActionResult> UploadAvatar([FromForm] IFormFile file, CancellationToken cancellationToken)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest("Không có file hợp lệ");
+
+        var imageUrl = await _cloudinaryService.UploadImageAsync(file, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: imageUrl,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUBMIT_SUCCESS, "feedback")
+        ));
+    }
+
+    /// <summary>
+    /// Lấy link ảnh sau khi upload lên Cloudinary để cập nhật lại cho user
+    /// </summary>
+    /// <param name="avatarUrl"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    [HttpPut("update-avatar")]
+    [Authorize]
+    public async Task<IActionResult> UpdateAvatar(string avatarUrl, CancellationToken cancellationToken)
+    {
+        var result = await _userService.UpdateAvatarAsync(avatarUrl, cancellationToken);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: true,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUBMIT_SUCCESS, "feedback")
@@ -166,15 +211,15 @@ public class UserController : ControllerBase
         ));
     }
 
-    [HttpPut("{userId}/role")]
-    public async Task<IActionResult> AssignModeratorRole(Guid userId, [FromBody] UpdateUserRoleDto model)
-    {
-        var result = await _userService.AssignModeratorRoleAsync(userId, model);
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "user")
-        ));
-    }
+    // [HttpPut("{userId}/role")]
+    // public async Task<IActionResult> AssignModeratorRole(Guid userId, [FromBody] UpdateUserRoleDto model)
+    // {
+    //     var result = await _userService.AssignModeratorRoleAsync(userId, model);
+    //     return Ok(ResponseModel<object>.OkResponseModel(
+    //         data: result,
+    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "user")
+    //     ));
+    // }
 
     [HttpPost("tour-guide-request")]
     public async Task<IActionResult> CreateTourGuideRequest([FromBody] CreateTourGuideRequestDto model, CancellationToken cancellationToken = default)

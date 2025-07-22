@@ -9,7 +9,7 @@ public class CreateUserDto
 
 public class UpdateUserRoleDto
 {
-    public string Role { get; set; } // Vai trò mới (VD: "Moderator")
+    public Guid RoleId { get; set; }
 }
 
 public class UserResponseDto
