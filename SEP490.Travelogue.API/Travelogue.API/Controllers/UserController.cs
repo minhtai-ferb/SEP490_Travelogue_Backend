@@ -104,12 +104,16 @@ public class UserController : ControllerBase
     /// <returns></returns>
     [HttpPost("upload-avatar")]
     [Authorize]
-    public async Task<IActionResult> UploadAvatar([FromForm] IFormFile file, CancellationToken cancellationToken)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadAvatar([FromForm] UploadAvatarDto request, CancellationToken cancellationToken)
     {
+        var file = request.File;
+
         if (file == null || file.Length == 0)
             return BadRequest("Không có file hợp lệ");
 
         var imageUrl = await _cloudinaryService.UploadImageAsync(file, cancellationToken);
+
         return Ok(ResponseModel<object>.OkResponseModel(
             data: imageUrl,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUBMIT_SUCCESS, "feedback")
