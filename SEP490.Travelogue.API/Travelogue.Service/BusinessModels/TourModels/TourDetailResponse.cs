@@ -31,7 +31,8 @@ public class TourDayDetail
 
 public class TourActivity
 {
-    public Guid Id { get; set; }
+    public Guid TourPlanLocationId { get; set; }
+    public Guid LocationId { get; set; }
     public string Type { get; set; } = string.Empty; // "Location", "Cuisine", "CraftVillage"
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
@@ -44,6 +45,10 @@ public class TourActivity
     public string? Duration { get; set; }
     public string? Notes { get; set; }
     public string? ImageUrl { get; set; }
+    public float TravelTimeFromPrev { get; set; }
+    public float DistanceFromPrev { get; set; }
+    public float EstimatedStartTime { get; set; }
+    public float EstimatedEndTime { get; set; }
     // public decimal? Rating { get; set; }
 }
 
