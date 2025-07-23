@@ -8,4 +8,8 @@ public class TourPlanLocationResponseDto
     public TimeSpan StartTime { get; set; }
     public TimeSpan EndTime { get; set; }
     public string? Notes { get; set; }
+    public float TravelTimeFromPrev { get; set; }
+    public float DistanceFromPrev { get; set; }
+    public float EstimatedStartTime { get; set; }
+    public float EstimatedEndTime { get; set; }
 }

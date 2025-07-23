@@ -340,7 +340,7 @@ public class TourController : ControllerBase
     /// <param name="dto">Thông tin lịch trình cần cập nhật</param>
     /// <param name="cancellationToken">Token để hủy thao tác</param>
     /// <returns>Lịch trình đã cập nhật</returns>
-    [HttpPut("{scheduleId}")]
+    [HttpPut("tour-schedule/{scheduleId}")]
     [ProducesResponseType(typeof(ResponseModel<TourScheduleResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
