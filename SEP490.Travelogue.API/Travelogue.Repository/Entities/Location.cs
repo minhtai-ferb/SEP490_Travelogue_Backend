@@ -10,6 +10,7 @@ public sealed class Location : BaseEntity
     public required string Name { get; set; }
     public string? Description { get; set; }
     public string? Content { get; set; }
+    public string? Notes { get; set; }
     public string? Address { get; set; }
 
     [Range(-90, 90)]

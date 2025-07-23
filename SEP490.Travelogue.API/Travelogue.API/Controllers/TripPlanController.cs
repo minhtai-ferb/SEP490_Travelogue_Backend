@@ -33,15 +33,41 @@ public class TripPlansController : ControllerBase
     }
 
     /// <summary>
+    /// Cập nhật thông tin trip plan
+    /// </summary>
+    /// <param name="tripPlanId"></param>
+    /// <param name="model"></param>
+    /// <returns></returns>
+    [HttpPut("trip-plan/{tripPlanId}")]
+    public async Task<IActionResult> UpdateTripPlan(Guid tripPlanId, [FromBody] TripPlanUpdateDto model)
+    {
+        var result = await _tripPlanService.UpdateTripPlanAsync(tripPlanId, model);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "trip plan")
+        ));
+    }
+
+    /// <summary>
     /// Cập nhật tripPlan
     /// </summary>
     /// <param name="id"></param>
     /// <param name="model"></param>
     /// <returns></returns>
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateTripPlan(Guid id, [FromBody] TripPlanUpdateModel model)
+    [HttpPut("old-update/{id}")]
+    public async Task<IActionResult> OldUpdateTripPlan(Guid id, [FromBody] TripPlanUpdateModel model)
     {
         await _tripPlanService.UpdateTripPlanAsync(id, model, new CancellationToken());
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: true,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "news")
+        ));
+    }
+
+    [HttpPut("trip-plan-location/{id}")]
+    public async Task<IActionResult> UpdateTripPlan(Guid id, [FromBody] List<UpdateTripPlanLocationDto> model)
+    {
+        await _tripPlanService.UpdateTripPlanLocationsAsync(id, model);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: true,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "news")
@@ -92,6 +118,23 @@ public class TripPlansController : ControllerBase
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "trip plan")
+        ));
+    }
+
+    /// <summary>
+    /// Xóa trip plan
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="deletedImages"></param>
+    /// <returns></returns>
+    [HttpDelete]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> DeleteMedia(Guid id)
+    {
+        await _tripPlanService.DeleteTripPlanAsync(id, new CancellationToken());
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: true,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "media")
         ));
     }
 }

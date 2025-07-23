@@ -199,6 +199,23 @@ public class TourController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Xóa trip plan
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="deletedImages"></param>
+    /// <returns></returns>
+    [HttpDelete]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> DeleteMedia(Guid id)
+    {
+        await _tourService.DeleteTourAsync(id, new CancellationToken());
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: true,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "media")
+        ));
+    }
+
     #region Tour Locations
 
     /// <summary>

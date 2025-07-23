@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
+using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
@@ -8,6 +9,7 @@ using Travelogue.Service.BusinessModels.TourGuideModels;
 using Travelogue.Service.BusinessModels.TourModels;
 using Travelogue.Service.BusinessModels.WorkshopModels;
 using Travelogue.Service.Commons.Implementations;
+using Travelogue.Service.Commons.Interfaces;
 
 namespace Travelogue.Service.Services;
 
@@ -16,6 +18,7 @@ public interface ITourService
     Task<List<TourResponseDto>> GetAllToursAsync();
     Task<TourResponseDto> CreateTourAsync(CreateTourDto dto);
     Task<TourResponseDto> UpdateTourAsync(Guid tourId, UpdateTourDto dto);
+    Task DeleteTourAsync(Guid id, CancellationToken cancellationToken);
     Task<TourResponseDto> ConfirmTourAsync(Guid tourId, ConfirmTourDto dto);
     Task<TourDetailsResponseDto> GetTourDetailsAsync(Guid tourId);
     Task<TourDetailsResponseDto> GetTourDetailsAsync(Guid tourId, Guid? scheduleId = null);
@@ -40,12 +43,14 @@ public class TourService : ITourService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IEmailService _emailService;
     private readonly IEnumService _enumService;
+    private readonly IUserContextService _userContextService;
 
-    public TourService(IUnitOfWork unitOfWork, IEmailService emailService, IEnumService enumService)
+    public TourService(IUnitOfWork unitOfWork, IEmailService emailService, IEnumService enumService, IUserContextService userContextService)
     {
         _unitOfWork = unitOfWork;
         _emailService = emailService;
         _enumService = enumService;
+        _userContextService = userContextService;
     }
 
     public async Task<TourResponseDto> CreateTourAsync(CreateTourDto dto)
@@ -572,6 +577,46 @@ public class TourService : ITourService
         catch (Exception ex)
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task DeleteTourAsync(Guid id, CancellationToken cancellationToken)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            Guid userId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            var hasPermission = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
+            if (!hasPermission)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
+            var tour = _unitOfWork.TripPlanRepository.ActiveEntities
+                .FirstOrDefault(tp => tp.Id == id);
+            if (tour == null || tour.IsDeleted)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("trip plan");
+            }
+            tour.IsDeleted = true;
+            _unitOfWork.TripPlanRepository.Update(tour);
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (CustomException)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+        finally
+        {
+            ////  _unitOfWork.Dispose();
         }
     }
 

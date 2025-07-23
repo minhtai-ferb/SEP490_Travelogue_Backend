@@ -21,7 +21,7 @@ public class TripDayDetail
 
 public class TripActivity
 {
-    public Guid Id { get; set; }
+    public Guid LocationId { get; set; }
     public string Type { get; set; } = string.Empty; // "Location", "Cuisine", "CraftVillage"
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
