@@ -22,20 +22,24 @@ public interface ITripPlanService
     /// <summary>
     /// Lấy toàn bộ danh sách kế hoạch chuyến đi.
     /// </summary>
-    Task<List<TripPlanDataModel>> GetAllTripPlansAsync(CancellationToken cancellationToken);
+    Task<List<TripPlanResponseDto>> GetAllTripPlansAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// Thêm mới một kế hoạch chuyến đi.
     /// </summary>
     /// <param name="tripPlanCreateModel">Dữ liệu đầu vào để tạo kế hoạch.</param>
-    Task<TripPlanDataModel> AddTripPlanAsync(TripPlanCreateModel tripPlanCreateModel, CancellationToken cancellationToken);
+    Task<TripPlanResponseDto> AddTripPlanAsync(TripPlanCreateModel tripPlanCreateModel, CancellationToken cancellationToken);
+
+    Task<TripPlanResponseDto> UpdateTripPlanAsync(Guid tripPlanId, TripPlanUpdateDto dto);
 
     /// <summary>
     /// Cập nhật kế hoạch chuyến đi theo ID.
     /// </summary>
     /// <param name="id">ID của kế hoạch cần cập nhật.</param>
     /// <param name="tripPlanUpdateModel">Dữ liệu cập nhật.</param>
-    Task<TripPlanDataModel?> UpdateTripPlanAsync(Guid id, TripPlanUpdateModel tripPlanUpdateModel, CancellationToken cancellationToken);
+    Task<TripPlanResponseDto?> UpdateTripPlanAsync(Guid id, TripPlanUpdateModel tripPlanUpdateModel, CancellationToken cancellationToken);
+
+    Task<List<TripPlanLocationResponseDto>> UpdateTripPlanLocationsAsync(Guid tripPlanId, List<UpdateTripPlanLocationDto> dtos);
 
     /// <summary>
     /// Xóa kế hoạch chuyến đi theo ID.
@@ -49,7 +53,7 @@ public interface ITripPlanService
     /// <param name="title">Tiêu đề kế hoạch (tùy chọn, để tìm kiếm).</param>
     /// <param name="pageNumber">Trang hiện tại.</param>
     /// <param name="pageSize">Số lượng phần tử mỗi trang.</param>
-    Task<PagedResult<TripPlanDataModel>> GetPagedTripPlanWithSearchAsync(string? title, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<PagedResult<TripPlanResponseDto>> GetPagedTripPlanWithSearchAsync(string? title, int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<bool> UpdateTripPlanImageUrlAsync(Guid tripPlanId, string imageUrl, CancellationToken cancellationToken);
 }
 
@@ -69,6 +73,7 @@ public class TripPlanService : ITripPlanService
     }
     public async Task DeleteTripPlanAsync(Guid id, CancellationToken cancellationToken)
     {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
             Guid userId = Guid.Parse(_userContextService.GetCurrentUserId());
@@ -81,14 +86,16 @@ public class TripPlanService : ITripPlanService
             tripPlan.IsDeleted = true;
             _unitOfWork.TripPlanRepository.Update(tripPlan);
             await _unitOfWork.SaveAsync();
-
+            await transaction.CommitAsync(cancellationToken);
         }
         catch (CustomException)
         {
+            await transaction.RollbackAsync();
             throw;
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
@@ -97,12 +104,12 @@ public class TripPlanService : ITripPlanService
         }
     }
 
-    public Task<List<TripPlanDataModel>> GetAllTripPlansAsync(CancellationToken cancellationToken)
+    public Task<List<TripPlanResponseDto>> GetAllTripPlansAsync(CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }
 
-    public async Task<PagedResult<TripPlanDataModel>> GetPagedTripPlanWithSearchAsync(string? title, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<TripPlanResponseDto>> GetPagedTripPlanWithSearchAsync(string? title, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
@@ -110,14 +117,14 @@ public class TripPlanService : ITripPlanService
 
             var pagedResult = await _unitOfWork.TripPlanRepository.GetPageWithSearchAsync(title, pageNumber, pageSize, cancellationToken);
 
-            var newsDataModels = _mapper.Map<List<TripPlanDataModel>>(pagedResult.Items);
+            var newsDataModels = _mapper.Map<List<TripPlanResponseDto>>(pagedResult.Items);
 
             foreach (var tripPlan in newsDataModels)
             {
                 tripPlan.OwnerName = await _unitOfWork.UserRepository.GetUserNameByIdAsync(tripPlan.UserId) ?? string.Empty;
             }
 
-            var result = new PagedResult<TripPlanDataModel>
+            var result = new PagedResult<TripPlanResponseDto>
             {
                 Items = newsDataModels,
                 TotalCount = pagedResult.TotalCount,
@@ -138,6 +145,77 @@ public class TripPlanService : ITripPlanService
         finally
         {
             ////  _unitOfWork.Dispose();
+        }
+    }
+
+    public async Task<TripPlanResponseDto> UpdateTripPlanAsync(Guid tripPlanId, TripPlanUpdateDto dto)
+    {
+        try
+        {
+            var tripPlan = await _unitOfWork.TripPlanRepository
+                .ActiveEntities
+                .Include(t => t.TripPlanLocations)
+                .Include(t => t.Bookings)
+                .ThenInclude(b => b.User)
+                .FirstOrDefaultAsync(t => t.Id == tripPlanId)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("TripPlan");
+
+            // Validate date range
+            if (dto.StartDate > dto.EndDate)
+                throw CustomExceptionFactory.CreateBadRequestError("StartDate must be before EndDate.");
+
+            // Check if dates are being updated
+            bool datesChanged = tripPlan.StartDate != dto.StartDate || tripPlan.EndDate != dto.EndDate;
+            if (datesChanged)
+            {
+                var tripPlanStartDate = dto.StartDate.Date;
+                var tripPlanEndDate = dto.EndDate.Date.AddDays(1).AddTicks(-1); // Include the entire end date
+                foreach (var location in tripPlan.TripPlanLocations.Where(l => !l.IsDeleted))
+                {
+                    if (location.StartTime < tripPlanStartDate || location.StartTime > tripPlanEndDate)
+                        throw CustomExceptionFactory.CreateBadRequestError($"Start time {location.StartTime} for location {location.LocationId} is outside the new TripPlan date range ({tripPlanStartDate} to {tripPlanEndDate}).");
+                    if (location.EndTime < tripPlanStartDate || location.EndTime > tripPlanEndDate)
+                        throw CustomExceptionFactory.CreateBadRequestError($"End time {location.EndTime} for location {location.LocationId} is outside the new TripPlan date range ({tripPlanStartDate} to {tripPlanEndDate}).");
+                }
+            }
+
+            var changes = new List<string>();
+            using (var transaction = await _unitOfWork.BeginTransactionAsync())
+            {
+                try
+                {
+                    tripPlan.LastUpdatedTime = DateTimeOffset.UtcNow;
+
+                    await _unitOfWork.SaveAsync();
+
+                    await transaction.CommitAsync();
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            }
+            var ownerName = await _unitOfWork.UserRepository.GetUserNameByIdAsync(tripPlan.UserId) ?? string.Empty;
+            return new TripPlanResponseDto
+            {
+                Id = tripPlan.Id,
+                Name = tripPlan.Name,
+                Description = tripPlan.Description,
+                StartDate = tripPlan.StartDate,
+                EndDate = tripPlan.EndDate,
+                ImageUrl = tripPlan.ImageUrl,
+                UserId = tripPlan.UserId,
+                OwnerName = ownerName,
+            };
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
@@ -191,7 +269,7 @@ public class TripPlanService : ITripPlanService
             .Include(x => x.TripPlanLocations)
             .FirstOrDefaultAsync(x => x.Id == tripPlanId);
 
-        if (tripPlan == null || tripPlan.UserTripPlanVersionId == null)
+        if (tripPlan == null)
             throw CustomExceptionFactory.CreateNotFoundError("Trip plan hoặc version");
 
         // Locations
@@ -200,9 +278,10 @@ public class TripPlanService : ITripPlanService
             var location = await _unitOfWork.LocationRepository.GetByIdAsync(tpl.LocationId, cancellationToken: CancellationToken.None);
             if (location == null) continue;
 
+            var imageUrl = await GetLocationImageUrl(tpl.LocationId);
             activities.Add(new TripActivity
             {
-                Id = tpl.Id,
+                LocationId = tpl.LocationId,
                 Type = TripActivityTypeEnum.Location.ToString(),
                 Name = location.Name,
                 Description = location.Description,
@@ -213,7 +292,8 @@ public class TripPlanService : ITripPlanService
                 EndTimeFormatted = tpl.EndTime?.ToString("HH:mm"),
                 Duration = $"{(tpl.EndTime - tpl.StartTime)?.TotalMinutes} phút",
                 Notes = tpl.Notes,
-                ImageUrl = string.Empty
+                Order = tpl.Order,
+                ImageUrl = imageUrl ?? string.Empty,
             });
         }
 
@@ -244,7 +324,6 @@ public class TripPlanService : ITripPlanService
     {
         try
         {
-
             // Note: Nếu có isThumbnail thì lấy ảnh thumbnail, nếu không thì lấy ảnh đầu tiên
             var locationMedia = await _unitOfWork.LocationMediaRepository.ActiveEntities
                 .FirstOrDefaultAsync(l => l.LocationId == locationId);
@@ -385,7 +464,7 @@ public class TripPlanService : ITripPlanService
     //     }
     // }
 
-    public async Task<TripPlanDataModel?> UpdateTripPlanAsync(
+    public async Task<TripPlanResponseDto?> UpdateTripPlanAsync(
         Guid id,
         TripPlanUpdateModel tripPlanUpdateModel,
         CancellationToken cancellationToken)
@@ -423,9 +502,187 @@ public class TripPlanService : ITripPlanService
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);
 
-            var result = _mapper.Map<TripPlanDataModel>(tripPlan);
+            var result = _mapper.Map<TripPlanResponseDto>(tripPlan);
 
-            result.TripPlanId = tripPlan != null ? tripPlan.Id : (tripPlan.UserTripPlanVersionId ?? Guid.Empty);
+            return result;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<TripPlanLocationResponseDto>> UpdateTripPlanLocationsAsync(Guid tripPlanId, List<UpdateTripPlanLocationDto> dtos)
+    {
+        try
+        {
+            var tripPlan = await _unitOfWork.TripPlanRepository
+                .ActiveEntities
+                .Include(t => t.TripPlanLocations)
+                .Include(t => t.Bookings)
+                .ThenInclude(b => b.User)
+                .FirstOrDefaultAsync(t => t.Id == tripPlanId)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("TripPlan");
+
+            foreach (var dto in dtos)
+            {
+                if (dto.TripPlanLocationId.HasValue && !tripPlan.TripPlanLocations.Any(l => l.Id == dto.TripPlanLocationId && !l.IsDeleted))
+                    throw CustomExceptionFactory.CreateBadRequestError($"Location with ID {dto.TripPlanLocationId} not found or already deleted.");
+                if (dto.LocationId == Guid.Empty)
+                    throw CustomExceptionFactory.CreateBadRequestError($"Location ID is required for Order {dto.Order}.");
+                if (dto.Order < 1)
+                    throw CustomExceptionFactory.CreateBadRequestError($"Order must be positive for location {dto.LocationId}.");
+                if (dto.StartTime >= dto.EndTime)
+                    throw CustomExceptionFactory.CreateBadRequestError($"End time must be after start time for location {dto.LocationId}.");
+            }
+
+            // Validate LocationId
+            var locationIds = dtos.Select(d => d.LocationId).Distinct().ToList();
+            var validLocations = await _unitOfWork.LocationRepository
+                .ActiveEntities
+                .Where(l => locationIds.Contains(l.Id))
+                .Select(l => l.Id)
+                .ToListAsync();
+            var invalidLocations = locationIds.Except(validLocations).ToList();
+            if (invalidLocations.Any())
+                throw CustomExceptionFactory.CreateBadRequestError($"Invalid location IDs: {string.Join(", ", invalidLocations)}");
+
+            var existingLocations = tripPlan.TripPlanLocations.Where(l => !l.IsDeleted).ToList();
+            var providedLocationIds = dtos.Where(d => d.TripPlanLocationId.HasValue).Select(d => d.TripPlanLocationId.Value).ToList();
+            var toDelete = existingLocations.Where(l => !providedLocationIds.Contains(l.Id)).ToList();
+            var toAdd = dtos.Where(d => !d.TripPlanLocationId.HasValue)
+                .Select(d => new TripPlanLocation
+                {
+                    TripPlanId = tripPlanId,
+                    LocationId = d.LocationId,
+                    StartTime = d.StartTime,
+                    EndTime = d.EndTime,
+                    Notes = d.Notes,
+                    Order = d.Order,
+                    TravelTimeFromPrev = d.TravelTimeFromPrev,
+                    DistanceFromPrev = d.DistanceFromPrev,
+                    EstimatedStartTime = d.EstimatedStartTime,
+                    EstimatedEndTime = d.EstimatedEndTime,
+                    IsActive = true,
+                    IsDeleted = false
+                }).ToList();
+            var toUpdate = dtos.Where(d => d.TripPlanLocationId.HasValue).ToList();
+
+            // Validate time overlaps
+            var allLocations = existingLocations
+                .Where(l => !toDelete.Contains(l))
+                .Select(l => new { l.Id, l.StartTime, l.EndTime, l.Order })
+                .Concat(toAdd.Select(l => new { Id = Guid.Empty, l.StartTime, l.EndTime, l.Order }))
+                .Concat(toUpdate.Select(u => new { Id = u.TripPlanLocationId.Value, u.StartTime, u.EndTime, u.Order }))
+                .GroupBy(l => l.Order)
+                .ToList();
+
+            foreach (var group in allLocations)
+            {
+                var locationsInOrder = group.OrderBy(l => l.StartTime).ToList();
+                for (int i = 1; i < locationsInOrder.Count; i++)
+                {
+                    if (locationsInOrder[i].StartTime < locationsInOrder[i - 1].EndTime)
+                        throw CustomExceptionFactory.CreateBadRequestError($"Time overlap detected in Order {group.Key}.");
+                }
+            }
+
+            // Validate date range
+            var tripPlanStartDate = tripPlan.StartDate.Date;
+            var tripPlanEndDate = tripPlan.EndDate.Date.AddDays(1).AddTicks(-1);
+            foreach (var location in allLocations.SelectMany(g => g))
+            {
+                if (location.StartTime < tripPlanStartDate || location.StartTime > tripPlanEndDate)
+                    throw CustomExceptionFactory.CreateBadRequestError($"Start time {location.StartTime} for location is outside the TripPlan date range ({tripPlanStartDate} to {tripPlanEndDate}).");
+                if (location.EndTime < tripPlanStartDate || location.EndTime > tripPlanEndDate)
+                    throw CustomExceptionFactory.CreateBadRequestError($"End time {location.EndTime} for location is outside the TripPlan date range ({tripPlanStartDate} to {tripPlanEndDate}).");
+            }
+
+            var changes = new List<string>();
+            using (var transaction = await _unitOfWork.BeginTransactionAsync())
+            {
+                try
+                {
+                    foreach (var location in toDelete)
+                    {
+                        location.IsDeleted = true;
+                        location.LastUpdatedTime = DateTimeOffset.UtcNow;
+                        changes.Add($"Deleted location: {location.LocationId}");
+                    }
+
+                    await _unitOfWork.TripPlanLocationRepository.AddRangeAsync(toAdd);
+                    foreach (var location in toAdd)
+                        changes.Add($"Added location: {location.LocationId}");
+
+                    foreach (var dto in toUpdate)
+                    {
+                        var location = existingLocations.First(l => l.Id == dto.TripPlanLocationId.Value);
+                        location.LocationId = dto.LocationId;
+                        location.Order = dto.Order;
+                        location.StartTime = dto.StartTime;
+                        location.EndTime = dto.EndTime;
+                        location.Notes = dto.Notes;
+                        location.TravelTimeFromPrev = dto.TravelTimeFromPrev;
+                        location.DistanceFromPrev = dto.DistanceFromPrev;
+                        location.EstimatedStartTime = dto.EstimatedStartTime;
+                        location.EstimatedEndTime = dto.EstimatedEndTime;
+                        location.LastUpdatedTime = DateTimeOffset.UtcNow;
+                        changes.Add($"Updated location: {dto.LocationId}");
+                    }
+
+                    await _unitOfWork.SaveAsync();
+
+                    await transaction.CommitAsync();
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            }
+
+            var result = new List<TripPlanLocationResponseDto>();
+            foreach (var location in existingLocations.Where(l => !l.IsDeleted))
+            {
+                var imageUrl = await GetLocationImageUrl(location.LocationId);
+                result.Add(new TripPlanLocationResponseDto
+                {
+                    TripPlanLocationId = location.Id,
+                    LocationId = location.LocationId,
+                    Order = location.Order,
+                    StartTime = location.StartTime,
+                    EndTime = location.EndTime,
+                    Notes = location.Notes,
+                    TravelTimeFromPrev = location.TravelTimeFromPrev,
+                    DistanceFromPrev = location.DistanceFromPrev,
+                    EstimatedStartTime = location.EstimatedStartTime,
+                    EstimatedEndTime = location.EstimatedEndTime,
+                    ImageUrl = imageUrl
+                });
+            }
+
+            foreach (var location in toAdd)
+            {
+                var imageUrl = await GetLocationImageUrl(location.LocationId);
+                result.Add(new TripPlanLocationResponseDto
+                {
+                    TripPlanLocationId = location.Id,
+                    LocationId = location.LocationId,
+                    Order = location.Order,
+                    StartTime = location.StartTime,
+                    EndTime = location.EndTime,
+                    Notes = location.Notes,
+                    TravelTimeFromPrev = location.TravelTimeFromPrev,
+                    DistanceFromPrev = location.DistanceFromPrev,
+                    EstimatedStartTime = location.EstimatedStartTime,
+                    EstimatedEndTime = location.EstimatedEndTime,
+                    ImageUrl = imageUrl
+                });
+            }
 
             return result;
         }
@@ -539,7 +796,7 @@ public class TripPlanService : ITripPlanService
         }
     }
 
-    public async Task<TripPlanDataModel> AddTripPlanAsync(TripPlanCreateModel tripPlanCreateModel, CancellationToken cancellationToken)
+    public async Task<TripPlanResponseDto> AddTripPlanAsync(TripPlanCreateModel tripPlanCreateModel, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
@@ -562,7 +819,7 @@ public class TripPlanService : ITripPlanService
             var result = _unitOfWork.TripPlanRepository.ActiveEntities
                 .FirstOrDefault(tp => tp.Id == newTripPlan.Id);
 
-            return _mapper.Map<TripPlanDataModel>(result);
+            return _mapper.Map<TripPlanResponseDto>(result);
         }
         catch (CustomException)
         {
