@@ -212,30 +212,34 @@ public class AuthService : IAuthService
             };
 
             // Gửi email xác thực
-            await _emailService.SendEmailWithTemplateAsync(
+            // await _emailService.SendEmailWithTemplateAsync(
+            //     selectedEmail,
+            //     "Xác minh đăng ký Goyoung Tây Ninh",
+            //     MailTemplateLinks.VerifyAccountMailTemplate,
+            //     mailModel);
+            await _emailService.SendEmailAsync(
                 selectedEmail,
-                "Xác minh đăng ký Goyoung Tây Ninh",
-                MailTemplateLinks.VerifyAccountMailTemplate,
-                mailModel);
+                "Xác minh đăng ký Travelogue",
+                $"Username: {mailModel.UserName} \nVerificationLink = {mailModel.VerificationLink}");
 
             return response;
         }
         catch (CustomException)
         {
-            await transaction.RollbackAsync();
             if (firebaseUid != null)
             {
                 await FirebaseAuth.DefaultInstance.DeleteUserAsync(firebaseUid); // Rollback Firebase nếu có lỗi
             }
+            await transaction.RollbackAsync();
             throw;
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync();
             if (firebaseUid != null)
             {
                 await FirebaseAuth.DefaultInstance.DeleteUserAsync(firebaseUid); // Rollback Firebase nếu có lỗi
             }
+            await transaction.RollbackAsync();
             throw CustomExceptionFactory.CreateInternalServerError(ex.ToString());
         }
     }
