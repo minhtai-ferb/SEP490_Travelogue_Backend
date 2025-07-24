@@ -65,9 +65,18 @@ var app = builder.Build();
 //     await DataSeeder.SeedDataAsync(serviceProvider);
 // }
 
-await using var scope = app.Services.CreateAsyncScope();
-var serviceProvider = scope.ServiceProvider;
-await DataSeeder.SeedDataAsync(serviceProvider);
+//await using var scope = app.Services.CreateAsyncScope();
+//var serviceProvider = scope.ServiceProvider;
+//await DataSeeder.SeedDataAsync(serviceProvider);
+using (var scope = app.Services.CreateScope())
+{
+    var serviceProvider = scope.ServiceProvider;
+
+    var dbContext = serviceProvider.GetRequiredService<ApplicationDbContext>();
+    dbContext.Database.Migrate();
+
+    await DataSeeder.SeedDataAsync(serviceProvider);
+}
 
 app.UseCors(x => x.AllowAnyMethod().AllowAnyHeader().SetIsOriginAllowed(origin => true).AllowCredentials());
 app.UseSwagger();
@@ -75,7 +84,7 @@ app.UseSwaggerUI();
 //app.UseHttpsRedirection();
 app.UseHttpsRedirection();
 
-var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "UploadedImages");
+var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "images");
 
 if (!Directory.Exists(uploadPath))
 {
@@ -85,8 +94,8 @@ if (!Directory.Exists(uploadPath))
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(
-        Path.Combine(Directory.GetCurrentDirectory(), "UploadedImages")),
-    RequestPath = "/UploadedImages"
+        Path.Combine(Directory.GetCurrentDirectory(), "images")),
+    RequestPath = "/images"
 });
 
 app.UseAuthentication();
