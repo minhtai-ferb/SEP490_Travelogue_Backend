@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: 12345
+      MYSQL_DATABASE: travelogue
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - travelogue-net
+
+  travelogue-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: travelogue-api
+    depends_on:
+      - mysql
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://*:5565
+      - ConnectionStrings__DefaultConnectionMySQL=server=mysql;port=3306;user=root;password=12345;database=travelogue
+    volumes:
+      - ./images:/app/images
+    networks:
+      - travelogue-net
+    restart: unless-stopped
+
+  npm:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx-ui
+    ports:
+      - "80:80"
+      - "81:81"
+      - "443:443"
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+    networks:
+      - travelogue-net
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+
+networks:
+  travelogue-net:
+    driver: bridge
