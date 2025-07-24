@@ -17,7 +17,7 @@ public class MediaService : IMediaService
     {
         _httpContextAccessor = httpContextAccessor;
         _timeService = timeService;
-        _uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "UploadedImages");
+        _uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "images");
 
         // Ensure upload directory exists
         if (!Directory.Exists(_uploadPath))
@@ -201,8 +201,8 @@ public class MediaService : IMediaService
     {
         var request = _httpContextAccessor.HttpContext?.Request;
         return request != null
-            ? $"{request.Scheme}://{request.Host}/UploadedImages/{fileName}"
-            : $"/UploadedImages/{fileName}";
+            ? $"{request.Scheme}://{request.Host}/images/{fileName}"
+            : $"/images/{fileName}";
     }
 
     private MediaResponse CreateMediaResponse(string fileName, IFormFile image)
