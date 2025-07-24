@@ -2,7 +2,7 @@
 
 public enum AnnouncementType
 {
-    System,
-    Personal,
-    RoleBased
+    System = 1,
+    Personal = 2,
+    RoleBased = 3
 }

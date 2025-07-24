@@ -5,8 +5,8 @@ namespace Travelogue.Repository.Entities.Enums;
 public enum DiscountType
 {
     [Display(Name = "Cố định")]
-    Fixed,
+    Fixed = 1,
 
     [Display(Name = "Phần trăm")]
-    Percentage
+    Percentage = 2
 }

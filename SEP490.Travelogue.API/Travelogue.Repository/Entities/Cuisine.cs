@@ -4,7 +4,7 @@ namespace Travelogue.Repository.Entities;
 
 public sealed class Cuisine : BaseEntity
 {
-    public string? CuisineType { get; set; } // Loại âm thực 
+    public string? CuisineType { get; set; }
     public string? PhoneNumber { get; set; }
     public string? Email { get; set; }
     public string? Website { get; set; }

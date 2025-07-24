@@ -6,9 +6,11 @@ namespace Travelogue.Repository.Entities;
 
 public sealed class WithdrawalRequest : BaseEntity
 {
-
     [Required]
     public Guid CraftVillageId { get; set; }
+
+    [Required]
+    public Guid WalletId { get; set; }
 
     [Required]
     public Guid UserId { get; set; }
@@ -28,4 +30,8 @@ public sealed class WithdrawalRequest : BaseEntity
     // Navigation
     public CraftVillage CraftVillage { get; set; } = null!;
     public User User { get; set; } = null!;
+
+    // Navigation properties
+    [ForeignKey("WalletId")]
+    public Wallet Wallet { get; set; }
 }
