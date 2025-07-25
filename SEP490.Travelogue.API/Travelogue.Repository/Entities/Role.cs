@@ -29,16 +29,16 @@ public sealed class Role : BaseEntity
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Role name cannot be empty");
 
-        // if (skipFormatting)
-        // {
-        Name = name;
-        NormalizedName = name.ToUpperInvariant();
-        // }
-        // else
-        // {
-        //     Name = GenerateRoleName(name);
-        //     NormalizedName = GenerateNormalizedRoleName(name);
-        // }
+        if (skipFormatting)
+        {
+            Name = name;
+            NormalizedName = name.ToUpperInvariant();
+        }
+        else
+        {
+            Name = GenerateRoleName(name);
+            NormalizedName = GenerateNormalizedRoleName(name);
+        }
     }
 
     private static string GenerateNormalizedRoleName(string input)

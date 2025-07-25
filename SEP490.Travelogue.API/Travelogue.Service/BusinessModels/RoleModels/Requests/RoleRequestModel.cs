@@ -6,4 +6,5 @@ public class RoleRequestModel
 {
     [Required, StringLength(100)]
     public required string Name { get; set; }
+    public Guid? DistrictId { get; set; }
 }

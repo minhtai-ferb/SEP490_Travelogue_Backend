@@ -21,9 +21,11 @@ public sealed class Tour : BaseEntity
     public ICollection<TourPlanLocation> TourPlanLocations { get; set; } = new List<TourPlanLocation>();
     public TourType? TourType { get; set; }
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
+    public ICollection<TourGroup> TourGroups { get; set; } = new List<TourGroup>();
     public ICollection<TourSchedule> TourSchedules { get; set; } = new List<TourSchedule>();
+    // public ICollection<TourPlanLocation> TourPlanLocations { get; set; } = new List<TourPlanLocation>();
+
+    public ICollection<TourGuideMapping> TourGuideMappings { get; set; } = new List<TourGuideMapping>();
     public ICollection<PromotionApplicable> PromotionApplicables { get; set; } = new List<PromotionApplicable>();
     public ICollection<TourInterest> TourInterests { get; set; } = new List<TourInterest>();
-    // public ICollection<TourPlanLocation> TourPlanLocations { get; set; } = new List<TourPlanLocation>();
-    // public ICollection<TourGroup> TourGroups { get; set; } = new List<TourGroup>();
 }

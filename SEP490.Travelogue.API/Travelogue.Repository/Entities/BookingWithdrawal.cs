@@ -6,6 +6,7 @@ namespace Travelogue.Repository.Entities;
 
 public sealed class BookingWithdrawal : BaseEntity
 {
+
     [Required]
     public Guid BookingId { get; set; }
 

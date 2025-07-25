@@ -200,7 +200,7 @@ public class TourController : ControllerBase
     }
 
     /// <summary>
-    /// Xóa tour
+    /// Xóa trip plan
     /// </summary>
     /// <param name="id"></param>
     /// <param name="deletedImages"></param>
@@ -413,22 +413,15 @@ public class TourController : ControllerBase
     }
     #endregion
 
-    /// <summary>
-    /// Gán tour guide để dẫn 1 tour
-    /// </summary>
-    /// <param name="tourScheduleId"></param>
-    /// <param name="guideId"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
     [HttpPost("{tourId}/guides")]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> AddTourGuides(Guid tourScheduleId, Guid guideId, CancellationToken cancellationToken)
+    public async Task<IActionResult> AddTourGuides(Guid tourId, List<Guid> guideIds, CancellationToken cancellationToken)
     {
         try
         {
-            await _tourService.AddTourGuideToScheduleAsync(tourScheduleId, guideId);
+            await _tourService.AddTourGuidesAsync(tourId, guideIds);
             return Ok(ResponseModel<object>.OkResponseModel(
                 data: null,
                 message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "tour schedule")
@@ -444,13 +437,6 @@ public class TourController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Xóa 1 tour guide ra khỏi đoàn dẫn tour
-    /// </summary>
-    /// <param name="tourId"></param>
-    /// <param name="guideId"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
     [HttpDelete("{tourId}/guides")]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]

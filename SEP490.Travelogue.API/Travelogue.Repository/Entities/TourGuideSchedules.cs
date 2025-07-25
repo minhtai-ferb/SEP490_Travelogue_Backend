@@ -9,8 +9,7 @@ public sealed class TourGuideSchedule : BaseEntity
     [ForeignKey("TourGuide")]
     public Guid TourGuideId { get; set; }
 
-    public Guid? BookingId { get; set; }
-    public Guid? TourId { get; set; }
+    public Guid? BookingId { get; set; } // Foreign key to Booking
     [MaxLength(255)]
     public string? Note { get; set; }
 
@@ -19,6 +18,5 @@ public sealed class TourGuideSchedule : BaseEntity
     // Navigation property
     public TourGuide TourGuide { get; set; } = null!;
 
-    public Tour? Tour { get; set; }
     public Booking? Booking { get; set; }
 }

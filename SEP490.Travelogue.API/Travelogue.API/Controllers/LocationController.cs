@@ -260,7 +260,7 @@ public class LocationController : ControllerBase
     /// Lấy danh sách location phân trang theo tiêu đề, loại, quận/huyện, hạng mục di sản
     /// </summary>
     /// <param name="title"></param>
-    /// <param name="type"></param>
+    /// <param name="typeId"></param>
     /// <param name="districtId"></param>
     /// <param name="heritageRank"></param>
     /// <param name="pageNumber"></param>
@@ -270,14 +270,14 @@ public class LocationController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPagedLocationWithSearch(
         string? title = null,
-        LocationType? type = null,
+        Guid? typeId = null,
         Guid? districtId = null,
         HeritageRank? heritageRank = null,
         int pageNumber = 1,
         int pageSize = 10)
     {
         var locations = await _locationService.GetPagedLocationsWithSearchAsync(
-            title, type, districtId, heritageRank, pageNumber, pageSize, new CancellationToken());
+            title, typeId, districtId, heritageRank, pageNumber, pageSize, new CancellationToken());
         return Ok(PagedResponseModel<object>.OkResponseModel(
             data: locations.Items,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "location"),

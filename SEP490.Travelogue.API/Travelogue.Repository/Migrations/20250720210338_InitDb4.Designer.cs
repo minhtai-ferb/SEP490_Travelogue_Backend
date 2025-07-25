@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Travelogue.Repository.Data;
 
@@ -11,9 +12,11 @@ using Travelogue.Repository.Data;
 namespace Travelogue.Repository.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250720210338_InitDb4")]
+    partial class InitDb4
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1013,10 +1016,6 @@ namespace Travelogue.Repository.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)")
                         .HasColumnName("name");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("longtext")
-                        .HasColumnName("notes");
 
                     b.Property<TimeSpan?>("OpenTime")
                         .HasColumnType("time(6)")
@@ -3005,21 +3004,9 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("deleted_time");
 
-                    b.Property<float?>("DistanceFromPrev")
-                        .HasColumnType("float")
-                        .HasColumnName("distance_from_prev");
-
                     b.Property<DateTime?>("EndTime")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("end_time");
-
-                    b.Property<float?>("EstimatedEndTime")
-                        .HasColumnType("float")
-                        .HasColumnName("estimated_end_time");
-
-                    b.Property<float?>("EstimatedStartTime")
-                        .HasColumnType("float")
-                        .HasColumnName("estimated_start_time");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
@@ -3052,10 +3039,6 @@ namespace Travelogue.Repository.Migrations
                     b.Property<DateTime?>("StartTime")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("start_time");
-
-                    b.Property<float?>("TravelTimeFromPrev")
-                        .HasColumnType("float")
-                        .HasColumnName("travel_time_from_prev");
 
                     b.Property<Guid>("TripPlanId")
                         .HasColumnType("char(36)")

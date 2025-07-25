@@ -36,7 +36,6 @@ public interface IUnitOfWork //: IDisposable
     ICraftVillageRequestRepository CraftVillageRequestRepository { get; }
     IWorkshopMediaRepository WorkshopMediaRepository { get; }
     ITourMediaRepository TourMediaRepository { get; }
-    ICertificationRepository CertificationRepository { get; }
 
     IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity;
     void Save();

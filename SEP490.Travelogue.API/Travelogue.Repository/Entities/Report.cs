@@ -5,6 +5,7 @@ namespace Travelogue.Repository.Entities;
 
 public class Report : BaseEntity
 {
+
     [Required]
     public Guid UserId { get; set; }
 

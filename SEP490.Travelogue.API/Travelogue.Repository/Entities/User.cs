@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Travelogue.Repository.Bases.BaseEntities;
@@ -7,16 +6,14 @@ using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Repository.Entities;
 
+//public sealed class User : IdentityUser, IBaseEntity
 public sealed class User : BaseEntity
 {
     [Required, EmailAddress]
     public required string Email { get; set; }
     public bool? EmailConfirmed { get; set; }
-    [Column(TypeName = "VARBINARY(128)")]
-    public byte[]? PasswordSalt { get; set; }
-
-    [Column(TypeName = "VARBINARY(64)")]
     public byte[]? PasswordHash { get; set; }
+    public byte[]? PasswordSalt { get; set; }
     public string? PhoneNumber { get; set; }
     public bool? PhoneNumberConfirmed { get; set; }
     public required string FullName { get; set; } = string.Empty;
@@ -35,7 +32,6 @@ public sealed class User : BaseEntity
     public string? VerificationToken { get; set; }
     public DateTimeOffset? VerificationTokenExpires { get; set; }
     public DateTimeOffset? LockoutEnd { get; set; }
-    public Wallet Wallet { get; set; }
     public ICollection<UserRole>? UserRoles { get; set; }
     public ICollection<FavoriteLocation> FavoriteLocations { get; set; } = new List<FavoriteLocation>();
 
@@ -132,9 +128,9 @@ public sealed class User : BaseEntity
     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     public ICollection<Report> Reports { get; set; } = new List<Report>();
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
+    public ICollection<TourGroupMember> TourGroupMembers { get; set; } = new List<TourGroupMember>();
     public ICollection<TourGuide> TourGuides { get; set; } = new List<TourGuide>();
     public ICollection<Message> SentMessages { get; set; } = new List<Message>();
     public ICollection<Message> ReceivedMessages { get; set; } = new List<Message>();
     public ICollection<UserAnnouncement> UserAnnouncements { get; set; } = new List<UserAnnouncement>();
-    // public ICollection<TourGroupMember> TourGroupMembers { get; set; } = new List<TourGroupMember>();
 }

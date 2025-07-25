@@ -13,7 +13,7 @@ public interface ILocationRepository : IGenericRepository<Location>
     Task<PagedResult<Location>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, Guid typeId, CancellationToken cancellationToken = default);
     Task<PagedResult<Location>> GetPageWithSearchAsync(
         string? title,
-        LocationType? typeId,
+        Guid? typeId,
         Guid? districtId,
         HeritageRank? heritageRank,
         int pageNumber,
@@ -54,7 +54,7 @@ public sealed class LocationRepository : GenericRepository<Location>, ILocationR
         var location = await _context.Locations
             .FirstOrDefaultAsync(l => l.Id == locationId, cancellationToken);
 
-        if (location == null)
+        if (location == null || location.LocationType == null)
         {
             return string.Empty;
         }
@@ -156,7 +156,7 @@ public sealed class LocationRepository : GenericRepository<Location>, ILocationR
 
     public async Task<PagedResult<Location>> GetPageWithSearchAsync(
         string? title,
-        LocationType? type,
+        Guid? typeId,
         Guid? districtId,
         HeritageRank? heritageRank,
         int pageNumber,
@@ -175,10 +175,10 @@ public sealed class LocationRepository : GenericRepository<Location>, ILocationR
             query = query.Where(a => a.Name.Contains(title));
         }
 
-        if (type.HasValue)
-        {
-            query = query.Where(a => a.LocationType == type.Value);
-        }
+        // if (typeId.HasValue)
+        // {
+        //     query = query.Where(a => a.TypeLocationId == typeId.Value);
+        // }
 
         if (districtId.HasValue)
         {

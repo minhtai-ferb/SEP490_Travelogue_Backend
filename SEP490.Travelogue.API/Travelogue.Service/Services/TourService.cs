@@ -29,8 +29,8 @@ public interface ITourService
     Task<TourScheduleResponseDto> UpdateScheduleAsync(Guid tourId, Guid scheduleId, CreateTourScheduleDto dto);
     Task DeleteScheduleAsync(Guid tourId, Guid scheduleId);
 
-    Task AddTourGuideToScheduleAsync(Guid tourScheduleId, Guid guideId);
-    Task RemoveTourGuideAsync(Guid tourScheduleId, Guid guideId);
+    Task AddTourGuidesAsync(Guid tourId, List<Guid> guideIds);
+    Task RemoveTourGuideAsync(Guid tourId, Guid guideId);
 
     Task<List<TourMedia>> AddTourMediasAsync(Guid tourId, List<TourMediaCreateDto> createDtos);
     Task<bool> DeleteTourMediaAsync(Guid tourMediaId);
@@ -80,7 +80,7 @@ public class TourService : ITourService
             var childrenPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.ChildrenPrice) : 0m;
             var finalPrice = adultPrice;
 
-            // var tourGuide = GetTourGuidesInfo(tour);
+            // var tourGuide = GetTourGuideInfo(tour);
 
             var groupedLocations = tour.TourPlanLocations
                 .Where(l => !l.IsDeleted)
@@ -195,7 +195,7 @@ public class TourService : ITourService
             var childrenPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.ChildrenPrice) : 0m;
             var finalPrice = adultPrice;
 
-            // var tourGuide = GetTourGuidesInfo(tour);
+            // var tourGuide = GetTourGuideInfo(tour);
 
             var groupedLocations = tour.TourPlanLocations
                 .Where(l => !l.IsDeleted)
@@ -251,12 +251,12 @@ public class TourService : ITourService
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Tour");
 
             var maxDayOrder = tour.TourPlanLocations.Any() ? tour.TourPlanLocations.Max(l => l.DayOrder) : 0;
-
-            if (tour.TotalDays < maxDayOrder)
-                throw CustomExceptionFactory.CreateBadRequestError($"Tổng số ngày ({tour.TotalDays}) không được nhỏ hơn ngày lớn nhất đã lên kế hoạch ({maxDayOrder}).");
+            // var scheduleDates = tour.TourSchedules.Select(s => s.DepartureDate.Date).Distinct().Count();
+            // if (scheduleDates < maxDayOrder)
+            //     throw CustomExceptionFactory.CreateBadRequestError($"Not enough schedules ({scheduleDates}) to cover DayOrder ({maxDayOrder}).");
 
             if (tour.Status == TourStatus.Confirmed)
-                throw CustomExceptionFactory.CreateBadRequestError("Tour đã được xác nhận.");
+                throw CustomExceptionFactory.CreateBadRequestError("Tour is already confirmed.");
 
             tour.Status = TourStatus.Confirmed;
             tour.LastUpdatedTime = DateTimeOffset.UtcNow;
@@ -267,17 +267,17 @@ public class TourService : ITourService
                 {
                     await _unitOfWork.SaveAsync();
 
-                    // if (tour.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
-                    // {
-                    //     foreach (var booking in tour.Bookings)
-                    //     {
-                    //         await _emailService.SendEmailAsync(
-                    //             new[] { booking.User.Email },
-                    //             $"Tour {tour.Name} Đã Được Xác Nhận",
-                    //             $"Tour {tour.Name} đã được xác nhận và sẵn sàng cho bạn tham gia. Vui lòng kiểm tra chi tiết."
-                    //         );
-                    //     }
-                    // }
+                    if (tour.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
+                    {
+                        foreach (var booking in tour.Bookings)
+                        {
+                            await _emailService.SendEmailAsync(
+                                new[] { booking.User.Email },
+                                $"Tour {tour.Name} Đã Được Xác Nhận",
+                                $"Tour {tour.Name} đã được xác nhận và sẵn sàng cho bạn tham gia. Vui lòng kiểm tra chi tiết."
+                            );
+                        }
+                    }
 
                     await transaction.CommitAsync();
                 }
@@ -313,6 +313,9 @@ public class TourService : ITourService
                 .Include(t => t.TourPlanLocations)
                     .ThenInclude(l => l.Location)
                 .Include(t => t.TourSchedules)
+                .Include(t => t.TourGuideMappings)
+                    .ThenInclude(tg => tg.TourGuide)
+                        .ThenInclude(tg => tg.User)
                 .Include(t => t.PromotionApplicables)
                     .ThenInclude(p => p.Promotion)
                 .ToListAsync();
@@ -332,7 +335,7 @@ public class TourService : ITourService
                 var childrenPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.ChildrenPrice) : 0m;
                 var finalPrice = adultPrice;
 
-                var tourGuide = GetTourGuidesInfo(tour);
+                var tourGuide = GetTourGuideInfo(tour);
 
                 var groupedLocations = tour.TourPlanLocations
                     .Where(l => !l.IsDeleted)
@@ -382,9 +385,9 @@ public class TourService : ITourService
                 .Include(t => t.TourPlanLocations)
                     .ThenInclude(l => l.Location)
                 .Include(t => t.TourSchedules)
-                    .ThenInclude(t => t.TourGuideMappings)
-                        .ThenInclude(tg => tg.TourGuide)
-                            .ThenInclude(tg => tg.User)
+                .Include(t => t.TourGuideMappings)
+                    .ThenInclude(tg => tg.TourGuide)
+                        .ThenInclude(tg => tg.User)
                 .Include(t => t.PromotionApplicables)
                     .ThenInclude(p => p.Promotion)
                 .FirstOrDefaultAsync(t => t.Id == tourId)
@@ -413,7 +416,7 @@ public class TourService : ITourService
             var maxDiscount = isDiscount ? activePromotions.Max(p => p.DiscountPercentage) : 0;
             var finalPrice = adultPrice * (1 - maxDiscount / 100);
 
-            var tourGuide = GetTourGuidesInfo(tour);
+            var tourGuide = GetTourGuideInfo(tour);
 
             var groupedLocations = tour.TourPlanLocations
                 .Where(l => !l.IsDeleted)
@@ -486,9 +489,9 @@ public class TourService : ITourService
                 .Include(t => t.TourPlanLocations)
                     .ThenInclude(l => l.Location)
                 .Include(t => t.TourSchedules)
-                    .ThenInclude(t => t.TourGuideMappings)
-                        .ThenInclude(tg => tg.TourGuide)
-                            .ThenInclude(tg => tg.User)
+                .Include(t => t.TourGuideMappings)
+                    .ThenInclude(tg => tg.TourGuide)
+                        .ThenInclude(tg => tg.User)
                 .Include(t => t.PromotionApplicables)
                     .ThenInclude(p => p.Promotion)
                 .FirstOrDefaultAsync(t => t.Id == tourId)
@@ -531,7 +534,7 @@ public class TourService : ITourService
             var maxDiscount = isDiscount ? activePromotions.Max(p => p.DiscountPercentage) : 0;
             var finalPrice = adultPrice * (1 - maxDiscount / 100);
 
-            var tourGuide = GetTourGuidesInfo(tour);
+            var tourGuide = GetTourGuideInfo(tour);
             var dayDetails = await BuildDayDetails(tour);
 
             return new TourDetailsResponseDto
@@ -1149,192 +1152,100 @@ public class TourService : ITourService
 
     #region TourGuide
 
-    // public async Task AddTourGuidesAsync(Guid tourId, List<Guid> guideIds)
-    // {
-    //     try
-    //     {
-    //         var tour = await _unitOfWork.TourRepository
-    //             .ActiveEntities
-    //             .Include(t => t.TourSchedules)
-    //             .Include(t => t.TourGuideMappings)
-    //             .Include(t => t.Bookings)
-    //             .ThenInclude(b => b.User)
-    //             .FirstOrDefaultAsync(t => t.Id == tourId)
-    //             ?? throw CustomExceptionFactory.CreateNotFoundError("Tour");
-
-    //         if (tour.Status == TourStatus.Cancelled)
-    //             throw CustomExceptionFactory.CreateBadRequestError("Không thể chỉ định hướng dẫn viên cho chuyến tham quan đã hủy.");
-
-    //         // Kiểm tra TourGuide tồn tại và hợp lệ
-    //         var validGuides = await _unitOfWork.TourGuideRepository
-    //             .ActiveEntities
-    //             .Include(tg => tg.User)
-    //             .Include(tg => tg.TourGuideSchedules)
-    //             .Where(tg => guideIds.Contains(tg.Id))
-    //             .ToListAsync();
-    //         var invalidGuideIds = guideIds.Except(validGuides.Select(tg => tg.Id)).ToList();
-    //         if (invalidGuideIds.Any())
-    //             throw CustomExceptionFactory.CreateBadRequestError($"TourGuide IDs không hợp lệ: {string.Join(", ", invalidGuideIds)}");
-
-    //         // Kiểm tra lịch trống của TourGuide
-    //         var tourSchedules = tour.TourSchedules.Where(s => !s.IsDeleted).ToList();
-    //         if (tourSchedules.Any())
-    //         {
-    //             var tourStart = tourSchedules.Min(s => s.DepartureDate.Date);
-    //             var tourEnd = tourSchedules.Max(s => s.DepartureDate.AddDays(s.TotalDays).Date);
-    //             foreach (var guide in validGuides)
-    //             {
-    //                 var conflictingSchedules = guide.TourGuideSchedules
-    //                     .Where(s => !s.IsDeleted)
-    //                     .Where(s => s.BookingId != null) // Chỉ kiểm tra lịch đã gắn với booking
-    //                     .Where(s => s.Date.Date >= tourStart && s.Date.Date <= tourEnd)
-    //                     .ToList();
-    //                 if (conflictingSchedules.Any())
-    //                     throw CustomExceptionFactory.CreateBadRequestError($"TourGuide {guide.User.FullName} không sẵn sàng trong khoảng {tourStart:yyyy-MM-dd} tới {tourEnd:yyyy-MM-dd}.");
-    //             }
-    //         }
-
-    //         // check tourGuide 
-    //         var existingGuideIds = tour.TourGuideMappings.Where(tg => !tg.IsDeleted).Select(tg => tg.GuideId).ToList();
-    //         var newGuideIds = guideIds.Except(existingGuideIds).ToList();
-    //         if (!newGuideIds.Any())
-    //             return; // không có TourGuide mới để thêm
-
-    //         // tour Guide Mapping
-    //         var newMappings = newGuideIds.Select(guideId => new TourGuideMapping
-    //         {
-    //             TourId = tourId,
-    //             GuideId = guideId,
-    //             CreatedTime = DateTimeOffset.UtcNow,
-    //             LastUpdatedTime = DateTimeOffset.UtcNow
-    //         }).ToList();
-
-    //         var changes = new List<string>();
-    //         using (var transaction = await _unitOfWork.BeginTransactionAsync())
-    //         {
-    //             try
-    //             {
-    //                 await _unitOfWork.TourGuideMappingRepository.AddRangeAsync(newMappings);
-    //                 foreach (var mapping in newMappings)
-    //                 {
-    //                     var guide = validGuides.First(g => g.Id == mapping.GuideId);
-    //                     changes.Add($"Added TourGuide: {guide.User.FullName}");
-    //                 }
-
-    //                 await _unitOfWork.SaveAsync();
-
-    //                 if (tour.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
-    //                 {
-    //                     var changeSummary = string.Join("\n", changes);
-    //                     foreach (var booking in tour.Bookings)
-    //                     {
-    //                         await _emailService.SendEmailAsync(
-    //                             new[] { booking.User.Email },
-    //                             $"Cập nhật thông tin Tour {tour.Name}",
-    //                             $"Tour {tour.Name} đã có các thay đổi sau:\n{changeSummary}\nVui lòng kiểm tra chi tiết."
-    //                         );
-    //                     }
-    //                 }
-
-    //                 await transaction.CommitAsync();
-    //             }
-    //             catch
-    //             {
-    //                 await transaction.RollbackAsync();
-    //                 throw;
-    //             }
-    //         }
-    //     }
-    //     catch (CustomException)
-    //     {
-    //         throw;
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-    //     }
-    // }
-
-    public async Task AddTourGuideToScheduleAsync(Guid tourScheduleId, Guid guideId)
+    public async Task AddTourGuidesAsync(Guid tourId, List<Guid> guideIds)
     {
         try
         {
-            var tourSchedule = await _unitOfWork.TourScheduleRepository
+            var tour = await _unitOfWork.TourRepository
                 .ActiveEntities
-                .Include(ts => ts.Tour)
-                    .ThenInclude(t => t.Bookings)
-                        .ThenInclude(b => b.User)
-                .Include(ts => ts.TourGuideMappings)
-                .FirstOrDefaultAsync(ts => ts.Id == tourScheduleId)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("TourSchedule");
+                .Include(t => t.TourSchedules)
+                .Include(t => t.TourGuideMappings)
+                .Include(t => t.Bookings)
+                .ThenInclude(b => b.User)
+                .FirstOrDefaultAsync(t => t.Id == tourId)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Tour");
 
-            if (tourSchedule.Tour.Status == TourStatus.Cancelled)
-                throw CustomExceptionFactory.CreateBadRequestError("Không thể chỉ định hướng dẫn viên cho tour đã bị hủy.");
+            if (tour.Status == TourStatus.Cancelled)
+                throw CustomExceptionFactory.CreateBadRequestError("Không thể chỉ định hướng dẫn viên cho chuyến tham quan đã hủy.");
 
-            // Kiểm tra hướng dẫn viên có tồn tại
-            var tourGuide = await _unitOfWork.TourGuideRepository
+            // Kiểm tra TourGuide tồn tại và hợp lệ
+            var validGuides = await _unitOfWork.TourGuideRepository
                 .ActiveEntities
-                .Include(g => g.User)
-                .Include(g => g.TourGuideSchedules)
-                .FirstOrDefaultAsync(g => g.Id == guideId)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("TourGuide");
+                .Include(tg => tg.User)
+                .Include(tg => tg.TourGuideSchedules)
+                .Where(tg => guideIds.Contains(tg.Id))
+                .ToListAsync();
+            var invalidGuideIds = guideIds.Except(validGuides.Select(tg => tg.Id)).ToList();
+            if (invalidGuideIds.Any())
+                throw CustomExceptionFactory.CreateBadRequestError($"TourGuide IDs không hợp lệ: {string.Join(", ", invalidGuideIds)}");
 
-            // Kiểm tra lịch bị trùng
-            var tourStart = tourSchedule.DepartureDate.Date;
-            var tourEnd = tourSchedule.DepartureDate.AddDays(tourSchedule.TotalDays).Date;
-
-            var conflictingSchedules = tourGuide.TourGuideSchedules
-                .Where(s => !s.IsDeleted)
-                .Where(s => s.BookingId != null)
-                .Where(s => s.Date.Date >= tourStart && s.Date.Date <= tourEnd)
-                .ToList();
-
-            if (conflictingSchedules.Any())
-                throw CustomExceptionFactory.CreateBadRequestError($"TourGuide {tourGuide.User.FullName} không sẵn sàng trong khoảng {tourStart:yyyy-MM-dd} đến {tourEnd:yyyy-MM-dd}.");
-
-            // Check đã gán rồi chưa
-            var isAlreadyAssigned = tourSchedule.TourGuideMappings
-                .Any(m => !m.IsDeleted && m.TourGuideId == guideId);
-
-            if (isAlreadyAssigned)
-                throw CustomExceptionFactory.CreateBadRequestError("Hướng dẫn viên này đã được gán cho lịch trình.");
-
-            // Thêm mới
-            var mapping = new TourGuideMapping
+            // Kiểm tra lịch trống của TourGuide
+            var tourSchedules = tour.TourSchedules.Where(s => !s.IsDeleted).ToList();
+            if (tourSchedules.Any())
             {
-                TourScheduleId = tourScheduleId,
-                TourGuideId = guideId,
+                var tourStart = tourSchedules.Min(s => s.DepartureDate.Date);
+                var tourEnd = tourSchedules.Max(s => s.DepartureDate.AddDays(s.TotalDays).Date);
+                foreach (var guide in validGuides)
+                {
+                    var conflictingSchedules = guide.TourGuideSchedules
+                        .Where(s => !s.IsDeleted)
+                        .Where(s => s.BookingId != null) // Chỉ kiểm tra lịch đã gắn với booking
+                        .Where(s => s.Date.Date >= tourStart && s.Date.Date <= tourEnd)
+                        .ToList();
+                    if (conflictingSchedules.Any())
+                        throw CustomExceptionFactory.CreateBadRequestError($"TourGuide {guide.User.FullName} không sẵn sàng trong khoảng {tourStart:yyyy-MM-dd} tới {tourEnd:yyyy-MM-dd}.");
+                }
+            }
+
+            // check tourGuide 
+            var existingGuideIds = tour.TourGuideMappings.Where(tg => !tg.IsDeleted).Select(tg => tg.GuideId).ToList();
+            var newGuideIds = guideIds.Except(existingGuideIds).ToList();
+            if (!newGuideIds.Any())
+                return; // không có TourGuide mới để thêm
+
+            // tour Guide Mapping
+            var newMappings = newGuideIds.Select(guideId => new TourGuideMapping
+            {
+                TourId = tourId,
+                GuideId = guideId,
                 CreatedTime = DateTimeOffset.UtcNow,
                 LastUpdatedTime = DateTimeOffset.UtcNow
-            };
+            }).ToList();
 
-            using var transaction = await _unitOfWork.BeginTransactionAsync();
-            try
+            var changes = new List<string>();
+            using (var transaction = await _unitOfWork.BeginTransactionAsync())
             {
-                await _unitOfWork.TourGuideMappingRepository.AddAsync(mapping);
-                await _unitOfWork.SaveAsync();
-
-                // Gửi email nếu tour đã có người đặt
-                if (tourSchedule.Tour.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
+                try
                 {
-                    var changeMsg = $"TourGuide {tourGuide.User.FullName} đã được gán cho lịch trình ngày {tourSchedule.DepartureDate:yyyy-MM-dd}.";
-
-                    foreach (var booking in tourSchedule.Tour.Bookings)
+                    await _unitOfWork.TourGuideMappingRepository.AddRangeAsync(newMappings);
+                    foreach (var mapping in newMappings)
                     {
-                        await _emailService.SendEmailAsync(
-                            new[] { booking.User.Email },
-                            $"Cập nhật thông tin Tour {tourSchedule.Tour.Name}",
-                            $"Tour {tourSchedule.Tour.Name} đã được cập nhật:\n{changeMsg}"
-                        );
+                        var guide = validGuides.First(g => g.Id == mapping.GuideId);
+                        changes.Add($"Added TourGuide: {guide.User.FullName}");
                     }
-                }
 
-                await transaction.CommitAsync();
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
+                    await _unitOfWork.SaveAsync();
+
+                    if (tour.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
+                    {
+                        var changeSummary = string.Join("\n", changes);
+                        foreach (var booking in tour.Bookings)
+                        {
+                            await _emailService.SendEmailAsync(
+                                new[] { booking.User.Email },
+                                $"Cập nhật thông tin Tour {tour.Name}",
+                                $"Tour {tour.Name} đã có các thay đổi sau:\n{changeSummary}\nVui lòng kiểm tra chi tiết."
+                            );
+                        }
+                    }
+
+                    await transaction.CommitAsync();
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
             }
         }
         catch (CustomException)
@@ -1347,25 +1258,24 @@ public class TourService : ITourService
         }
     }
 
-    public async Task RemoveTourGuideAsync(Guid tourScheduleId, Guid guideId)
+    public async Task RemoveTourGuideAsync(Guid tourId, Guid guideId)
     {
         try
         {
-            var tourSchedule = await _unitOfWork.TourScheduleRepository
+            var tour = await _unitOfWork.TourRepository
                 .ActiveEntities
-                .Include(ts => ts.Tour)
-                .ThenInclude(t => t.Bookings)
+                .Include(t => t.TourGuideMappings)
+                .Include(t => t.Bookings)
                 .ThenInclude(b => b.User)
-                .Include(ts => ts.TourGuideMappings)
-                .FirstOrDefaultAsync(ts => ts.Id == tourScheduleId)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("TourSchedule");
+                .FirstOrDefaultAsync(t => t.Id == tourId)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Tour");
 
-            if (tourSchedule.Tour.Status == TourStatus.Cancelled)
+            if (tour.Status == TourStatus.Cancelled)
                 throw CustomExceptionFactory.CreateBadRequestError("Không thể xóa tour guide khỏi lịch trình đã bị hủy.");
 
-            var mapping = tourSchedule.TourGuideMappings
-                .FirstOrDefault(tg => tg.TourGuideId == guideId && !tg.IsDeleted)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("TourGuide không được chỉ định cho lịch trình này.");
+            var mapping = tour.TourGuideMappings
+                .FirstOrDefault(tg => tg.GuideId == guideId && !tg.IsDeleted)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("TourGuide không được chỉ định cho tour này.");
 
             var guide = await _unitOfWork.TourGuideRepository
                 .ActiveEntities
@@ -1382,15 +1292,14 @@ public class TourService : ITourService
 
                     await _unitOfWork.SaveAsync();
 
-                    // Gửi email nếu có khách đặt tour
-                    if (tourSchedule.Tour.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
+                    if (tour.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
                     {
-                        foreach (var booking in tourSchedule.Tour.Bookings)
+                        foreach (var booking in tour.Bookings)
                         {
                             await _emailService.SendEmailAsync(
-                                new[] { booking.User.Email },
-                                $"Cập nhật thông tin Tour {tourSchedule.Tour.Name}",
-                                $"Tour {tourSchedule.Tour.Name} - Lịch trình ngày {tourSchedule.DepartureDate:dd/MM/yyyy} đã xóa hướng dẫn viên: {guide.User.FullName}."
+                                 new[] { booking.User.Email },
+                                $"Cập nhật thông tin Tour {tour.Name}",
+                                $"Tour {tour.Name} đã xóa hướng dẫn viên: {guide.User.FullName}."
                             );
                         }
                     }
@@ -1490,11 +1399,9 @@ public class TourService : ITourService
         return dayDetails;
     }
 
-    private List<TourGuideDataModel> GetTourGuidesInfo(Tour tour)
+    private TourGuideDataModel? GetTourGuideInfo(Tour tour)
     {
-        return tour.TourSchedules
-            .Where(ts => !ts.IsDeleted)
-            .SelectMany(ts => ts.TourGuideMappings)
+        return tour.TourGuideMappings
             .Where(tg => !tg.IsDeleted && tg.TourGuide != null)
             .Select(tg => new TourGuideDataModel
             {
@@ -1508,8 +1415,7 @@ public class TourService : ITourService
                 Introduction = tg.TourGuide.Introduction,
                 AvatarUrl = tg.TourGuide.User.AvatarUrl,
             })
-            .DistinctBy(g => g.Id)
-            .ToList();
+            .FirstOrDefault();
     }
 
     // Location
@@ -1534,26 +1440,14 @@ public class TourService : ITourService
                 throw CustomExceptionFactory.CreateBadRequestError("Email cannot be empty.");
             }
 
-            email = email.Trim().ToLower();
-
-            var toursQuery = _unitOfWork.TourRepository.ActiveEntities
+            var tours = _unitOfWork.TourRepository.ActiveEntities
+                .Include(t => t.TourGuideMappings)
+                    .ThenInclude(tgm => tgm.TourGuide)
+                        .ThenInclude(tg => tg.User)
                 .Include(t => t.TourSchedules)
-                    .ThenInclude(s => s.TourGuideMappings)
-                        .ThenInclude(m => m.TourGuide)
-                            .ThenInclude(g => g.User)
-                .Where(t => t.TourSchedules
-                    .Any(s => !s.IsDeleted &&
-                              s.TourGuideMappings.Any(m =>
-                                  !m.IsDeleted &&
-                                  m.TourGuide != null &&
-                                  m.TourGuide.User.Email.ToLower() == email
-                              )
-                    )
-                );
+                .Where(t => t.TourGuideMappings.Any(tgm => tgm.TourGuide.User.Email.ToLower() == email.ToLower()));
 
-            var totalCount = await toursQuery.CountAsync(cancellationToken);
-
-            if (totalCount == 0)
+            if (tours == null || !await tours.AnyAsync(cancellationToken))
             {
                 return new PagedResult<TourResponseDto>
                 {
@@ -1564,13 +1458,14 @@ public class TourService : ITourService
                 };
             }
 
-            var tourItems = await toursQuery
+            var totalCount = await tours.CountAsync(cancellationToken);
+
+            var tourResponses = new List<TourResponseDto>();
+            var tourItems = await tours
                 .OrderBy(t => t.Name)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
-
-            var tourResponses = new List<TourResponseDto>();
 
             foreach (var tour in tourItems)
             {

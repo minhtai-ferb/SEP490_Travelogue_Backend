@@ -65,11 +65,11 @@ public class OrderService : IOrderService
                 // Predefined tour: Validate tour schedule and guide assignment
                 tourSchedule = await _unitOfWork.TourScheduleRepository.GetAsync(
                     ts => ts.Id == request.TourScheduleId.Value && ts.TourId == request.TourId,
-                    q => q.Include(ts => ts.TourGuideMappings),
+                    q => q.Include(ts => ts.TourScheduleGuides),
                     cancellationToken)
                     ?? throw CustomExceptionFactory.CreateNotFoundError("Tour schedule not found or not associated with the tour plan version.");
 
-                if (!tourSchedule.TourGuideMappings.Any(tsg => tsg.TourGuideId == request.TourGuideId))
+                if (!tourSchedule.TourScheduleGuides.Any(tsg => tsg.TourGuideId == request.TourGuideId))
                     throw CustomExceptionFactory.CreateBadRequestError("Tour guide is not assigned to this tour schedule.");
 
                 // Use tour schedule dates

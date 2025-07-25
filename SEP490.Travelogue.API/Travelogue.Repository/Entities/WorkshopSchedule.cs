@@ -15,9 +15,9 @@ public sealed class WorkshopSchedule : BaseEntity
     public DateTime EndTime { get; set; }
 
     [Range(1, int.MaxValue)]
-    public int MaxParticipant { get; set; }
+    public int MaxParticipant { get; set; }  // Số người tối đa cho ngày này
 
-    public int CurrentBooked { get; set; } = 0;
+    public int CurrentBooked { get; set; } = 0; // Số người đã đặt
     public string? Notes { get; set; }
 
     [Range(0, double.MaxValue)]
