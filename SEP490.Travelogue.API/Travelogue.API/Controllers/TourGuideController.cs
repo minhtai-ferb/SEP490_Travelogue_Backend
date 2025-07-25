@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Travelogue.Repository.Bases.Responses;
 using Travelogue.Service.BusinessModels.TourGuideModels;
@@ -68,6 +69,37 @@ public class TourGuideController : ControllerBase
     public async Task<IActionResult> AssignToTourGuideAsync([FromBody] List<string> emails, CancellationToken cancellationToken)
     {
         var result = await _tourGuideService.AssignToTourGuideAsync(emails, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+        ));
+    }
+
+    [HttpPut("update")]
+    [Authorize]
+    public async Task<IActionResult> UpdateTourGuide([FromBody] TourGuideUpdateModel model, CancellationToken cancellationToken)
+    {
+        var updatedData = await _tourGuideService.UpdateTourGuideAsync(model, cancellationToken);
+        return Ok(ResponseModel<TourGuideDataModel>.OkResponseModel(
+            data: updatedData,
+            message: ResponseMessages.UPDATE_SUCCESS
+        ));
+    }
+
+    [HttpPost("certification")]
+    public async Task<IActionResult> AddCertification([FromBody] CertificationDto dto, CancellationToken cancellationToken)
+    {
+        var result = await _tourGuideService.AddCertificationAsync(dto, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+        ));
+    }
+
+    [HttpDelete("{certificationId:guid}")]
+    public async Task<IActionResult> SoftDeleteCertification(Guid certificationId, CancellationToken cancellationToken)
+    {
+        var result = await _tourGuideService.SoftDeleteCertificationAsync(certificationId, cancellationToken);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)

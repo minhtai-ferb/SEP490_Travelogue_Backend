@@ -5,11 +5,11 @@ namespace Travelogue.Repository.Entities.Enums;
 public enum ServiceOption
 {
     [Display(Name = "Tour")]
-    Tour,
+    Tour = 1,
 
     [Display(Name = "Hướng dẫn viên")]
-    TourGuide,
+    TourGuide = 2,
 
     [Display(Name = "Cả hai")]
-    Both
+    Both = 3
 }

@@ -33,7 +33,7 @@ public class TourDetailsResponseDto
     }
     // public List<TourPlanLocationResponseDto> Locations { get; set; }
     public List<TourScheduleResponseDto>? Schedules { get; set; }
-    public TourGuideDataModel? TourGuide { get; set; }
+    public List<TourGuideDataModel>? TourGuide { get; set; }
     public List<PromotionDto>? Promotions { get; set; } = new List<PromotionDto>();
     public List<TourDayDetail> Days { get; set; } = new List<TourDayDetail>();
 }

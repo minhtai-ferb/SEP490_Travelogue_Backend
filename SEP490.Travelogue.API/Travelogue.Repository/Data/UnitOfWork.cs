@@ -40,6 +40,7 @@ public class UnitOfWork : IUnitOfWork
     public ICraftVillageRequestRepository CraftVillageRequestRepository { get; }
     public IWorkshopMediaRepository WorkshopMediaRepository { get; }
     public ITourMediaRepository TourMediaRepository { get; }
+    public ICertificationRepository CertificationRepository { get; }
 
     public UnitOfWork(ApplicationDbContext dbContext)
     {
@@ -74,6 +75,7 @@ public class UnitOfWork : IUnitOfWork
         CraftVillageRequestRepository = new CraftVillageRequestRepository(_dbContext);
         TourMediaRepository = new TourMediaRepository(_dbContext);
         WorkshopMediaRepository = new WorkshopMediaRepository(_dbContext);
+        CertificationRepository = new CertificationRepository(_dbContext);
     }
 
     public IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity

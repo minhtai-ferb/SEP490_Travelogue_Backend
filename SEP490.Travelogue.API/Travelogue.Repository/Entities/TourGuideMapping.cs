@@ -7,15 +7,15 @@ namespace Travelogue.Repository.Entities;
 public sealed class TourGuideMapping : BaseEntity
 {
     [Required]
-    public Guid TourId { get; set; }
+    public Guid TourScheduleId { get; set; }
 
     [Required]
-    public Guid GuideId { get; set; }
+    public Guid TourGuideId { get; set; }
 
     // Navigation properties
-    [ForeignKey("TourId")]
-    public Tour Tour { get; set; } = null!;
+    [ForeignKey("TourScheduleId")]
+    public TourSchedule TourSchedule { get; set; } = null!;
 
-    [ForeignKey("GuideId")]
+    [ForeignKey("TourGuideId")]
     public TourGuide TourGuide { get; set; } = null!;
 }

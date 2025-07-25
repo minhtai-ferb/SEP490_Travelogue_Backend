@@ -5,11 +5,11 @@ namespace Travelogue.Repository.Entities.Enums;
 public enum TypeHistoricalLocation
 {
     [Display(Name = "Di tích Quốc gia Đặc biệt")]
-    SpecialNationalMonument,
+    SpecialNationalMonument = 1,
 
     [Display(Name = "Di tích cấp quốc gia")]
-    NationalMonument,
+    NationalMonument = 2,
 
     [Display(Name = "Di tích cấp tỉnh")]
-    ProvincialMonument
+    ProvincialMonument = 3
 }

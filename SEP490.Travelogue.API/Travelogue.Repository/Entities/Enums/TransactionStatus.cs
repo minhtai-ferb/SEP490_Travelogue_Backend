@@ -2,7 +2,7 @@
 
 public enum TransactionStatus
 {
-    Pending,
-    Completed,
-    Failed
+    Pending = 1,
+    Completed = 2,
+    Failed = 3
 }

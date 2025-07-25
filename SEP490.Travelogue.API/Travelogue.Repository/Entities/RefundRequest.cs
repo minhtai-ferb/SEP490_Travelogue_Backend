@@ -20,6 +20,8 @@ public sealed class RefundRequest : BaseEntity
     public string Status { get; set; } = null!;
 
     public DateTime? ApprovedAt { get; set; }
+    public DateTime? RejectionAt { get; set; }
+    public string? RejectionReason { get; set; }
 
     [Column(TypeName = "decimal(18,2)")]
     public decimal? RefundAmount { get; set; }

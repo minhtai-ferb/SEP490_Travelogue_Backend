@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Travelogue.Repository.Bases.BaseEntities;
 using Travelogue.Repository.Entities.Enums;
 
@@ -6,10 +7,13 @@ namespace Travelogue.Repository.Entities;
 
 public sealed class Transaction : BaseEntity
 {
-    [Required]
-    public Guid BookingId { get; set; }
+    public Guid? BookingId { get; set; }
 
-    [Range(0, double.MaxValue)]
+    [Required]
+    public Guid WalletId { get; set; }
+
+    [Required]
+    [Column(TypeName = "decimal(10,2)")]
     public decimal Amount { get; set; }
 
     [DataType(DataType.DateTime)]
@@ -18,6 +22,12 @@ public sealed class Transaction : BaseEntity
     [Required]
     [EnumDataType(typeof(TransactionStatus))]
     public TransactionStatus Status { get; set; }
+    public TransactionType Type { get; set; }
 
-    public Booking? Booking { get; set; }
+    // Navigation properties
+    [ForeignKey("WalletId")]
+    public Wallet Wallet { get; set; }
+
+    [ForeignKey("BookingId")]
+    public Booking Booking { get; set; }
 }
