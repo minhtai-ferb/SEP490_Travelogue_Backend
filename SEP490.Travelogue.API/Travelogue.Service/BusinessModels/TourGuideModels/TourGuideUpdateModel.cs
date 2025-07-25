@@ -11,4 +11,6 @@ public class TourGuideUpdateModel
     public Gender Sex { get; set; }
     public string? Address { get; set; }
     public string? Introduction { get; set; }
+    public List<LanguageEnum> Languages { get; set; } = new();
+    public List<TagEnum> Tags { get; set; } = new();
 }

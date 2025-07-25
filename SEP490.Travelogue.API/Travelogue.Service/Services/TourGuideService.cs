@@ -1,4 +1,5 @@
 using AutoMapper;
+using Google.Protobuf;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
@@ -16,10 +17,12 @@ public interface ITourGuideService
     Task<List<TourGuideDataModel>> GetAllTourGuidesAsync(CancellationToken cancellationToken);
     Task<TourGuideDataModel?> AssignToTourGuideAsync(List<string> emails, CancellationToken cancellationToken);
     // Task<TourGuideDataModel> AddTourGuideAsync(TourGuideCreateModel tourGuideCreateModel, CancellationToken cancellationToken);
-    Task<TourGuideDataModel?> UpdateTourGuideAsync(Guid id, TourGuideUpdateModel tourGuideUpdateModel, CancellationToken cancellationToken);
+    Task<TourGuideDataModel?> UpdateTourGuideAsync(TourGuideUpdateModel tourGuideUpdateModel, CancellationToken cancellationToken);
     // Task DeleteTourGuideAsync(Guid id, CancellationToken cancellationToken);
-    Task<PagedResult<TourGuideDataModel>> GetPagedTourGuideWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<List<TourGuideDataModel>> GetTourGuidesByFilterAsync(TourGuideFilterRequest request, CancellationToken cancellationToken);
+    Task<CertificationDto> AddCertificationAsync(CertificationDto dto, CancellationToken cancellationToken);
+    Task<CertificationDto> SoftDeleteCertificationAsync(Guid certificationId, CancellationToken cancellationToken);
+    Task<PagedResult<TourGuideDataModel>> GetPagedTourGuideWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
 }
 
 public class TourGuideService : ITourGuideService
@@ -279,33 +282,122 @@ public class TourGuideService : ITourGuideService
         }
     }
 
-    public async Task<TourGuideDataModel?> UpdateTourGuideAsync(Guid userId, TourGuideUpdateModel tourGuideUpdateModel, CancellationToken cancellationToken)
+    public async Task<TourGuideDataModel?> UpdateTourGuideAsync(TourGuideUpdateModel tourGuideUpdateModel, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
-            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId, cancellationToken) ?? throw new Exception("User not found");
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
 
-            // Cập nhật thông tin user
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("user");
+
             user.Email = tourGuideUpdateModel.Email;
             user.PhoneNumber = tourGuideUpdateModel.PhoneNumber;
             user.FullName = tourGuideUpdateModel.FullName;
             user.Sex = tourGuideUpdateModel.Sex;
             user.Address = tourGuideUpdateModel.Address;
 
-            // Kiểm tra xem có phải tour guide không
-            var tourGuide = await _unitOfWork.TourGuideRepository.GetByUserIdAsync(userId) ?? throw new Exception("This user is not a tour guide");
+            var tourGuide = await _unitOfWork.TourGuideRepository.GetByUserIdAsync(currentUserId)
+                ?? throw CustomExceptionFactory.CreateForbiddenError();
 
-            // Cập nhật thông tin tour guide
             tourGuide.Introduction = tourGuideUpdateModel.Introduction;
+            tourGuide.Languages = tourGuideUpdateModel.Languages;
+            tourGuide.Tags = tourGuideUpdateModel.Tags;
 
-            // Lưu thay đổi
             await _unitOfWork.UserRepository.UpdateAsync(user);
             _unitOfWork.TourGuideRepository.Update(tourGuide);
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);
+
             var updatedTourGuide = _mapper.Map<TourGuideDataModel>(tourGuide);
             return updatedTourGuide;
+        }
+        catch (CustomException)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<CertificationDto> AddCertificationAsync(CertificationDto dto, CancellationToken cancellationToken)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+            var currentTime = _timeService.SystemTimeNow;
+
+            var tourGuide = await _unitOfWork.TourGuideRepository.GetByUserIdAsync(currentUserId)
+                ?? throw CustomExceptionFactory.CreateForbiddenError();
+
+            var cert = new Certification
+            {
+                Id = Guid.NewGuid(),
+                TourGuideId = tourGuide.Id,
+                Name = dto.Name,
+                CertificateUrl = dto.CertificateUrl,
+                CreatedTime = currentTime,
+                CreatedBy = currentUserId.ToString()
+            };
+
+            await _unitOfWork.CertificationRepository.AddAsync(cert);
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+
+            return new CertificationDto
+            {
+                Name = cert.Name,
+                CertificateUrl = cert.CertificateUrl
+            };
+        }
+        catch (CustomException)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+
+    public async Task<CertificationDto> SoftDeleteCertificationAsync(Guid certificationId, CancellationToken cancellationToken)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var userId = Guid.Parse(_userContextService.GetCurrentUserId());
+            var currentTime = _timeService.SystemTimeNow;
+
+            var cert = await _unitOfWork.CertificationRepository.GetByIdAsync(certificationId, cancellationToken)
+                ?? throw new Exception("Certification not found");
+
+            // Optional: Kiểm tra quyền sở hữu certification
+            var tourGuide = await _unitOfWork.TourGuideRepository.GetByIdAsync(cert.TourGuideId, cancellationToken);
+            if (tourGuide?.UserId != userId)
+                throw new UnauthorizedAccessException("You do not have permission to delete this certification.");
+
+            cert.IsDeleted = true;
+            cert.DeletedBy = userId.ToString();
+            cert.DeletedTime = currentTime;
+
+            _unitOfWork.CertificationRepository.Update(cert);
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+
+            return new CertificationDto
+            {
+                Name = cert.Name,
+                CertificateUrl = cert.CertificateUrl
+            };
         }
         catch (CustomException)
         {
