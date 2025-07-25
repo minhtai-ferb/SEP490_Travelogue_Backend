@@ -10,8 +10,7 @@
 		<PackageReference Include="FirebaseAdmin" Version="3.0.1" />
 		<PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.10.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.1.1" />
-		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore"
-			Version="8.0.8" />
+		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.8" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.8" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.8">
 			<PrivateAssets>all</PrivateAssets>
@@ -26,14 +25,9 @@
 		<PackageReference Include="MySql.Data" Version="9.1.0" />
 		<PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.2" />
 	</ItemGroup>
-	<ItemGroup>
-		<None Update="SeedScripts\SeedScript.sql">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Migrations\" />
+	  <Folder Include="Migrations\" />
 	</ItemGroup>
 
 </Project>

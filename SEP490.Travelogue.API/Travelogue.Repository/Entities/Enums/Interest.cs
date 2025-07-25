@@ -5,20 +5,20 @@ namespace Travelogue.Repository.Entities.Enums;
 public enum Interest
 {
     [Display(Name = "Di sản văn hóa")]
-    CulturalHeritage = 1,
+    CulturalHeritage,
 
     [Display(Name = "Thiên nhiên")]
-    Nature = 2,
+    Nature,
 
     [Display(Name = "Địa điểm tôn giáo")]
-    ReligiousSite = 3,
+    ReligiousSite,
 
     [Display(Name = "Nghệ thuật truyền thống")]
-    TraditionalArt = 4,
+    TraditionalArt,
 
     [Display(Name = "Ăn uống")]
-    Cuisine = 5,
+    Cuisine,
 
     [Display(Name = "Di tích lịch sử")]
-    HistoricalSite = 6
+    HistoricalSite
 }

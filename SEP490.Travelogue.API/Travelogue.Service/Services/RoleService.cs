@@ -52,8 +52,6 @@ public sealed class RoleService : IRoleService
             //    throw new CustomException(StatusCodes.Status409Conflict, ResponseCodeConstants.BAD_REQUEST, ResponseMessages.DUPLICATE);
             //}
 
-            await _unitOfWork.SaveAsync();
-
             return result != null;
         }
         catch (CustomException)

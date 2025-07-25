@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Org.BouncyCastle.Asn1.Pkcs;
 using Travelogue.Repository.Entities;
 
 namespace Travelogue.Repository.Data;
@@ -12,7 +13,6 @@ public class ApplicationDbContext : DbContext
     public DbSet<UserRole> UserRoles { get; set; }
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
     public DbSet<UserAnnouncement> UserAnnouncements { get; set; }
-    public DbSet<Wallet> Wallets { get; set; }
 
     // Interest
     public DbSet<LocationInterest> locationInterests { get; set; }
@@ -46,10 +46,10 @@ public class ApplicationDbContext : DbContext
     public DbSet<TourSchedule> TourSchedules { get; set; }
     public DbSet<TourPlanLocation> TourPlanLocations { get; set; }
     public DbSet<TourGuideSchedule> TourGuideSchedules { get; set; }
+    public DbSet<TourGroup> TourGroups { get; set; }
+    public DbSet<TourGroupMember> TourGroupMembers { get; set; }
+    public DbSet<TourJoinRequest> TourJoinRequests { get; set; }
     public DbSet<TourMedia> TourMedias { get; set; }
-    // public DbSet<TourGroup> TourGroups { get; set; }
-    // public DbSet<TourGroupMember> TourGroupMembers { get; set; }
-    // public DbSet<TourJoinRequest> TourJoinRequests { get; set; }
 
     // Trip Plan Management
     public DbSet<TripPlan> TripPlans { get; set; }

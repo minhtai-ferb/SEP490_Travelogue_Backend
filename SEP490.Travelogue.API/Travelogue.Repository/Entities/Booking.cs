@@ -7,12 +7,15 @@ namespace Travelogue.Repository.Entities;
 
 public sealed class Booking : BaseEntity
 {
-    public Guid UserId { get; set; }
-    public Guid? TourId { get; set; }
+    public Guid TourId { get; set; }
     public Guid? TourScheduleId { get; set; }
     public Guid? TourGuideId { get; set; }
-    public Guid? WorkshopId { get; set; }
+    public Guid UserId { get; set; }
+    public Guid TourVersionId { get; set; }
     public string? PaymentLinkId { get; set; }
+
+    [Required]
+    public DateTimeOffset BookingDate { get; set; }
 
     // public DateTimeOffset? ScheduledStartDate { get; set; }
     // public DateTimeOffset? ScheduledEndDate { get; set; }
@@ -21,16 +24,11 @@ public sealed class Booking : BaseEntity
     [EnumDataType(typeof(BookingStatus))]
     public BookingStatus Status { get; set; }
 
-    [Required]
-    [EnumDataType(typeof(BookingType))]
-    public BookingType BookingType { get; set; }
-
-    [Required]
-    public DateTimeOffset BookingDate { get; set; }
     public DateTimeOffset? CancelledAt { get; set; }
     public bool IsOpenToJoin { get; set; } = false;
 
     public Guid? PromotionId { get; set; }
+    public Guid? WorkshopId { get; set; }
 
     [Required]
     [Column(TypeName = "decimal(10,2)")]
@@ -53,6 +51,5 @@ public sealed class Booking : BaseEntity
 
     [ForeignKey("PromotionId")]
     public Promotion? Promotion { get; set; }
-    public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
     public ICollection<BookingParticipant> Participants { get; set; } = new List<BookingParticipant>();
 }

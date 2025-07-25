@@ -31,7 +31,7 @@ public interface ILocationService
     Task<PagedResult<LocationDataModel>> GetPagedLocationsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
     //Task UploadImageLocationAsync(Guid id, IFormFile image, CancellationToken cancellationToken);
     //Task<PagedResult<LocationDataModel>> GetPagedLocationsWithSearchAsync(int pageNumber, int pageSize, string title, CancellationToken cancellationToken);
-    Task<PagedResult<LocationDataModel>> GetPagedLocationsWithSearchAsync(string? title, LocationType? type, Guid? districtId, HeritageRank? heritageRank, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<PagedResult<LocationDataModel>> GetPagedLocationsWithSearchAsync(string? title, Guid? typeId, Guid? districtId, HeritageRank? heritageRank, int pageNumber, int pageSize, CancellationToken cancellationToken);
     //Task<PagedResult<LocationDataModel>> GetPagedLocationsWithSearchAsync(int pageNumber, int pageSize, string title, Guid typeId, CancellationToken cancellationToken);
     Task<PagedResult<LocationDataModel>> GetFavoriteLocationsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task AddFavoriteLocationAsync(Guid locationId, CancellationToken cancellationToken);
@@ -1532,11 +1532,11 @@ public class LocationService : ILocationService
         }
     }
 
-    public async Task<PagedResult<LocationDataModel>> GetPagedLocationsWithSearchAsync(string? title, LocationType? type, Guid? districtId, HeritageRank? heritageRank, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<LocationDataModel>> GetPagedLocationsWithSearchAsync(string? title, Guid? typeId, Guid? districtId, HeritageRank? heritageRank, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
-            var pagedResult = await _unitOfWork.LocationRepository.GetPageWithSearchAsync(title, type, districtId, heritageRank, pageNumber, pageSize, cancellationToken);
+            var pagedResult = await _unitOfWork.LocationRepository.GetPageWithSearchAsync(title, typeId, districtId, heritageRank, pageNumber, pageSize, cancellationToken);
 
             var locationDataModels = _mapper.Map<List<LocationDataModel>>(pagedResult.Items);
 

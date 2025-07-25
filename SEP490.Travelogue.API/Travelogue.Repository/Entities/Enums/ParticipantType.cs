@@ -5,8 +5,8 @@ namespace Travelogue.Repository.Entities.Enums;
 public enum ParticipantType
 {
     [Display(Name = "Người lớn")]
-    Adult = 1,
+    Adult,
 
     [Display(Name = "Trẻ em")]
-    Child = 2
+    Child
 }
