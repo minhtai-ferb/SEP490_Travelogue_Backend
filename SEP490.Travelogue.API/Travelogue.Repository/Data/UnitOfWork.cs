@@ -41,6 +41,8 @@ public class UnitOfWork : IUnitOfWork
     public IWorkshopMediaRepository WorkshopMediaRepository { get; }
     public ITourMediaRepository TourMediaRepository { get; }
     public ICertificationRepository CertificationRepository { get; }
+    public IPromotionRepository PromotionRepository { get; }
+    public ITransactionEntryRepository TransactionEntryRepository { get; }
 
     public UnitOfWork(ApplicationDbContext dbContext)
     {
@@ -76,6 +78,8 @@ public class UnitOfWork : IUnitOfWork
         TourMediaRepository = new TourMediaRepository(_dbContext);
         WorkshopMediaRepository = new WorkshopMediaRepository(_dbContext);
         CertificationRepository = new CertificationRepository(_dbContext);
+        PromotionRepository = new PromotionRepository(_dbContext);
+        TransactionEntryRepository = new TransactionEntryRepository(_dbContext);
     }
 
     public IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity

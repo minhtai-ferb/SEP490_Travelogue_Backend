@@ -64,7 +64,7 @@ public class ApplicationDbContext : DbContext
 
     // Financial and Transaction Management
     public DbSet<Booking> Bookings { get; set; }
-    public DbSet<Transaction> Transactions { get; set; }
+    public DbSet<TransactionEntry> Transactions { get; set; }
     public DbSet<Promotion> Promotions { get; set; }
     public DbSet<WithdrawalRequest> WithdrawalRequests { get; set; }
     public DbSet<BookingWithdrawal> BookingWithdrawals { get; set; }
@@ -100,6 +100,10 @@ public class ApplicationDbContext : DbContext
             .WithMany(u => u.ReceivedMessages)
             .HasForeignKey(m => m.ReceiverId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Promotion>()
+            .HasIndex(p => p.PromotionCode)
+            .IsUnique();
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes())
         {

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Travelogue.Repository.Data;
 
@@ -11,9 +12,11 @@ using Travelogue.Repository.Data;
 namespace Travelogue.Repository.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250725153048_BookingTable")]
+    partial class BookingTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -195,10 +198,6 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("char(36)")
                         .HasColumnName("workshop_id");
 
-                    b.Property<Guid?>("WorkshopScheduleId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("workshop_schedule_id");
-
                     b.HasKey("Id");
 
                     b.HasIndex("PromotionId");
@@ -214,8 +213,6 @@ namespace Travelogue.Repository.Migrations
                     b.HasIndex("UserId");
 
                     b.HasIndex("WorkshopId");
-
-                    b.HasIndex("WorkshopScheduleId");
 
                     b.ToTable("bookings");
                 });
@@ -2623,32 +2620,20 @@ namespace Travelogue.Repository.Migrations
                     b.ToTable("tour_schedules");
                 });
 
-            modelBuilder.Entity("Travelogue.Repository.Entities.TransactionEntry", b =>
+            modelBuilder.Entity("Travelogue.Repository.Entities.Transaction", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)")
                         .HasColumnName("id");
 
-                    b.Property<string>("AccountNumber")
-                        .HasColumnType("longtext")
-                        .HasColumnName("account_number");
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(10,2)")
+                        .HasColumnName("amount");
 
                     b.Property<Guid?>("BookingId")
                         .HasColumnType("char(36)")
                         .HasColumnName("booking_id");
-
-                    b.Property<string>("CounterAccountBankId")
-                        .HasColumnType("longtext")
-                        .HasColumnName("counter_account_bank_id");
-
-                    b.Property<string>("CounterAccountName")
-                        .HasColumnType("longtext")
-                        .HasColumnName("counter_account_name");
-
-                    b.Property<string>("CounterAccountNumber")
-                        .HasColumnType("longtext")
-                        .HasColumnName("counter_account_number");
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("longtext")
@@ -2657,10 +2642,6 @@ namespace Travelogue.Repository.Migrations
                     b.Property<DateTimeOffset>("CreatedTime")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_time");
-
-                    b.Property<string>("Currency")
-                        .HasColumnType("longtext")
-                        .HasColumnName("currency");
 
                     b.Property<string>("DeletedBy")
                         .HasColumnType("longtext")
@@ -2686,29 +2667,13 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_updated_time");
 
-                    b.Property<decimal?>("PaidAmount")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("paid_amount");
-
-                    b.Property<string>("PaymentLinkId")
-                        .HasColumnType("longtext")
-                        .HasColumnName("payment_link_id");
-
-                    b.Property<string>("PaymentReference")
-                        .HasColumnType("longtext")
-                        .HasColumnName("payment_reference");
-
-                    b.Property<int?>("PaymentStatus")
-                        .HasColumnType("int")
-                        .HasColumnName("payment_status");
-
                     b.Property<int>("Status")
                         .HasColumnType("int")
                         .HasColumnName("status");
 
-                    b.Property<DateTime?>("TransactionDateTime")
+                    b.Property<DateTime>("TransactionDate")
                         .HasColumnType("datetime(6)")
-                        .HasColumnName("transaction_date_time");
+                        .HasColumnName("transaction_date");
 
                     b.Property<int>("Type")
                         .HasColumnType("int")
@@ -3617,10 +3582,6 @@ namespace Travelogue.Repository.Migrations
                         .WithMany("Bookings")
                         .HasForeignKey("WorkshopId");
 
-                    b.HasOne("Travelogue.Repository.Entities.WorkshopSchedule", "WorkshopSchedule")
-                        .WithMany()
-                        .HasForeignKey("WorkshopScheduleId");
-
                     b.Navigation("Promotion");
 
                     b.Navigation("Tour");
@@ -3634,8 +3595,6 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("User");
 
                     b.Navigation("Workshop");
-
-                    b.Navigation("WorkshopSchedule");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.BookingParticipant", b =>
@@ -4066,7 +4025,7 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("Tour");
                 });
 
-            modelBuilder.Entity("Travelogue.Repository.Entities.TransactionEntry", b =>
+            modelBuilder.Entity("Travelogue.Repository.Entities.Transaction", b =>
                 {
                     b.HasOne("Travelogue.Repository.Entities.Booking", "Booking")
                         .WithMany("Transactions")

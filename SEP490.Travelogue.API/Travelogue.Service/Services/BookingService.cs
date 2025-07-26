@@ -1,8 +1,11 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Net.payOS;
+using Net.payOS.Types;
 using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
+using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.BookingModels;
 using Travelogue.Service.Commons.Interfaces;
 
@@ -11,7 +14,9 @@ namespace Travelogue.Service.Services;
 public interface IBookingService
 {
     // Task<BookingDataModel?> GetBookingByIdAsync(Guid id, CancellationToken cancellationToken);
-    Task<BookingDataModel> AddBookingAsync(BookingCreateModel tripPlanCreateModel, CancellationToken cancellationToken);
+    Task<BookingDataModel> CreateTourBookingAsync(CreateBookingTourDto dto, CancellationToken cancellationToken);
+    Task<CreatePaymentResult> CreatePaymentLink(Guid bookingId, CancellationToken cancellationToken = default);
+    Task<bool> ProcessPaymentResponseAsync(PaymentResponse paymentResponse);
 }
 
 public class BookingService : IBookingService
@@ -20,53 +25,662 @@ public class BookingService : IBookingService
     private readonly IMapper _mapper;
     private readonly IUserContextService _userContextService;
     private readonly ITimeService _timeService;
+    private readonly IEnumService _enumService;
+    private readonly PayOS _payOS;
 
-    public BookingService(IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService)
+    public BookingService(IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService, IEnumService enumService, PayOS payOS)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _userContextService = userContextService;
         _timeService = timeService;
+        _enumService = enumService;
+        _payOS = payOS;
     }
 
-    public async Task<BookingDataModel> AddBookingAsync(BookingCreateModel bookingCreateModel, CancellationToken cancellationToken)
+    public async Task<BookingDataModel> CreateTourBookingAsync(CreateBookingTourDto dto, CancellationToken cancellationToken)
     {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        if (dto.AdultCount <= 0)
+        {
+            throw CustomExceptionFactory.CreateBadRequestError(
+                dto.ChildrenCount > 0
+                    ? "Phải có ít nhất một người lớn đi kèm nếu có trẻ em."
+                    : "Cần có ít nhất một người lớn tham gia."
+            );
+        }
+        var currentUserId = _userContextService.GetCurrentUserId();
+        var currentTime = _timeService.SystemTimeNow;
 
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var tourSchedule = await _unitOfWork.TourScheduleRepository
+                .ActiveEntities
+                .Include(ts => ts.Tour)
+                .FirstOrDefaultAsync(ts => ts.Id == dto.ScheduledId && ts.TourId == dto.TourId)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("tour hoặc tour schedule");
+
+            // còn chỗ kh
+            int totalParticipants = dto.AdultCount + dto.ChildrenCount;
+            if (tourSchedule.CurrentBooked + totalParticipants > tourSchedule.MaxParticipant)
+                throw CustomExceptionFactory.CreateBadRequestError("Tour không còn đủ số lượng chỗ bạn yêu cầu");
+
+            decimal adultPrice = tourSchedule.AdultPrice;
+            decimal childrenPrice = tourSchedule.ChildrenPrice;
+            decimal originalPrice = (adultPrice * dto.AdultCount) + (childrenPrice * dto.ChildrenCount);
+
+            // mã giảm giá
+            var (discountAmount, promotion) = await ValidateAndCalculateDiscountAsync(dto.PromotionCode, originalPrice, dto.TourId);
+
+            decimal finalPrice = Math.Max(0, originalPrice - discountAmount);
+
+            var booking = new Booking
+            {
+                UserId = Guid.Parse(currentUserId),
+                TourId = dto.TourId,
+                TourScheduleId = dto.ScheduledId,
+                BookingType = BookingType.Tour,
+                Status = BookingStatus.Pending,
+                BookingDate = DateTimeOffset.UtcNow,
+                PromotionId = promotion?.Id,
+                OriginalPrice = originalPrice,
+                DiscountAmount = discountAmount,
+                FinalPrice = finalPrice
+            };
+
+            // Add participants
+            if (dto.AdultCount > 0)
+            {
+                booking.Participants.Add(new BookingParticipant
+                {
+                    Type = ParticipantType.Adult,
+                    Quantity = dto.AdultCount,
+                    PricePerParticipant = adultPrice
+                });
+            }
+
+            if (dto.ChildrenCount > 0)
+            {
+                booking.Participants.Add(new BookingParticipant
+                {
+                    Type = ParticipantType.Child,
+                    Quantity = dto.ChildrenCount,
+                    PricePerParticipant = childrenPrice
+                });
+            }
+
+            tourSchedule.CurrentBooked += totalParticipants;
+
+            await _unitOfWork.BookingRepository.AddAsync(booking);
+
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync();
+
+            var response = new BookingDataModel
+            {
+                Id = booking.Id,
+                UserId = booking.UserId,
+                TourId = booking.TourId,
+                TourScheduleId = booking.TourScheduleId,
+                TourGuideId = booking.TourGuideId,
+                WorkshopId = booking.WorkshopId,
+                PaymentLinkId = booking.PaymentLinkId,
+                Status = booking.Status,
+                StatusText = _enumService.GetEnumDisplayName(booking.Status),
+                BookingType = booking.BookingType,
+                BookingTypeText = _enumService.GetEnumDisplayName(booking.BookingType),
+                BookingDate = booking.BookingDate,
+                CancelledAt = booking.CancelledAt,
+                PromotionId = booking.PromotionId,
+                OriginalPrice = booking.OriginalPrice,
+                DiscountAmount = booking.DiscountAmount,
+                FinalPrice = booking.FinalPrice
+            };
+
+            return response;
+        }
+        catch (CustomException)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<BookingDataModel> CreateWorkshopBookingAsync(CreateBookingWorkshopDto dto, CancellationToken cancellationToken)
+    {
+        if (dto.AdultCount <= 0)
+        {
+            throw CustomExceptionFactory.CreateBadRequestError(
+                dto.ChildrenCount > 0
+                    ? "Phải có ít nhất một người lớn đi kèm nếu có trẻ em."
+                    : "Cần có ít nhất một người lớn tham gia."
+            );
+        }
+
+        var currentUserId = _userContextService.GetCurrentUserId();
+        var currentTime = _timeService.SystemTimeNow;
+
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var workshopSchedule = await _unitOfWork.WorkshopScheduleRepository
+                .ActiveEntities
+                .Include(ws => ws.Workshop)
+                .FirstOrDefaultAsync(ws => ws.Id == dto.WorkshopScheduleId && ws.WorkshopId == dto.WorkshopId)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("workshop hoặc workshop schedule");
+
+            // Check available slots
+            int totalParticipants = dto.AdultCount + dto.ChildrenCount;
+            if (workshopSchedule.CurrentBooked + totalParticipants > workshopSchedule.MaxParticipant)
+                throw CustomExceptionFactory.CreateBadRequestError("Workshop không còn đủ chỗ cho số lượng bạn yêu cầu.");
+
+            decimal adultPrice = workshopSchedule.AdultPrice;
+            decimal childrenPrice = workshopSchedule.ChildrenPrice;
+            decimal originalPrice = (adultPrice * dto.AdultCount) + (childrenPrice * dto.ChildrenCount);
+
+            var (discountAmount, promotion) = await ValidateAndCalculateDiscountAsync(dto.PromotionCode, originalPrice, dto.WorkshopId);
+
+            decimal finalPrice = Math.Max(0, originalPrice - discountAmount);
+
+            var booking = new Booking
+            {
+                UserId = Guid.Parse(currentUserId),
+                WorkshopId = dto.WorkshopId,
+                WorkshopScheduleId = dto.WorkshopScheduleId,
+                BookingType = BookingType.Workshop,
+                Status = BookingStatus.Pending,
+                BookingDate = DateTimeOffset.UtcNow,
+                PromotionId = promotion?.Id,
+                OriginalPrice = originalPrice,
+                DiscountAmount = discountAmount,
+                FinalPrice = finalPrice
+            };
+
+            // Add participants
+            if (dto.AdultCount > 0)
+            {
+                booking.Participants.Add(new BookingParticipant
+                {
+                    Type = ParticipantType.Adult,
+                    Quantity = dto.AdultCount,
+                    PricePerParticipant = adultPrice
+                });
+            }
+
+            if (dto.ChildrenCount > 0)
+            {
+                booking.Participants.Add(new BookingParticipant
+                {
+                    Type = ParticipantType.Child,
+                    Quantity = dto.ChildrenCount,
+                    PricePerParticipant = childrenPrice
+                });
+            }
+
+            workshopSchedule.CurrentBooked += totalParticipants;
+
+            await _unitOfWork.BookingRepository.AddAsync(booking);
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync();
+
+            var response = new BookingDataModel
+            {
+                Id = booking.Id,
+                UserId = booking.UserId,
+                TourId = booking.TourId,
+                TourScheduleId = booking.TourScheduleId,
+                TourGuideId = booking.TourGuideId,
+                WorkshopId = booking.WorkshopId,
+                WorkshopScheduleId = booking.WorkshopScheduleId,
+                PaymentLinkId = booking.PaymentLinkId,
+                Status = booking.Status,
+                StatusText = _enumService.GetEnumDisplayName(booking.Status),
+                BookingType = booking.BookingType,
+                BookingTypeText = _enumService.GetEnumDisplayName(booking.BookingType),
+                BookingDate = booking.BookingDate,
+                CancelledAt = booking.CancelledAt,
+                PromotionId = booking.PromotionId,
+                OriginalPrice = booking.OriginalPrice,
+                DiscountAmount = booking.DiscountAmount,
+                FinalPrice = booking.FinalPrice
+            };
+
+            return response;
+        }
+        catch (CustomException)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<BookingDataModel> CreateTourGuideBookingAsync(CreateBookingTourGuideDto dto, CancellationToken cancellationToken)
+    {
+        if (dto.AdultCount <= 0)
+        {
+            throw CustomExceptionFactory.CreateBadRequestError(
+                dto.ChildrenCount > 0
+                    ? "Phải có ít nhất một người lớn đi kèm nếu có trẻ em."
+                    : "Cần có ít nhất một người lớn tham gia."
+            );
+        }
+
+        var currentUserId = _userContextService.GetCurrentUserId();
+        var currentTime = _timeService.SystemTimeNow;
+
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            Tour? tour = null;
+            TourGuide? tourGuide = null;
+
+            if (dto.TourId.HasValue)
+            {
+                tour = await _unitOfWork.TourRepository
+                    .ActiveEntities
+                    .FirstOrDefaultAsync(t => t.Id == dto.TourId.Value)
+                    ?? throw CustomExceptionFactory.CreateNotFoundError("tour");
+            }
+
+            if (dto.TourGuideId.HasValue)
+            {
+                tourGuide = await _unitOfWork.TourGuideRepository
+                    .ActiveEntities
+                    .Include(g => g.TourGuideSchedules)
+                    .FirstOrDefaultAsync(g => g.Id == dto.TourGuideId.Value)
+                    ?? throw CustomExceptionFactory.CreateNotFoundError("hướng dẫn viên");
+
+                // tour guide có rảnh vào ngày đó kh
+                var isBusy = tourGuide.TourGuideSchedules != null && tourGuide.TourGuideSchedules.Any(s =>
+                    s.Date.Date == dto.Date.Date &&
+                    s.BookingId != null
+                );
+                if (isBusy)
+                {
+                    throw CustomExceptionFactory.CreateBadRequestError("Hướng dẫn viên đã có lịch vào ngày được chọn.");
+                }
+            }
+
+            // Tính giá
+            decimal tourGuidePrice = tourGuide?.Price ?? 0;
+            decimal originalPrice = tourGuidePrice;
+
+            // var (discountAmount, promotion) = await ValidateAndCalculateDiscountAsync(dto.PromotionCode, originalPrice, tourGuide?.Id);
+
+            // decimal finalPrice = Math.Max(0, originalPrice - discountAmount);
+
+            var booking = new Booking
+            {
+                UserId = Guid.Parse(currentUserId),
+                TourId = dto.TourId,
+                TourGuideId = dto.TourGuideId,
+                BookingType = BookingType.TourGuide,
+                Status = BookingStatus.Pending,
+                BookingDate = currentTime,
+                // PromotionId = promotion?.Id,
+                OriginalPrice = originalPrice,
+                DiscountAmount = 0,
+                FinalPrice = originalPrice
+            };
+
+            // Thêm participant
+            booking.Participants.Add(new BookingParticipant
+            {
+                Type = ParticipantType.Adult,
+                Quantity = dto.AdultCount,
+                PricePerParticipant = 0
+            });
+
+            if (dto.ChildrenCount > 0)
+            {
+                booking.Participants.Add(new BookingParticipant
+                {
+                    Type = ParticipantType.Child,
+                    Quantity = dto.ChildrenCount,
+                    PricePerParticipant = 0
+                });
+            }
+
+            // Gán lịch cho TourGuide nếu có
+            if (tourGuide != null)
+            {
+                var schedule = new TourGuideSchedule
+                {
+                    TourGuideId = tourGuide.Id,
+                    Date = dto.Date,
+                    Note = dto.Note,
+                    TourId = dto.TourId,
+                    Booking = booking
+                };
+
+                await _unitOfWork.TourGuideScheduleRepository.AddAsync(schedule);
+            }
+
+            await _unitOfWork.BookingRepository.AddAsync(booking);
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync();
+
+            return new BookingDataModel
+            {
+                Id = booking.Id,
+                UserId = booking.UserId,
+                TourId = booking.TourId,
+                TourGuideId = booking.TourGuideId,
+                Status = booking.Status,
+                StatusText = _enumService.GetEnumDisplayName(booking.Status),
+                BookingType = booking.BookingType,
+                BookingTypeText = _enumService.GetEnumDisplayName(booking.BookingType),
+                BookingDate = booking.BookingDate,
+                CancelledAt = booking.CancelledAt,
+                PromotionId = booking.PromotionId,
+                OriginalPrice = booking.OriginalPrice,
+                DiscountAmount = booking.DiscountAmount,
+                FinalPrice = booking.FinalPrice
+            };
+        }
+        catch (CustomException)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<CreatePaymentResult> CreatePaymentLink(Guid bookingId, CancellationToken cancellationToken = default)
+    {
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
 
-            var tourGuide = await _unitOfWork.TourGuideRepository.ActiveEntities
-                .FirstOrDefaultAsync(tp => tp.Id == bookingCreateModel.TourGuideId, cancellationToken) ?? throw CustomExceptionFactory.CreateNotFoundError("tour guide");
-            var tour = await _unitOfWork.TourRepository.ActiveEntities
-                .FirstOrDefaultAsync(t => t.Id == bookingCreateModel.TourId, cancellationToken) ?? throw CustomExceptionFactory.CreateNotFoundError("tour");
+            if (!Guid.TryParse(currentUserId, out Guid currentUserIdGuid))
+                throw CustomExceptionFactory.CreateBadRequestError("Invalid user ID format.");
 
-            var newBooking = _mapper.Map<Booking>(bookingCreateModel);
+            var booking = await _unitOfWork.BookingRepository
+                .ActiveEntities
+                .Include(b => b.Tour)
+                .Include(b => b.TourSchedule)
+                .Include(b => b.TourGuide)
+                .ThenInclude(tg => tg!.User)
+                .Include(b => b.Participants)
+                .FirstOrDefaultAsync(b => b.Id == bookingId && b.UserId == currentUserIdGuid, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Booking not found or user not authorized.");
 
-            newBooking.CreatedBy = currentUserId;
-            newBooking.LastUpdatedBy = currentUserId;
-            newBooking.CreatedTime = currentTime;
-            newBooking.LastUpdatedTime = currentTime;
+            if (booking.Status != BookingStatus.Pending)
+                throw CustomExceptionFactory.CreateBadRequestError("Booking is not in a pending state.");
 
-            await _unitOfWork.BookingRepository.AddAsync(newBooking);
+            decimal totalAmount = booking.FinalPrice;
+            if (totalAmount <= 0)
+                throw CustomExceptionFactory.CreateBadRequestError("Total amount must be greater than zero.");
+
+            // Calculate participant counts
+            int adultCount = booking.Participants
+                .Where(p => p.Type == ParticipantType.Adult)
+                .Sum(p => p.Quantity);
+            int childCount = booking.Participants
+                .Where(p => p.Type == ParticipantType.Child)
+                .Sum(p => p.Quantity);
+
+            // Generate order code
+            int orderCode = int.Parse(currentTime.ToString("yyyyMMddHHmmss"));
+
+            // Prepare payment description
+            string tourDescription = booking.TourScheduleId.HasValue
+                ? $"Tour: {booking.Tour?.Name ?? "Custom Tour"} (Run: {booking.TourSchedule?.DepartureDate:yyyy-MM-dd}, Adults: {adultCount}, Children: {childCount})"
+                : $"Custom Tour with {booking.TourGuide?.User.FullName ?? "Unknown Guide"} (Adults: {adultCount}, Children: {childCount})";
+
+            var items = new List<ItemData>
+            {
+                new ItemData(
+                    name: tourDescription,
+                    quantity: 1,
+                    price: (int)totalAmount
+                )
+            };
+
+            var paymentData = new PaymentData(
+                orderCode: orderCode,
+                amount: (int)totalAmount,
+                description: $"Payment for {tourDescription} from {booking.BookingDate:yyyy-MM-dd}",
+                items: items,
+                cancelUrl: "http://yourapp.com/cancel",
+                returnUrl: "http://yourapp.com/success",
+                expiredAt: Convert.ToInt64(currentTime.AddMinutes(5))
+            );
+
+            var paymentResult = await _payOS.createPaymentLink(paymentData);
+
+            booking.PaymentLinkId = paymentResult.paymentLinkId;
+
+            _unitOfWork.BookingRepository.Update(booking);
+
             await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync(cancellationToken);
+            await transaction.CommitAsync();
 
-            var result = _unitOfWork.BookingRepository.ActiveEntities
-                .FirstOrDefault(tp => tp.Id == newBooking.Id);
-
-            return _mapper.Map<BookingDataModel>(result);
+            return paymentResult;
         }
         catch (CustomException)
         {
-            await _unitOfWork.RollBackAsync();
+            await transaction.RollbackAsync();
             throw;
         }
         catch (Exception ex)
         {
-            await _unitOfWork.RollBackAsync();
+            await transaction.RollbackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<Booking>> GetUserBookingsAsync(
+        BookingType? bookingType = null,
+        DateTimeOffset? bookingDate = null,
+        BookingStatus? bookingStatus = null,
+        CancellationToken cancellationToken = default)
+    {
+        var currentUserId = _userContextService.GetCurrentUserId();
+        if (!Guid.TryParse(currentUserId, out Guid currentUserIdGuid))
+            throw CustomExceptionFactory.CreateBadRequestError("User id không hợp lệ");
+
+        var query = _unitOfWork.BookingRepository
+            .ActiveEntities
+            .Include(b => b.Tour)
+            .Include(b => b.TourSchedule)
+            .Include(b => b.TourGuide)
+            .Include(b => b.Workshop)
+            .Include(b => b.WorkshopSchedule)
+            .Include(b => b.Promotion)
+            .Include(b => b.Participants)
+            .Where(b => b.UserId == currentUserIdGuid);
+
+        // Apply filters
+        if (bookingType.HasValue)
+            query = query.Where(b => b.BookingType == bookingType.Value);
+
+        if (bookingDate.HasValue)
+            query = query.Where(b => b.BookingDate.Date == bookingDate.Value.Date);
+
+        if (bookingStatus.HasValue)
+            query = query.Where(b => b.Status == bookingStatus.Value);
+
+        // Sort by BookingDate descending
+        query = query.OrderByDescending(b => b.BookingDate);
+
+        return await query.ToListAsync(cancellationToken);
+    }
+
+    public async Task<bool> ProcessPaymentResponseAsync(PaymentResponse paymentResponse)
+    {
+        try
+        {
+            var currentUserId = "1";
+            var currentTime = _timeService.SystemTimeNow;
+
+            // In các giá trị của PaymentResponse để kiểm tra
+            if (paymentResponse != null)
+            {
+                Console.WriteLine("Parsed paymentResponse successfully:");
+                Console.WriteLine($"Code: {paymentResponse.Code}");
+                Console.WriteLine($"Desc: {paymentResponse.Desc}");
+                Console.WriteLine($"Success: {paymentResponse.Success}");
+                Console.WriteLine($"Signature: {paymentResponse.Signature}");
+
+                if (paymentResponse.Data != null)
+                {
+                    Console.WriteLine("Data:");
+                    Console.WriteLine($"  AccountNumber: {paymentResponse.Data.AccountNumber}");
+                    Console.WriteLine($"  Amount: {paymentResponse.Data.Amount}");
+                    Console.WriteLine($"  Description: {paymentResponse.Data.Description}");
+                    Console.WriteLine($"  Reference: {paymentResponse.Data.Reference}");
+                    Console.WriteLine($"  TransactionDateTime: {paymentResponse.Data.TransactionDateTime}");
+                    Console.WriteLine($"  CounterAccountBankId: {paymentResponse.Data.CounterAccountBankId}");
+                    Console.WriteLine($"  CounterAccountBankName: {paymentResponse.Data.CounterAccountBankName}");
+                    Console.WriteLine($"  CounterAccountName: {paymentResponse.Data.CounterAccountName}");
+                    Console.WriteLine($"  CounterAccountNumber: {paymentResponse.Data.CounterAccountNumber}");
+                    Console.WriteLine($"  Currency: {paymentResponse.Data.Currency}");
+                    Console.WriteLine($"  OrderCode: {paymentResponse.Data.OrderCode}");
+                    Console.WriteLine($"  PaymentLinkId: {paymentResponse.Data.PaymentLinkId}");
+                }
+                else
+                {
+                    Console.WriteLine("Data is null.");
+                    return false;
+                }
+            }
+            else
+            {
+                Console.WriteLine("PaymentResponse is null.");
+                return false;
+            }
+
+            // Kiểm tra điều kiện trong paymentResponse
+            if (paymentResponse.Code != "00" || !paymentResponse.Success)
+            {
+                Console.WriteLine("Validation failed for paymentResponse.");
+                return false;
+            }
+
+            // Xử lý TransactionDateTime
+            if (!DateTime.TryParse(paymentResponse.Data.TransactionDateTime, out DateTime transactionDateTime))
+            {
+                Console.WriteLine("TransactionDateTime is invalid.");
+                return false;
+            }
+
+            var order = new TransactionEntry
+            {
+                AccountNumber = paymentResponse.Data.AccountNumber,
+                PaidAmount = paymentResponse.Data.Amount,
+                PaymentReference = paymentResponse.Data.Reference,
+                TransactionDateTime = transactionDateTime,
+                CounterAccountBankId = paymentResponse.Data.CounterAccountBankId,
+                CounterAccountName = paymentResponse.Data.CounterAccountName,
+                CounterAccountNumber = paymentResponse.Data.CounterAccountNumber,
+                Currency = paymentResponse.Data.Currency,
+                PaymentLinkId = paymentResponse.Data.PaymentLinkId,
+                PaymentStatus = PaymentStatus.Success,
+                CreatedBy = currentUserId,
+                CreatedTime = currentTime,
+                LastUpdatedBy = currentUserId,
+                LastUpdatedTime = currentTime
+            };
+
+            _unitOfWork.BeginTransaction();
+            await _unitOfWork.TransactionEntryRepository.AddAsync(order);
+            await _unitOfWork.SaveAsync();
+            Console.WriteLine("Order has been successfully added to the database.");
+
+            var bookingsToUpdate = await _unitOfWork.BookingRepository.Entities
+                .Where(b => b.PaymentLinkId == paymentResponse.Data.PaymentLinkId)
+                .ToListAsync();
+
+            if (bookingsToUpdate.Any())
+            {
+                foreach (var booking in bookingsToUpdate)
+                {
+                    booking.Status = BookingStatus.Confirmed;
+                }
+
+                _unitOfWork.BookingRepository.UpdateRange(bookingsToUpdate);
+                await _unitOfWork.SaveAsync();
+
+                Console.WriteLine("Updated status for the matching Booking(s).");
+            }
+
+            _unitOfWork.CommitTransaction();
+            return true;
+        }
+        catch (CustomException)
+        {
+            _unitOfWork.RollBack();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _unitOfWork.RollBack();
+            Console.WriteLine("Error occurred:");
+            Console.WriteLine(ex.Message);
+            throw CustomExceptionFactory.CreateInternalServerError();
+        }
+        finally
+        {
+            // _unitOfWork.Dispose();
+        }
+    }
+
+    private async Task<(decimal DiscountAmount, Promotion? Promotion)> ValidateAndCalculateDiscountAsync(string? promotionCode, decimal basePrice, Guid tourId)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(promotionCode))
+                return (0, null);
+
+            var promotion = await _unitOfWork.PromotionRepository
+                .ActiveEntities
+                .Include(p => p.PromotionApplicables)
+                .FirstOrDefaultAsync(p => p.PromotionCode == promotionCode);
+
+            if (promotion == null)
+                throw CustomExceptionFactory.CreateBadRequestError("Không tim thấy mã giảm giá");
+
+            // kieem tra ngày
+            var currentDate = DateTimeOffset.UtcNow;
+            if (promotion.StartDate > currentDate || promotion.EndDate < currentDate)
+                throw CustomExceptionFactory.CreateBadRequestError("Promotion is not active or has expired.");
+
+            // đối tượng áp dụng
+            if (promotion.ApplicableType != ServiceOption.Tour || promotion.ApplicableType != ServiceOption.Both)
+                throw CustomExceptionFactory.CreateBadRequestError("Mã giảm giá không áp dụng cho tour.");
+
+            bool isApplicable = promotion.PromotionApplicables.Any(pa => pa.TourId == tourId);
+            if (!isApplicable)
+                throw CustomExceptionFactory.CreateBadRequestError("Mã giảm giá không áp dụng với tour này");
+
+            decimal discountAmount = promotion.DiscountType switch
+            {
+                DiscountType.Fixed => promotion.DiscountValue,
+                DiscountType.Percentage => basePrice * (promotion.DiscountValue / 100),
+                _ => throw CustomExceptionFactory.CreateBadRequestError("Loại giảm giá không phù hợp")
+            };
+
+            return (discountAmount, promotion);
+        }
+        catch (Exception ex)
+        {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }

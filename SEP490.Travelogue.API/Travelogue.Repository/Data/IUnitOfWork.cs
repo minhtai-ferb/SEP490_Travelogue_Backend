@@ -37,6 +37,8 @@ public interface IUnitOfWork //: IDisposable
     IWorkshopMediaRepository WorkshopMediaRepository { get; }
     ITourMediaRepository TourMediaRepository { get; }
     ICertificationRepository CertificationRepository { get; }
+    IPromotionRepository PromotionRepository { get; }
+    ITransactionEntryRepository TransactionEntryRepository { get; }
 
     IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity;
     void Save();
