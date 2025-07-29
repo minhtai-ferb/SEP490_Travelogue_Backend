@@ -17,13 +17,33 @@ namespace Travelogue.API.Controllers
             _bookingService = bookingService;
         }
 
-        [HttpPost("create-booking")]
-        public async Task<IActionResult> AddBookingAsync([FromBody] CreateBookingTourDto model, CancellationToken cancellationToken)
+        [HttpPost("create-booking-tour")]
+        public async Task<IActionResult> AddTourBookingAsync([FromBody] CreateBookingTourDto model, CancellationToken cancellationToken)
         {
             var result = await _bookingService.CreateTourBookingAsync(model, cancellationToken);
             return Ok(ResponseModel<object>.OkResponseModel(
                 data: result,
-                message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "booking")
+                message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "booking tour")
+            ));
+        }
+
+        [HttpPost("create-booking-tour-guide")]
+        public async Task<IActionResult> AddTourGuideBookingAsync([FromBody] CreateBookingTourGuideDto model, CancellationToken cancellationToken)
+        {
+            var result = await _bookingService.CreateTourGuideBookingAsync(model, cancellationToken);
+            return Ok(ResponseModel<object>.OkResponseModel(
+                data: result,
+                message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "booking tour guide")
+            ));
+        }
+
+        [HttpPost("create-booking-workshop")]
+        public async Task<IActionResult> AddWorkshopBookingAsync([FromBody] CreateBookingWorkshopDto model, CancellationToken cancellationToken)
+        {
+            var result = await _bookingService.CreateWorkshopBookingAsync(model, cancellationToken);
+            return Ok(ResponseModel<object>.OkResponseModel(
+                data: result,
+                message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "booking workshop")
             ));
         }
 
@@ -69,6 +89,26 @@ namespace Travelogue.API.Controllers
                 Console.WriteLine("Lỗi khi chuyển đổi payload: " + ex.Message);
                 return BadRequest("Dữ liệu không hợp lệ.");
             }
+        }
+
+        [HttpGet("my-bookings")]
+        public async Task<IActionResult> GetMyBookings([FromQuery] BookingFilterDto filter)
+        {
+            var result = await _bookingService.GetUserBookingsAsync(filter);
+            return Ok(ResponseModel<object>.OkResponseModel(
+                 data: result,
+                 message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "booking")
+             ));
+        }
+
+        [HttpGet("{bookingId}")]
+        public async Task<IActionResult> GetBookingById(Guid bookingId)
+        {
+            var result = await _bookingService.GetBookingByIdAsync(bookingId);
+            return Ok(ResponseModel<object>.OkResponseModel(
+                 data: result,
+                 message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "booking")
+             ));
         }
     }
 }

@@ -35,7 +35,6 @@ public class UnitOfWork : IUnitOfWork
     public IWorkshopRepository WorkshopRepository { get; }
     public IWorkshopActivityRepository WorkshopActivityRepository { get; }
     public IWorkshopScheduleRepository WorkshopScheduleRepository { get; }
-    public ITourGuideMappingRepository TourGuideMappingRepository { get; }
     public ITourGuideRequestRepository TourGuideRequestRepository { get; }
     public ICraftVillageRequestRepository CraftVillageRequestRepository { get; }
     public IWorkshopMediaRepository WorkshopMediaRepository { get; }
@@ -43,6 +42,8 @@ public class UnitOfWork : IUnitOfWork
     public ICertificationRepository CertificationRepository { get; }
     public IPromotionRepository PromotionRepository { get; }
     public ITransactionEntryRepository TransactionEntryRepository { get; }
+    public IBookingPriceRequestRepository BookingPriceRequestRepository { get; }
+    public IRejectionRequestRepository RejectionRequestRepository { get; }
 
     public UnitOfWork(ApplicationDbContext dbContext)
     {
@@ -72,7 +73,6 @@ public class UnitOfWork : IUnitOfWork
         WorkshopRepository = new WorkshopRepository(_dbContext);
         WorkshopActivityRepository = new WorkshopActivityRepository(_dbContext);
         WorkshopScheduleRepository = new WorkshopScheduleRepository(_dbContext);
-        TourGuideMappingRepository = new TourGuideMappingRepository(_dbContext);
         TourGuideRequestRepository = new TourGuideRequestRepository(_dbContext);
         CraftVillageRequestRepository = new CraftVillageRequestRepository(_dbContext);
         TourMediaRepository = new TourMediaRepository(_dbContext);
@@ -80,6 +80,7 @@ public class UnitOfWork : IUnitOfWork
         CertificationRepository = new CertificationRepository(_dbContext);
         PromotionRepository = new PromotionRepository(_dbContext);
         TransactionEntryRepository = new TransactionEntryRepository(_dbContext);
+        RejectionRequestRepository = new RejectionRequestRepository(_dbContext);
     }
 
     public IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity

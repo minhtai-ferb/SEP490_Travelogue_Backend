@@ -42,8 +42,8 @@ public sealed class TourGuide : BaseEntity
 
     public User User { get; set; } = null!;
 
-    public ICollection<TourGuideMapping> TourGuideMappings { get; set; } = new List<TourGuideMapping>();
+    public ICollection<TourGuideSchedule> TourGuideSchedules { get; set; } = new List<TourGuideSchedule>();
     public ICollection<PromotionApplicable> PromotionApplicables { get; set; } = new List<PromotionApplicable>();
-    public ICollection<TourGuideSchedule>? TourGuideSchedules { get; set; }
     public ICollection<Certification>? Certifications { get; set; }
+    public ICollection<BookingPriceRequest>? BookingPriceRequests { get; set; }
 }

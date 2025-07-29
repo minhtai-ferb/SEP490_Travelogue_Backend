@@ -27,7 +27,7 @@ public sealed class TourSchedule : BaseEntity
 
     public Tour Tour { get; set; } = null!;
 
-    public ICollection<TourGuideMapping> TourGuideMappings { get; set; } = new List<TourGuideMapping>();
+    public ICollection<TourGuideSchedule> TourGuideSchedules { get; set; } = new List<TourGuideSchedule>();
     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     // public ICollection<TourScheduleGuide> TourScheduleGuides { get; set; } = new List<TourScheduleGuide>();
 }

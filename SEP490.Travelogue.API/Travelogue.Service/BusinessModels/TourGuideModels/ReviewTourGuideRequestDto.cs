@@ -7,3 +7,4 @@ public class ReviewTourGuideRequestDto
     public TourGuideRequestStatus Status { get; set; }
     public string? RejectionReason { get; set; }
 }
+

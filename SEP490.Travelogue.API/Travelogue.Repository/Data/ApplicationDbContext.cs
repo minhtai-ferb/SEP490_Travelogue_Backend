@@ -41,6 +41,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<TourGuide> TourGuides { get; set; }
     public DbSet<Certification> Certifications { get; set; }
     public DbSet<TourGuideRequest> TourGuideRequests { get; set; }
+    public DbSet<RejectionRequest> RejectionRequests { get; set; }
     public DbSet<TourGuideRequestCertification> TourGuideRequestCertifications { get; set; }
     public DbSet<Tour> Tours { get; set; }
     public DbSet<TourSchedule> TourSchedules { get; set; }

@@ -4,8 +4,9 @@ namespace Travelogue.Service.BusinessModels.BookingModels;
 
 public class CreateBookingTourGuideDto
 {
-    public Guid? TourId { get; set; }
-    public Guid? TourGuideId { get; set; }
+    public Guid TourGuideId { get; set; }
+
+    public Guid? TripPlanId { get; set; }
 
     [Required]
     public DateTimeOffset Date { get; set; }

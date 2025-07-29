@@ -10,6 +10,7 @@ public class BookingDataModel
     public Guid? TourId { get; set; }
     public Guid? TourScheduleId { get; set; }
     public Guid? TourGuideId { get; set; }
+    public Guid? TripPlanId { get; set; }
     public Guid? WorkshopId { get; set; }
     public Guid? WorkshopScheduleId { get; set; }
     public string? PaymentLinkId { get; set; }
