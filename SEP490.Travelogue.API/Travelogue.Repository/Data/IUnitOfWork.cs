@@ -31,12 +31,15 @@ public interface IUnitOfWork //: IDisposable
     IWorkshopRepository WorkshopRepository { get; }
     IWorkshopActivityRepository WorkshopActivityRepository { get; }
     IWorkshopScheduleRepository WorkshopScheduleRepository { get; }
-    ITourGuideMappingRepository TourGuideMappingRepository { get; }
     ITourGuideRequestRepository TourGuideRequestRepository { get; }
     ICraftVillageRequestRepository CraftVillageRequestRepository { get; }
     IWorkshopMediaRepository WorkshopMediaRepository { get; }
     ITourMediaRepository TourMediaRepository { get; }
     ICertificationRepository CertificationRepository { get; }
+    IPromotionRepository PromotionRepository { get; }
+    ITransactionEntryRepository TransactionEntryRepository { get; }
+    IBookingPriceRequestRepository BookingPriceRequestRepository { get; }
+    IRejectionRequestRepository RejectionRequestRepository { get; }
 
     IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity;
     void Save();

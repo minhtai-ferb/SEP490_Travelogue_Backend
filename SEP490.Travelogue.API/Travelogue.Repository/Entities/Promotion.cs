@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases.BaseEntities;
 using Travelogue.Repository.Entities.Enums;
 
@@ -10,6 +11,10 @@ public sealed class Promotion : BaseEntity
     [Required]
     [StringLength(100)]
     public required string PromotionName { get; set; }
+
+    [Required]
+    [StringLength(50)]
+    public required string PromotionCode { get; set; }
 
     [Required]
     [EnumDataType(typeof(DiscountType))]

@@ -4,23 +4,19 @@ using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Repository.Entities;
 
-public sealed class TourGuideRequest : BaseEntity
+public sealed class BookingPriceRequest : BaseEntity
 {
     [Required]
-    public Guid UserId { get; set; }
-    public User User { get; set; } = null!;
-
-    [Required]
-    public required string Introduction { get; set; }
+    public Guid TourGuideId { get; set; }
 
     [Range(10000, double.MaxValue)]
     public decimal Price { get; set; }
-    public TourGuideRequestStatus Status { get; set; }
+
+    public BookingPriceRequestStatus Status { get; set; } = BookingPriceRequestStatus.Pending;
 
     public string? RejectionReason { get; set; }
 
     public DateTimeOffset? ReviewedAt { get; set; }
     public Guid? ReviewedBy { get; set; }
-
-    public ICollection<TourGuideRequestCertification> Certifications { get; set; } = new List<TourGuideRequestCertification>();
+    public TourGuide TourGuide { get; set; } = null!;
 }

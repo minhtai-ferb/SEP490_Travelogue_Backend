@@ -4,13 +4,16 @@ using Travelogue.Repository.Bases.BaseEntities;
 
 namespace Travelogue.Repository.Entities;
 
-public sealed class TourGuideMapping : BaseEntity
+public sealed class TourGuideSchedule : BaseEntity
 {
-    [Required]
-    public Guid TourScheduleId { get; set; }
+    public Guid? TourScheduleId { get; set; }
 
     [Required]
     public Guid TourGuideId { get; set; }
+
+    public DateTimeOffset Date { get; set; }
+    public string? Note { get; set; }
+    public Guid? BookingId { get; set; }
 
     // Navigation properties
     [ForeignKey("TourScheduleId")]
@@ -18,4 +21,5 @@ public sealed class TourGuideMapping : BaseEntity
 
     [ForeignKey("TourGuideId")]
     public TourGuide TourGuide { get; set; } = null!;
+    public Booking Booking { get; set; } = null!;
 }

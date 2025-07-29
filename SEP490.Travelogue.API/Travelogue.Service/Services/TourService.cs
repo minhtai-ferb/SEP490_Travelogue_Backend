@@ -382,7 +382,7 @@ public class TourService : ITourService
                 .Include(t => t.TourPlanLocations)
                     .ThenInclude(l => l.Location)
                 .Include(t => t.TourSchedules)
-                    .ThenInclude(t => t.TourGuideMappings)
+                    .ThenInclude(t => t.TourGuideSchedules)
                         .ThenInclude(tg => tg.TourGuide)
                             .ThenInclude(tg => tg.User)
                 .Include(t => t.PromotionApplicables)
@@ -486,7 +486,7 @@ public class TourService : ITourService
                 .Include(t => t.TourPlanLocations)
                     .ThenInclude(l => l.Location)
                 .Include(t => t.TourSchedules)
-                    .ThenInclude(t => t.TourGuideMappings)
+                    .ThenInclude(t => t.TourGuideSchedules)
                         .ThenInclude(tg => tg.TourGuide)
                             .ThenInclude(tg => tg.User)
                 .Include(t => t.PromotionApplicables)
@@ -1156,7 +1156,7 @@ public class TourService : ITourService
     //         var tour = await _unitOfWork.TourRepository
     //             .ActiveEntities
     //             .Include(t => t.TourSchedules)
-    //             .Include(t => t.TourGuideMappings)
+    //             .Include(t => t.TourGuideSchedules)
     //             .Include(t => t.Bookings)
     //             .ThenInclude(b => b.User)
     //             .FirstOrDefaultAsync(t => t.Id == tourId)
@@ -1195,7 +1195,7 @@ public class TourService : ITourService
     //         }
 
     //         // check tourGuide 
-    //         var existingGuideIds = tour.TourGuideMappings.Where(tg => !tg.IsDeleted).Select(tg => tg.GuideId).ToList();
+    //         var existingGuideIds = tour.TourGuideSchedules.Where(tg => !tg.IsDeleted).Select(tg => tg.GuideId).ToList();
     //         var newGuideIds = guideIds.Except(existingGuideIds).ToList();
     //         if (!newGuideIds.Any())
     //             return; // không có TourGuide mới để thêm
@@ -1264,7 +1264,7 @@ public class TourService : ITourService
                 .Include(ts => ts.Tour)
                     .ThenInclude(t => t.Bookings)
                         .ThenInclude(b => b.User)
-                .Include(ts => ts.TourGuideMappings)
+                .Include(ts => ts.TourGuideSchedules)
                 .FirstOrDefaultAsync(ts => ts.Id == tourScheduleId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("TourSchedule");
 
@@ -1293,25 +1293,34 @@ public class TourService : ITourService
                 throw CustomExceptionFactory.CreateBadRequestError($"TourGuide {tourGuide.User.FullName} không sẵn sàng trong khoảng {tourStart:yyyy-MM-dd} đến {tourEnd:yyyy-MM-dd}.");
 
             // Check đã gán rồi chưa
-            var isAlreadyAssigned = tourSchedule.TourGuideMappings
+            var isAlreadyAssigned = tourSchedule.TourGuideSchedules
                 .Any(m => !m.IsDeleted && m.TourGuideId == guideId);
 
             if (isAlreadyAssigned)
                 throw CustomExceptionFactory.CreateBadRequestError("Hướng dẫn viên này đã được gán cho lịch trình.");
 
             // Thêm mới
-            var mapping = new TourGuideMapping
-            {
-                TourScheduleId = tourScheduleId,
-                TourGuideId = guideId,
-                CreatedTime = DateTimeOffset.UtcNow,
-                LastUpdatedTime = DateTimeOffset.UtcNow
-            };
+
 
             using var transaction = await _unitOfWork.BeginTransactionAsync();
             try
             {
-                await _unitOfWork.TourGuideMappingRepository.AddAsync(mapping);
+                var schedules = new List<TourGuideSchedule>();
+
+                for (var date = tourStart; date < tourEnd; date = date.AddDays(1))
+                {
+                    var schedule = new TourGuideSchedule
+                    {
+                        TourScheduleId = tourScheduleId,
+                        TourGuideId = guideId,
+                        Date = date,
+                        CreatedTime = DateTimeOffset.UtcNow,
+                        LastUpdatedTime = DateTimeOffset.UtcNow
+                    };
+
+                    schedules.Add(schedule);
+                }
+                await _unitOfWork.TourGuideScheduleRepository.AddRangeAsync(schedules);
                 await _unitOfWork.SaveAsync();
 
                 // Gửi email nếu tour đã có người đặt
@@ -1354,16 +1363,16 @@ public class TourService : ITourService
             var tourSchedule = await _unitOfWork.TourScheduleRepository
                 .ActiveEntities
                 .Include(ts => ts.Tour)
-                .ThenInclude(t => t.Bookings)
-                .ThenInclude(b => b.User)
-                .Include(ts => ts.TourGuideMappings)
+                    .ThenInclude(t => t.Bookings)
+                        .ThenInclude(b => b.User)
+                .Include(ts => ts.TourGuideSchedules)
                 .FirstOrDefaultAsync(ts => ts.Id == tourScheduleId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("TourSchedule");
 
             if (tourSchedule.Tour.Status == TourStatus.Cancelled)
                 throw CustomExceptionFactory.CreateBadRequestError("Không thể xóa tour guide khỏi lịch trình đã bị hủy.");
 
-            var mapping = tourSchedule.TourGuideMappings
+            var mapping = tourSchedule.TourGuideSchedules
                 .FirstOrDefault(tg => tg.TourGuideId == guideId && !tg.IsDeleted)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("TourGuide không được chỉ định cho lịch trình này.");
 
@@ -1494,7 +1503,7 @@ public class TourService : ITourService
     {
         return tour.TourSchedules
             .Where(ts => !ts.IsDeleted)
-            .SelectMany(ts => ts.TourGuideMappings)
+            .SelectMany(ts => ts.TourGuideSchedules)
             .Where(tg => !tg.IsDeleted && tg.TourGuide != null)
             .Select(tg => new TourGuideDataModel
             {
@@ -1538,12 +1547,12 @@ public class TourService : ITourService
 
             var toursQuery = _unitOfWork.TourRepository.ActiveEntities
                 .Include(t => t.TourSchedules)
-                    .ThenInclude(s => s.TourGuideMappings)
+                    .ThenInclude(s => s.TourGuideSchedules)
                         .ThenInclude(m => m.TourGuide)
                             .ThenInclude(g => g.User)
                 .Where(t => t.TourSchedules
                     .Any(s => !s.IsDeleted &&
-                              s.TourGuideMappings.Any(m =>
+                              s.TourGuideSchedules.Any(m =>
                                   !m.IsDeleted &&
                                   m.TourGuide != null &&
                                   m.TourGuide.User.Email.ToLower() == email
