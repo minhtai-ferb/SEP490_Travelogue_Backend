@@ -93,6 +93,8 @@ public class BookingService : IBookingService
                 BookingType = BookingType.Tour,
                 Status = BookingStatus.Pending,
                 BookingDate = DateTimeOffset.UtcNow,
+                StartDate = tourSchedule.DepartureDate,
+                EndDate = tourSchedule.DepartureDate.AddDays(tourSchedule.TotalDays - 1),
                 PromotionId = promotion?.Id,
                 OriginalPrice = originalPrice,
                 DiscountAmount = discountAmount,
@@ -139,6 +141,8 @@ public class BookingService : IBookingService
                 BookingType = booking.BookingType,
                 BookingTypeText = _enumService.GetEnumDisplayName(booking.BookingType),
                 BookingDate = booking.BookingDate,
+                StartDate = booking.StartDate,
+                EndDate = booking.EndDate,
                 CancelledAt = booking.CancelledAt,
                 PromotionId = booking.PromotionId,
                 OriginalPrice = booking.OriginalPrice,
@@ -204,6 +208,8 @@ public class BookingService : IBookingService
                 BookingType = BookingType.Workshop,
                 Status = BookingStatus.Pending,
                 BookingDate = DateTimeOffset.UtcNow,
+                StartDate = workshopSchedule.StartTime,
+                EndDate = workshopSchedule.EndTime,
                 PromotionId = promotion?.Id,
                 OriginalPrice = originalPrice,
                 DiscountAmount = discountAmount,
@@ -252,6 +258,8 @@ public class BookingService : IBookingService
                 BookingType = booking.BookingType,
                 BookingTypeText = _enumService.GetEnumDisplayName(booking.BookingType),
                 BookingDate = booking.BookingDate,
+                StartDate = booking.StartDate,
+                EndDate = booking.EndDate,
                 CancelledAt = booking.CancelledAt,
                 PromotionId = booking.PromotionId,
                 OriginalPrice = booking.OriginalPrice,
@@ -344,6 +352,8 @@ public class BookingService : IBookingService
                 BookingType = BookingType.TourGuide,
                 Status = BookingStatus.Pending,
                 BookingDate = currentTime,
+                StartDate = dto.StartDate,
+                EndDate = dto.EndDate,
                 // PromotionId = promotion?.Id,
                 OriginalPrice = originalPrice,
                 DiscountAmount = 0,
@@ -399,6 +409,8 @@ public class BookingService : IBookingService
                 BookingType = booking.BookingType,
                 BookingTypeText = _enumService.GetEnumDisplayName(booking.BookingType),
                 BookingDate = booking.BookingDate,
+                StartDate = booking.StartDate,
+                EndDate = booking.EndDate,
                 CancelledAt = booking.CancelledAt,
                 PromotionId = booking.PromotionId,
                 OriginalPrice = booking.OriginalPrice,
@@ -441,6 +453,9 @@ public class BookingService : IBookingService
 
             if (booking.Status != BookingStatus.Pending)
                 throw CustomExceptionFactory.CreateBadRequestError("Booking is not in a pending state.");
+
+            if (booking.StartDate < currentTime)
+                throw CustomExceptionFactory.CreateBadRequestError("Cannot create payment link for past bookings.");
 
             decimal totalAmount = booking.FinalPrice;
             if (totalAmount <= 0)
@@ -605,18 +620,90 @@ public class BookingService : IBookingService
                 .FirstOrDefaultAsync(b => b.PaymentLinkId == paymentResponse.Data.PaymentLinkId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("booking");
 
-            var tourSchedule = await _unitOfWork.TourScheduleRepository
-                .ActiveEntities
-                .FirstOrDefaultAsync(ts => ts.Id == existingBooking.TourScheduleId)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("tour schedule");
-
             var totalParticipants = existingBooking.Participants.Sum(p => p.Quantity);
+            if (totalParticipants <= 0)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Khong có người tham gia nào trong booking.");
+            }
 
-            tourSchedule.CurrentBooked += totalParticipants;
+            switch (existingBooking.BookingType)
+            {
+                case BookingType.Tour:
+                    if (existingBooking.TourScheduleId == null)
+                        throw CustomExceptionFactory.CreateBadRequestError("TourScheduleId không tồn tại trong booking tour.");
+
+                    var tourSchedule = await _unitOfWork.TourScheduleRepository
+                        .ActiveEntities
+                        .FirstOrDefaultAsync(ts => ts.Id == existingBooking.TourScheduleId)
+                        ?? throw CustomExceptionFactory.CreateNotFoundError("tour schedule");
+
+                    tourSchedule.CurrentBooked += totalParticipants;
+                    _unitOfWork.TourScheduleRepository.Update(tourSchedule);
+                    break;
+
+                case BookingType.Workshop:
+                    if (existingBooking.WorkshopScheduleId == null)
+                        throw CustomExceptionFactory.CreateBadRequestError("WorkshopScheduleId không tồn tại trong booking workshop.");
+
+                    var workshopSchedule = await _unitOfWork.WorkshopScheduleRepository
+                        .ActiveEntities
+                        .FirstOrDefaultAsync(ws => ws.Id == existingBooking.WorkshopScheduleId)
+                        ?? throw CustomExceptionFactory.CreateNotFoundError("workshop schedule");
+
+                    workshopSchedule.CurrentBooked += totalParticipants;
+                    _unitOfWork.WorkshopScheduleRepository.Update(workshopSchedule);
+                    break;
+
+                case BookingType.TourGuide:
+                    if (existingBooking.TourGuideId == null)
+                        throw CustomExceptionFactory.CreateBadRequestError("TourGuideId không tồn tại trong booking tour guide.");
+                    var tourGuide = await _unitOfWork.TourGuideRepository
+                        .ActiveEntities
+                        .Include(tg => tg.TourGuideSchedules)
+                        .FirstOrDefaultAsync(tg => tg.Id == existingBooking.TourGuideId)
+                        ?? throw CustomExceptionFactory.CreateNotFoundError("tour guide");
+                    var dateRange = existingBooking.StartDate.Date <= existingBooking.EndDate.Date
+                        ? Enumerable.Range(0, (existingBooking.EndDate.Date - existingBooking.StartDate.Date).Days + 1)
+                            .Select(d => existingBooking.StartDate.Date.AddDays(d))
+                            .ToList()
+                        : new List<DateTime>();
+
+                    foreach (var date in dateRange)
+                    {
+                        var schedule = new TourGuideSchedule
+                        {
+                            TourGuideId = tourGuide.Id,
+                            Date = date,
+                            Note = "Đặt tour thành công",
+                            BookingId = existingBooking.Id
+                        };
+                        await _unitOfWork.TourGuideScheduleRepository.AddAsync(schedule);
+                    }
+
+                    // var dateRange = Enumerable.Range(0, (existingBooking.EndDate.Date - existingBooking.StartDate.Date).Days + 1)
+                    // .Select(d => existingBooking.StartDate.Date.AddDays(d))
+                    // .ToList();
+
+                    // foreach (var date in dateRange)
+                    // {
+                    //     var schedule = new TourGuideSchedule
+                    //     {
+                    //         TourGuideId = tourGuide.Id,
+                    //         Date = date,
+                    //         Note = "Đặt tour thành công",
+                    //         BookingId = existingBooking.Id
+                    //     };
+                    //     await _unitOfWork.TourGuideScheduleRepository.AddAsync(schedule);
+                    // }
+                    break;
+
+                default:
+                    throw CustomExceptionFactory.CreateBadRequestError("Loại booking không được hỗ trợ.");
+            }
 
             var order = new TransactionEntry
             {
-                BookingId = existingBooking?.Id,
+                BookingId = existingBooking.Id,
                 AccountNumber = paymentResponse.Data.AccountNumber,
                 PaidAmount = paymentResponse.Data.Amount,
                 PaymentReference = paymentResponse.Data.Reference,
@@ -637,7 +724,6 @@ public class BookingService : IBookingService
 
             await _unitOfWork.TransactionEntryRepository.AddAsync(order);
             await _unitOfWork.SaveAsync();
-            Console.WriteLine("Order has been successfully added to the database.");
 
             var bookingsToUpdate = await _unitOfWork.BookingRepository.Entities
                 .Where(b => b.PaymentLinkId == paymentResponse.Data.PaymentLinkId)
@@ -652,8 +738,6 @@ public class BookingService : IBookingService
 
                 _unitOfWork.BookingRepository.UpdateRange(bookingsToUpdate);
                 await _unitOfWork.SaveAsync();
-
-                Console.WriteLine("Updated status for the matching Booking(s).");
             }
 
             _unitOfWork.CommitTransaction();

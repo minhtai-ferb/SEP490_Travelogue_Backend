@@ -31,6 +31,8 @@ public class BookingDataModel
     public string? BookingTypeText { get; set; }
 
     public DateTimeOffset BookingDate { get; set; }
+    public DateTimeOffset StartDate { get; set; }
+    public DateTimeOffset EndDate { get; set; }
     public DateTimeOffset? CancelledAt { get; set; }
     public Guid? PromotionId { get; set; }
     public decimal OriginalPrice { get; set; }
