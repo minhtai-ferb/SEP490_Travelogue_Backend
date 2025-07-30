@@ -9,7 +9,8 @@ public class CreateBookingTourGuideDto
     public Guid? TripPlanId { get; set; }
 
     [Required]
-    public DateTimeOffset Date { get; set; }
+    public DateTimeOffset StartDate { get; set; }
+    public DateTimeOffset EndDate { get; set; }
 
     public int AdultCount { get; set; }
     public int ChildrenCount { get; set; }

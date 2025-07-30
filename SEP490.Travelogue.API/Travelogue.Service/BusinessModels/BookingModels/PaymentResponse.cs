@@ -59,14 +59,8 @@ public class PaymentDataJson
     public string Currency { get; set; }
 
     [JsonProperty("orderCode")]
-    public int OrderCode { get; set; }
+    public string OrderCode { get; set; }
 
     [JsonProperty("paymentLinkId")]
     public string PaymentLinkId { get; set; }
-
-    [JsonProperty("code")]
-    public string Code { get; set; }
-
-    [JsonProperty("desc")]
-    public string Desc { get; set; }
 }

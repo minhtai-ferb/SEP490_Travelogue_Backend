@@ -80,9 +80,9 @@ namespace Travelogue.API.Controllers
 
                 var result = await _bookingService.ProcessPaymentResponseAsync(paymentResponse);
                 return Ok(ResponseModel<object>.OkResponseModel(
-                 data: result,
-                 message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "booking")
-             ));
+                    data: result,
+                    message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "booking")
+                ));
             }
             catch (Exception ex)
             {
@@ -109,6 +109,18 @@ namespace Travelogue.API.Controllers
                  data: result,
                  message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "booking")
              ));
+        }
+
+        [HttpGet("payment-link-info/{orderId}")]
+        public async Task<IActionResult> GetOrder([FromRoute] long orderId)
+        {
+            var result = await _bookingService.GetPaymentLinkInformationAsync(orderId);
+
+            return Ok(ResponseModel<object>.OkResponseModel(
+                data: result,
+                message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "booking")
+            ));
+
         }
     }
 }

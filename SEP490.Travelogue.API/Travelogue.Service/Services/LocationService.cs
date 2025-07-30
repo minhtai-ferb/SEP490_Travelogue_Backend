@@ -37,7 +37,7 @@ public interface ILocationService
     Task AddFavoriteLocationAsync(Guid locationId, CancellationToken cancellationToken);
     Task RemoveFavoriteLocationAsync(Guid locationId, CancellationToken cancellationToken);
     Task<LocationMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
-    Task<LocationMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, string? thumbnailFileName, CancellationToken cancellationToken);
+    Task<LocationMediaResponse> UploadMediaAsync(Guid id, UploadMediasDto uploadMediasDto, string? thumbnailFileName, CancellationToken cancellationToken);
     Task<LocationMediaResponse> AddLocationWithMediaAsync(LocationCreateWithMediaFileModel locationCreateModel, string? thumbnailSelected, CancellationToken cancellationToken);
     Task UpdateLocationAsync(Guid id, LocationUpdateWithMediaFileModel locationUpdateModel, string? thumbnailSelected, CancellationToken cancellationToken);
     Task<bool> DeleteMediaAsync(Guid id, List<string> deletedImages, CancellationToken cancellationToken);
@@ -1862,7 +1862,7 @@ public class LocationService : ILocationService
 
     public async Task<LocationMediaResponse> UploadMediaAsync(
         Guid id,
-        List<IFormFile>? imageUploads,
+        UploadMediasDto uploadMediasDto,
         string? thumbnailSelected,
         CancellationToken cancellationToken)
     {
@@ -1876,7 +1876,7 @@ public class LocationService : ILocationService
                 throw CustomExceptionFactory.CreateNotFoundError("location");
             }
 
-            if (imageUploads == null || imageUploads.Count == 0)
+            if (uploadMediasDto.Files == null || uploadMediasDto.Files.Count == 0)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("images");
             }
@@ -1885,7 +1885,7 @@ public class LocationService : ILocationService
                 .Where(dm => dm.LocationId == existingLocation.Id).ToList();
 
             // Nếu không có ảnh mới & không có thumbnailSelected => Chỉ cập nhật thông tin location
-            if ((imageUploads == null || imageUploads.Count == 0) && string.IsNullOrEmpty(thumbnailSelected))
+            if ((uploadMediasDto.Files == null || uploadMediasDto.Files.Count == 0) && string.IsNullOrEmpty(thumbnailSelected))
             {
                 await _unitOfWork.SaveAsync();
                 await transaction.CommitAsync(cancellationToken);
@@ -1911,7 +1911,7 @@ public class LocationService : ILocationService
             }
 
             // Nếu không có ảnh mới nhưng có thumbnailSelected là ảnh cũ -> Dừng ở đây
-            if (imageUploads == null || imageUploads.Count == 0)
+            if (uploadMediasDto.Files == null || uploadMediasDto.Files.Count == 0)
             {
                 await _unitOfWork.SaveAsync();
                 await transaction.CommitAsync(cancellationToken);
@@ -1924,13 +1924,13 @@ public class LocationService : ILocationService
             }
 
             // Có ảnh mới -> Upload lên Cloudinary
-            // var imageUrls = await _cloudinaryService.UploadImagesAsync(imageUploads);
-            var imageUrls = await _mediaService.UploadMultipleImagesAsync(imageUploads);
+            // var imageUrls = await _cloudinaryService.UploadImagesAsync(uploadMediasDto.Files);
+            var imageUrls = await _mediaService.UploadMultipleImagesAsync(uploadMediasDto.Files);
             var mediaResponses = new List<MediaResponse>();
 
-            for (int i = 0; i < imageUploads.Count; i++)
+            for (int i = 0; i < uploadMediasDto.Files.Count; i++)
             {
-                var imageUpload = imageUploads[i];
+                var imageUpload = uploadMediasDto.Files[i];
                 bool isThumbnail = false;
 
                 // Nếu thumbnailSelected là tên file -> Đặt ảnh mới làm thumbnail
@@ -2173,7 +2173,7 @@ public class LocationService : ILocationService
             {
                 var locationMedia = await _unitOfWork.LocationMediaRepository
                     .Entities
-                    .FirstOrDefaultAsync(m => m.LocationId == id && m.MediaUrl == imageUpload && !m.IsDeleted, cancellationToken);
+                    .FirstOrDefaultAsync(m => m.LocationId == id && m.MediaUrl.Contains(imageUpload) && !m.IsDeleted, cancellationToken);
 
                 if (locationMedia != null)
                 {

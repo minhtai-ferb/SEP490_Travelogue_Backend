@@ -11,6 +11,7 @@ using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.CraftVillageModels;
+using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.BusinessModels.TourGuideModels;
 using Travelogue.Service.BusinessModels.UserModels;
 using Travelogue.Service.BusinessModels.UserModels.Requests;
@@ -36,7 +37,7 @@ public interface IUserService
     Task<bool> AssignRoleToUserAsync(Guid userId, Guid districtId, string roleName);
     Task<UserResponseModel> GetByEmailAsync(string email, CancellationToken cancellationToken);
     Task<bool> UpdateUserAsync(Guid id, UserUpdateModel model, CancellationToken cancellationToken);
-    Task<bool> UpdateAvatarAsync(string avatarUrl, CancellationToken cancellationToken);
+    Task<MediaResponse> UploadAvatarAsync(UploadMediaDto uploadMediaDto, CancellationToken cancellationToken);
     Task<bool> RemoveUserFromRole(Guid userId, Guid roleId, CancellationToken cancellationToken);
     Task<bool> SendFeedbackAsync(FeedbackModel model, CancellationToken cancellationToken);
     Task<TourGuideRequestResponseDto> CreateTourGuideRequestAsync(CreateTourGuideRequestDto model, CancellationToken cancellationToken = default);
@@ -52,15 +53,17 @@ public class UserService : IUserService
     private readonly IMapper _mapper;
     private readonly IUserContextService _userContextService;
     private readonly IEmailService _emailService;
+    private readonly ICloudinaryService _cloudinaryService;
     private readonly int YEARS_TO_BLOCK = 30;
 
-    public UserService(IUnitOfWork unitOfWork, ITimeService timeService, IMapper mapper, IUserContextService userContextService, IEmailService emailService)
+    public UserService(IUnitOfWork unitOfWork, ITimeService timeService, IMapper mapper, IUserContextService userContextService, IEmailService emailService, ICloudinaryService cloudinaryService)
     {
         _unitOfWork = unitOfWork;
         _timeService = timeService;
         _mapper = mapper;
         _userContextService = userContextService;
         _emailService = emailService;
+        _cloudinaryService = cloudinaryService;
     }
     public async Task<UserResponseModel> CreateUserAsync(CreateUserDto model, CancellationToken cancellationToken = default)
     {
@@ -611,7 +614,7 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<bool> UpdateAvatarAsync(string avatarUrl, CancellationToken cancellationToken)
+    public async Task<MediaResponse> UploadAvatarAsync(UploadMediaDto uploadMediaDto, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
@@ -623,14 +626,27 @@ public class UserService : IUserService
             {
                 throw CustomExceptionFactory.CreateNotFoundError("user");
             }
+            if (uploadMediaDto.File == null)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("image");
+            }
 
-            existingUser.AvatarUrl = avatarUrl;
+            var imageUrl = await _cloudinaryService.UploadImageAsync(uploadMediaDto.File);
+            var mediaResponses = new MediaResponse()
+            {
+                MediaUrl = imageUrl,
+                FileName = uploadMediaDto.File.FileName,
+                FileType = uploadMediaDto.File.ContentType,
+                SizeInBytes = uploadMediaDto.File.Length
+            };
+
+            existingUser.AvatarUrl = imageUrl;
 
             _unitOfWork.UserRepository.Update(existingUser);
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);
 
-            return true;
+            return mediaResponses;
         }
         catch (CustomException)
         {
@@ -733,7 +749,8 @@ public class UserService : IUserService
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
-            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+            var currentUserIdString = currentUserId.ToString();
             var currentTime = _timeService.SystemTimeNow;
             var user = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId, cancellationToken);
             if (user == null)
@@ -741,7 +758,7 @@ public class UserService : IUserService
                 throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "User");
             }
 
-            var existingTourGuide = await _unitOfWork.TourGuideRepository.GetByUserIdAsync(Guid.Parse(currentUserId));
+            var existingTourGuide = await _unitOfWork.TourGuideRepository.GetByUserIdAsync(currentUserId);
             if (existingTourGuide != null)
             {
                 throw new CustomException(StatusCodes.Status400BadRequest, ResponseCodeConstants.BAD_REQUEST, "User is already a TourGuide");
@@ -749,14 +766,14 @@ public class UserService : IUserService
 
             var tourGuideRequest = new TourGuideRequest
             {
-                UserId = Guid.Parse(currentUserId),
+                UserId = currentUserId,
                 Introduction = model.Introduction,
                 Price = model.Price,
                 Status = TourGuideRequestStatus.Pending,
                 CreatedTime = currentTime,
                 LastUpdatedTime = currentTime,
-                CreatedBy = currentUserId,
-                LastUpdatedBy = currentUserId
+                CreatedBy = currentUserIdString,
+                LastUpdatedBy = currentUserIdString
             };
 
             foreach (var cert in model.Certifications)
@@ -767,8 +784,8 @@ public class UserService : IUserService
                     CertificateUrl = cert.CertificateUrl,
                     CreatedTime = currentTime,
                     LastUpdatedTime = currentTime,
-                    CreatedBy = currentUserId,
-                    LastUpdatedBy = currentUserId
+                    CreatedBy = currentUserIdString,
+                    LastUpdatedBy = currentUserIdString
                 });
             }
 
@@ -791,8 +808,8 @@ public class UserService : IUserService
             {
                 Id = tourGuideRequest.Id,
                 UserId = tourGuideRequest.UserId,
-                Email = tourGuideRequest.User.Email,
-                FullName = tourGuideRequest.User.FullName,
+                Email = user.Email,
+                FullName = user.FullName,
                 Introduction = tourGuideRequest.Introduction,
                 Price = tourGuideRequest.Price,
                 Status = tourGuideRequest.Status,
@@ -829,32 +846,39 @@ public class UserService : IUserService
     {
         try
         {
-            var requests = await _unitOfWork.TourGuideRequestRepository
+            IQueryable<TourGuideRequest> query = _unitOfWork.TourGuideRequestRepository
                 .ActiveEntities
-                .Where(x => x.Status == status)
-                .ToListAsync();
+                .Include(x => x.Certifications);
+
+            if (status != null)
+            {
+                query = query.Where(x => x.Status == status);
+            }
+
+            var requests = await query.ToListAsync();
             var response = new List<TourGuideRequestResponseDto>();
 
             foreach (var request in requests)
             {
-                var user = await _unitOfWork.UserRepository.GetByIdAsync(request.UserId, cancellationToken);
+                var user = await _unitOfWork.UserRepository.GetByIdAsync(request.UserId, cancellationToken)
+                    ?? throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "User");
                 var requestDto = new TourGuideRequestResponseDto
                 {
                     Id = request.Id,
                     UserId = request.UserId,
-                    Email = request.User.Email,
-                    FullName = request.User.FullName,
+                    Email = user.Email,
+                    FullName = user.FullName,
                     Introduction = request.Introduction,
                     Price = request.Price,
                     Status = request.Status,
                     RejectionReason = request.RejectionReason,
                     Certifications = request.Certifications
-                .Select(c => new CertificationDto
-                {
-                    Name = c.Name,
-                    CertificateUrl = c.CertificateUrl
-                })
-                .ToList()
+                    .Select(c => new CertificationDto
+                    {
+                        Name = c.Name,
+                        CertificateUrl = c.CertificateUrl
+                    })
+                    .ToList()
                 };
                 requestDto.Email = user?.Email ?? string.Empty;
                 requestDto.FullName = user?.FullName ?? string.Empty;
@@ -1204,7 +1228,7 @@ public class UserService : IUserService
         }
     }
 
-    public TourGuideRequestResponseDto MapToTourGuideRequestResponseDto(TourGuideRequest tourGuideRequest, User user)
+    private TourGuideRequestResponseDto MapToTourGuideRequestResponseDto(TourGuideRequest tourGuideRequest, User user)
     {
         return new TourGuideRequestResponseDto
         {
@@ -1254,7 +1278,6 @@ public class UserService : IUserService
             ReviewedBy = request.ReviewedBy
         };
     }
-
 
     private string GenerateRandomPassword()
     {

@@ -14,6 +14,7 @@ namespace Travelogue.Service.Services;
 
 public interface IWorkshopService
 {
+    Task<List<WorkshopResponseDto>> GetFilteredWorkshopsAsync(string? name, Guid? craftVillageId, CancellationToken cancellationToken);
     Task<WorkshopResponseDto> CreateWorkshopAsync(CreateWorkshopDto dto);
     Task<WorkshopResponseDto> UpdateWorkshopAsync(Guid workshopId, UpdateWorkshopDto dto);
     Task<WorkshopResponseDto> SubmitWorkshopForReviewAsync(Guid workshopId, CancellationToken cancellationToken);
@@ -51,6 +52,55 @@ public class WorkshopService : IWorkshopService
         _mapper = mapper;
     }
 
+    public async Task<List<WorkshopResponseDto>> GetFilteredWorkshopsAsync(string? name, Guid? craftVillageId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var workshops = _unitOfWork.WorkshopRepository.ActiveEntities
+                .Include(w => w.CraftVillage)
+                .ThenInclude(cv => cv.Location)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                workshops = workshops.Where(w => w.Name.ToLower().Contains(name.ToLower()));
+            }
+
+            if (craftVillageId.HasValue)
+            {
+                workshops = workshops.Where(w => w.CraftVillageId == craftVillageId.Value);
+            }
+
+            var workshopItems = await workshops
+                .OrderBy(w => w.Name)
+                .ToListAsync(cancellationToken);
+
+            var workshopResponses = new List<WorkshopResponseDto>();
+            foreach (var workshop in workshopItems)
+            {
+                workshopResponses.Add(new WorkshopResponseDto
+                {
+                    Id = workshop.Id,
+                    Name = workshop.Name ?? string.Empty,
+                    Description = workshop.Description,
+                    Content = workshop.Content,
+                    Status = workshop.Status,
+                    CraftVillageId = workshop.CraftVillageId,
+                    CraftVillageName = workshop.CraftVillage?.Location.Name
+                });
+            }
+
+            return workshopResponses;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
     public async Task<WorkshopResponseDto> CreateWorkshopAsync(CreateWorkshopDto dto)
     {
         try

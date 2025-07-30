@@ -9,8 +9,7 @@ public sealed class TransactionEntry : BaseEntity
 {
     public Guid? BookingId { get; set; }
 
-    [Required]
-    public Guid WalletId { get; set; }
+    public Guid? WalletId { get; set; }
 
     public string? AccountNumber { get; set; }
     [Column(TypeName = "decimal(10,2)")]
