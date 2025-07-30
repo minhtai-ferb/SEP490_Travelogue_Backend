@@ -17,6 +17,16 @@ public class WorkshopController : ControllerBase
         _workshopService = workshopService;
     }
 
+    [HttpGet()]
+    public async Task<IActionResult> GetFilteredWorkshopsAsync([FromQuery] string? name, [FromQuery] Guid? craftVillageId, CancellationToken cancellationToken)
+    {
+        var result = await _workshopService.GetFilteredWorkshopsAsync(name, craftVillageId, cancellationToken);
+        return Ok(ResponseModel<List<WorkshopResponseDto>>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "workshops")
+        ));
+    }
+
     /// <summary>
     /// Tạo mới workshop
     /// </summary>
@@ -123,17 +133,18 @@ public class WorkshopController : ControllerBase
     /// Lấy chi tiết workshop
     /// </summary>
     /// <param name="workshopId">ID của workshop</param>
+    /// <param name="scheduleId">ID của schedule</param>
     /// <param name="cancellationToken">Token để hủy thao tác</param>
     /// <returns>Chi tiết workshop bao gồm hoạt động và lịch trình</returns>
     [HttpGet("{workshopId}")]
     [ProducesResponseType(typeof(ResponseModel<WorkshopDetailsResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetWorkshopDetails(Guid workshopId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetWorkshopDetails(Guid workshopId, Guid? scheduleId, CancellationToken cancellationToken)
     {
         try
         {
-            var result = await _workshopService.GetWorkshopDetailsAsync(workshopId);
+            var result = await _workshopService.GetWorkshopDetailsAsync(workshopId, scheduleId);
             return Ok(ResponseModel<WorkshopDetailsResponseDto>.OkResponseModel(
                 data: result,
                 message: "Workshop details retrieved successfully."

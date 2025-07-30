@@ -311,7 +311,7 @@ public class UserRepository : GenericRepository<User>, IUserRepository
                       u_ur => u_ur.UserRole.RoleId,
                       r => r.Id,
                       (u_ur, r) => new { User = u_ur.User, Role = r })
-                .Where(u_r => u_r.Role.Name.Equals(roleName, StringComparison.OrdinalIgnoreCase))
+                .Where(u_r => u_r.Role.Name.ToLower().Equals(roleName.ToLower()))
                 .Select(u_r => u_r.User)
                 .Distinct()
                 .ToListAsync();

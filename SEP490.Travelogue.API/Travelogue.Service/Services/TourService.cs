@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
@@ -5,6 +6,8 @@ using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.DistrictModels;
+using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.BusinessModels.TourGuideModels;
 using Travelogue.Service.BusinessModels.TourModels;
 using Travelogue.Service.BusinessModels.WorkshopModels;
@@ -44,13 +47,17 @@ public class TourService : ITourService
     private readonly IEmailService _emailService;
     private readonly IEnumService _enumService;
     private readonly IUserContextService _userContextService;
+    private readonly IMediaService _mediaService;
+    private readonly ITimeService _timeService;
 
-    public TourService(IUnitOfWork unitOfWork, IEmailService emailService, IEnumService enumService, IUserContextService userContextService)
+    public TourService(IUnitOfWork unitOfWork, IEmailService emailService, IEnumService enumService, IUserContextService userContextService, IMediaService mediaService, ITimeService timeService)
     {
         _unitOfWork = unitOfWork;
         _emailService = emailService;
         _enumService = enumService;
         _userContextService = userContextService;
+        _mediaService = mediaService;
+        _timeService = timeService;
     }
 
     public async Task<TourResponseDto> CreateTourAsync(CreateTourDto dto)
@@ -1680,6 +1687,173 @@ public class TourService : ITourService
         catch (Exception)
         {
             return new List<TourMedia>();
+        }
+    }
+
+    public async Task<TourMediaResponse> UploadMediaAsync(
+        Guid id,
+        UploadMediasDto? uploadMediasDto,
+        string? thumbnailSelected,
+        CancellationToken cancellationToken)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var existingTour = await _unitOfWork.TourRepository.GetByIdAsync(id, cancellationToken);
+            if (existingTour == null || existingTour.IsDeleted)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("location");
+            }
+
+            if (uploadMediasDto.Files == null || uploadMediasDto.Files.Count == 0)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("images");
+            }
+
+            var allMedia = _unitOfWork.TourMediaRepository.Entities
+                .Where(dm => dm.TourId == existingTour.Id).ToList();
+
+            // Nếu không có ảnh mới & không có thumbnailSelected => Chỉ cập nhật thông tin location
+            if ((uploadMediasDto.Files == null || uploadMediasDto.Files.Count == 0) && string.IsNullOrEmpty(thumbnailSelected))
+            {
+                await _unitOfWork.SaveAsync();
+                await transaction.CommitAsync(cancellationToken);
+                return new TourMediaResponse
+                {
+                    TourId = existingTour.Id,
+                    TourName = existingTour.Name,
+                    Media = new List<MediaResponse>()
+                };
+            }
+
+            bool isThumbnailUpdated = false;
+
+            // Nếu có thumbnailSelected và nó là link (ảnh cũ) -> Cập nhật ảnh cũ làm thumbnail
+            if (!string.IsNullOrEmpty(thumbnailSelected) && IsValidUrl(thumbnailSelected))
+            {
+                foreach (var media in allMedia)
+                {
+                    media.IsThumbnail = media.MediaUrl == thumbnailSelected;
+                    _unitOfWork.TourMediaRepository.Update(media);
+                }
+                isThumbnailUpdated = true; // Đánh dấu đã cập nhật thumbnail
+            }
+
+            // Nếu không có ảnh mới nhưng có thumbnailSelected là ảnh cũ -> Dừng ở đây
+            if (uploadMediasDto.Files == null || uploadMediasDto.Files.Count == 0)
+            {
+                await _unitOfWork.SaveAsync();
+                await transaction.CommitAsync(cancellationToken);
+                return new TourMediaResponse
+                {
+                    TourId = existingTour.Id,
+                    TourName = existingTour.Name,
+                    Media = new List<MediaResponse>()
+                };
+            }
+
+            // Có ảnh mới -> Upload lên Cloudinary
+            // var imageUrls = await _cloudinaryService.UploadImagesAsync(uploadMediasDto.Files);
+            var imageUrls = await _mediaService.UploadMultipleImagesAsync(uploadMediasDto.Files);
+            var mediaResponses = new List<MediaResponse>();
+
+            for (int i = 0; i < uploadMediasDto.Files.Count; i++)
+            {
+                var imageUpload = uploadMediasDto.Files[i];
+                bool isThumbnail = false;
+
+                // Nếu thumbnailSelected là tên file -> Đặt ảnh mới làm thumbnail
+                if (!string.IsNullOrEmpty(thumbnailSelected) && !IsValidUrl(thumbnailSelected))
+                {
+                    isThumbnail = imageUpload.FileName == thumbnailSelected;
+                }
+
+                var newTourMedia = new TourMedia
+                {
+                    FileName = imageUpload.FileName,
+                    FileType = imageUpload.ContentType,
+                    TourId = existingTour.Id,
+                    MediaUrl = imageUrls[i],
+                    SizeInBytes = imageUpload.Length,
+                    IsThumbnail = isThumbnail,
+                    CreatedBy = currentUserId,
+                    CreatedTime = _timeService.SystemTimeNow,
+                    LastUpdatedBy = currentUserId,
+                };
+
+                await _unitOfWork.TourMediaRepository.AddAsync(newTourMedia);
+                mediaResponses.Add(new MediaResponse
+                {
+                    MediaUrl = imageUrls[i],
+                    FileName = imageUpload.FileName,
+                    FileType = imageUpload.ContentType,
+                    IsThumbnail = isThumbnail,
+                    SizeInBytes = imageUpload.Length
+                });
+
+                // Nếu ảnh mới được chọn làm thumbnail -> Cập nhật tất cả ảnh cũ về IsThumbnail = false
+                if (isThumbnail)
+                {
+                    foreach (var media in allMedia)
+                    {
+                        media.IsThumbnail = false;
+                        _unitOfWork.TourMediaRepository.Update(media);
+                    }
+                    isThumbnailUpdated = true;
+                }
+            }
+
+            // Nếu chưa có ảnh nào được chọn làm thumbnail, đặt ảnh mới đầu tiên làm thumbnail
+            if (!isThumbnailUpdated && mediaResponses.Count > 0)
+            {
+                var firstMedia = mediaResponses.First();
+                var firstMediaEntity = await _unitOfWork.TourMediaRepository.ActiveEntities
+                    .FirstOrDefaultAsync(m => m.MediaUrl == firstMedia.MediaUrl);
+
+                if (firstMediaEntity != null)
+                {
+                    firstMediaEntity.IsThumbnail = true;
+                    _unitOfWork.TourMediaRepository.Update(firstMediaEntity);
+                }
+            }
+
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+
+            return new TourMediaResponse
+            {
+                TourId = existingTour.Id,
+                TourName = existingTour.Name,
+                Media = mediaResponses
+            };
+        }
+        catch (CustomException)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    private static bool IsValidUrl(string url)
+    {
+        try
+        {
+            return Uri.TryCreate(url, UriKind.Absolute, out Uri? uriResult)
+               && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 

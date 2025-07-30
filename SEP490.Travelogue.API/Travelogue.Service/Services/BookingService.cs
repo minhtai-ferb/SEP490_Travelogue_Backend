@@ -27,6 +27,7 @@ public interface IBookingService
     Task<BookingDataModel> GetBookingByIdAsync(Guid bookingId);
     Task<CreatePaymentResult> CreatePaymentLink(Guid bookingId, CancellationToken cancellationToken = default);
     Task<bool> ProcessPaymentResponseAsync(PaymentResponse paymentResponse);
+    Task<PaymentLinkInformation> GetPaymentLinkInformationAsync(long orderId);
 }
 
 public class BookingService : IBookingService
@@ -118,8 +119,6 @@ public class BookingService : IBookingService
                     PricePerParticipant = childrenPrice
                 });
             }
-
-            tourSchedule.CurrentBooked += totalParticipants;
 
             await _unitOfWork.BookingRepository.AddAsync(booking);
 
@@ -285,6 +284,11 @@ public class BookingService : IBookingService
             );
         }
 
+        if (dto.StartDate > dto.EndDate)
+        {
+            throw CustomExceptionFactory.CreateBadRequestError("Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.");
+        }
+
         var currentUserId = _userContextService.GetCurrentUserId();
         var currentTime = _timeService.SystemTimeNow;
 
@@ -308,20 +312,25 @@ public class BookingService : IBookingService
                 .FirstOrDefaultAsync(g => g.Id == dto.TourGuideId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("hướng dẫn viên");
 
+            var numberOfDays = (dto.EndDate.Date - dto.StartDate.Date).Days + 1;
+
             // tour guide có rảnh vào ngày đó kh
+            var dateRange = Enumerable.Range(0, (dto.EndDate.Date - dto.StartDate.Date).Days + 1)
+                .Select(d => dto.StartDate.Date.AddDays(d))
+                .ToList();
+
             var isBusy = tourGuide.TourGuideSchedules != null && tourGuide.TourGuideSchedules.Any(s =>
-                s.Date.Date == dto.Date.Date &&
-                s.BookingId != null
-            );
+                dateRange.Contains(s.Date.Date) && s.BookingId != null);
+
             if (isBusy)
             {
-                throw CustomExceptionFactory.CreateBadRequestError("Hướng dẫn viên đã có lịch vào ngày được chọn.");
+                throw CustomExceptionFactory.CreateBadRequestError("Hướng dẫn viên đã có lịch vào một hoặc nhiều ngày trong khoảng thời gian được chọn.");
             }
 
-
             // Tính giá
-            decimal tourGuidePrice = tourGuide?.Price ?? 0;
-            decimal originalPrice = tourGuidePrice;
+            decimal tourGuideDailyPrice = tourGuide?.Price ?? 0;
+            decimal originalPrice = tourGuideDailyPrice * numberOfDays;
+            decimal finalPrice = originalPrice;
 
             // var (discountAmount, promotion) = await ValidateAndCalculateDiscountAsync(dto.PromotionCode, originalPrice, tourGuide?.Id);
 
@@ -359,18 +368,20 @@ public class BookingService : IBookingService
                 });
             }
 
-            // Gán lịch cho TourGuide nếu có
+            // Gán lịch cho TourGuide 
             if (tourGuide != null)
             {
-                var schedule = new TourGuideSchedule
+                foreach (var date in dateRange)
                 {
-                    TourGuideId = tourGuide.Id,
-                    Date = dto.Date,
-                    Note = dto.Note,
-                    Booking = booking
-                };
-
-                await _unitOfWork.TourGuideScheduleRepository.AddAsync(schedule);
+                    var schedule = new TourGuideSchedule
+                    {
+                        TourGuideId = tourGuide.Id,
+                        Date = date,
+                        Note = dto.Note,
+                        Booking = booking
+                    };
+                    await _unitOfWork.TourGuideScheduleRepository.AddAsync(schedule);
+                }
             }
 
             await _unitOfWork.BookingRepository.AddAsync(booking);
@@ -588,8 +599,24 @@ public class BookingService : IBookingService
                 return false;
             }
 
+            var existingBooking = await _unitOfWork.BookingRepository
+                .ActiveEntities
+                .Include(b => b.Participants)
+                .FirstOrDefaultAsync(b => b.PaymentLinkId == paymentResponse.Data.PaymentLinkId)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("booking");
+
+            var tourSchedule = await _unitOfWork.TourScheduleRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(ts => ts.Id == existingBooking.TourScheduleId)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("tour schedule");
+
+            var totalParticipants = existingBooking.Participants.Sum(p => p.Quantity);
+
+            tourSchedule.CurrentBooked += totalParticipants;
+
             var order = new TransactionEntry
             {
+                BookingId = existingBooking?.Id,
                 AccountNumber = paymentResponse.Data.AccountNumber,
                 PaidAmount = paymentResponse.Data.Amount,
                 PaymentReference = paymentResponse.Data.Reference,
@@ -607,6 +634,8 @@ public class BookingService : IBookingService
             };
 
             _unitOfWork.BeginTransaction();
+
+
             await _unitOfWork.TransactionEntryRepository.AddAsync(order);
             await _unitOfWork.SaveAsync();
             Console.WriteLine("Order has been successfully added to the database.");
@@ -723,6 +752,31 @@ public class BookingService : IBookingService
             }).ToList();
 
             return result;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<PaymentLinkInformation> GetPaymentLinkInformationAsync(long orderId)
+    {
+        try
+        {
+            // if (string.IsNullOrWhiteSpace(orderId))
+            // {
+            //     throw CustomExceptionFactory.CreateBadRequestError("Order ID không được để trống.");
+            // }
+
+            // if (!long.TryParse(orderId, out long parsedOrderId))
+            // {
+            //     throw CustomExceptionFactory.CreateBadRequestError("Order ID không hợp lệ.");
+            // }
+            return await _payOS.getPaymentLinkInformation(orderId);
         }
         catch (CustomException)
         {

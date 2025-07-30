@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Travelogue.Repository.Bases.Responses;
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.BusinessModels.TourGuideModels;
 using Travelogue.Service.BusinessModels.UserModels;
 using Travelogue.Service.BusinessModels.UserModels.Requests;
@@ -123,14 +124,14 @@ public class UserController : ControllerBase
     /// <summary>
     /// Lấy link ảnh sau khi upload lên Cloudinary để cập nhật lại cho user
     /// </summary>
-    /// <param name="avatarUrl"></param>
+    /// <param name="mediaDto"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     [HttpPut("update-avatar")]
     [Authorize]
-    public async Task<IActionResult> UpdateAvatar(string avatarUrl, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateAvatar(UploadMediaDto mediaDto, CancellationToken cancellationToken)
     {
-        var result = await _userService.UpdateAvatarAsync(avatarUrl, cancellationToken);
+        var result = await _userService.UploadAvatarAsync(mediaDto, cancellationToken);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: true,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUBMIT_SUCCESS, "feedback")

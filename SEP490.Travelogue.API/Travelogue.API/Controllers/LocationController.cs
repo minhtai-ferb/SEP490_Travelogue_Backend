@@ -6,6 +6,7 @@ using Travelogue.Service.BusinessModels.CraftVillageModels;
 using Travelogue.Service.BusinessModels.CuisineModels;
 using Travelogue.Service.BusinessModels.HistoricalLocationModels;
 using Travelogue.Service.BusinessModels.LocationModels;
+using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 
@@ -329,7 +330,7 @@ public class LocationController : ControllerBase
     // }
     [HttpPost("upload-media")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> UploadMediaV2(Guid id, [FromForm] List<IFormFile> imageUploads, string? thumbnailFileName)
+    public async Task<IActionResult> UploadMediaV2(Guid id, [FromForm] UploadMediasDto imageUploads, string? thumbnailFileName)
     {
         var result = await _locationService.UploadMediaAsync(id, imageUploads, thumbnailFileName, new CancellationToken());
         return Ok(ResponseModel<object>.OkResponseModel(
