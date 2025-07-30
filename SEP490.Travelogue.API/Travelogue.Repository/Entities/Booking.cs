@@ -29,6 +29,8 @@ public sealed class Booking : BaseEntity
 
     [Required]
     public DateTimeOffset BookingDate { get; set; }
+    public DateTimeOffset StartDate { get; set; }
+    public DateTimeOffset EndDate { get; set; }
     public DateTimeOffset? CancelledAt { get; set; }
 
     public Guid? PromotionId { get; set; }

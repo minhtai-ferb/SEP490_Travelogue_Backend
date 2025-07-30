@@ -181,7 +181,7 @@ public class TourGuideService : ITourGuideService
         {
             var existingTourGuide = await _unitOfWork.TourGuideRepository.ActiveEntities
                 .Include(tg => tg.User)
-                // .Include(tg => tg.TourGuideSchedules)
+                .Include(tg => tg.TourGuideSchedules)
                 .ToListAsync(cancellationToken);
             if (existingTourGuide == null || existingTourGuide.Count() == 0)
             {
@@ -195,8 +195,8 @@ public class TourGuideService : ITourGuideService
                 .Where(tg => !request.MinPrice.HasValue || tg.Price >= request.MinPrice.Value)
                 .Where(tg => !request.MaxPrice.HasValue || tg.Price <= request.MaxPrice.Value)
                 .Where(tg => !request.Gender.HasValue || tg.User.Sex == request.Gender.Value)
-                // .Where(tg => !request.StartDate.HasValue || !request.EndDate.HasValue ||
-                //      !tg.TourGuideSchedules.Any(s => s.Date >= request.StartDate.Value && s.Date <= request.EndDate.Value))
+                .Where(tg => !request.StartDate.HasValue || !request.EndDate.HasValue ||
+                     !tg.TourGuideSchedules.Any(s => s.Date >= request.StartDate.Value && s.Date <= request.EndDate.Value))
                 .ToList();
 
             var result = _mapper.Map<List<TourGuideDataModel>>(existingTourGuide);
