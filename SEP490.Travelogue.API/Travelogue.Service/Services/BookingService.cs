@@ -635,7 +635,6 @@ public class BookingService : IBookingService
 
             _unitOfWork.BeginTransaction();
 
-
             await _unitOfWork.TransactionEntryRepository.AddAsync(order);
             await _unitOfWork.SaveAsync();
             Console.WriteLine("Order has been successfully added to the database.");
@@ -742,7 +741,9 @@ public class BookingService : IBookingService
                 WorkshopScheduleId = b.WorkshopScheduleId,
                 PaymentLinkId = b.PaymentLinkId,
                 Status = b.Status,
+                StatusText = _enumService.GetEnumDisplayName(b.Status),
                 BookingType = b.BookingType,
+                BookingTypeText = _enumService.GetEnumDisplayName(b.BookingType),
                 BookingDate = b.BookingDate,
                 CancelledAt = b.CancelledAt,
                 PromotionId = b.PromotionId,
@@ -830,7 +831,9 @@ public class BookingService : IBookingService
                 WorkshopScheduleId = booking.WorkshopScheduleId,
                 PaymentLinkId = booking.PaymentLinkId,
                 Status = booking.Status,
+                StatusText = _enumService.GetEnumDisplayName(booking.Status),
                 BookingType = booking.BookingType,
+                BookingTypeText = _enumService.GetEnumDisplayName(booking.BookingType),
                 BookingDate = booking.BookingDate,
                 CancelledAt = booking.CancelledAt,
                 PromotionId = booking.PromotionId,
