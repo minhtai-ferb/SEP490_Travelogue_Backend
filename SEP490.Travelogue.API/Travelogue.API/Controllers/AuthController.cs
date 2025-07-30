@@ -31,7 +31,7 @@ public class AuthController : ControllerBase
         {
 
             //await _userService.UpdateEmailVerifiedStatusAsync(userRecord.Uid, true);
-            return Ok(new { message = "13:20 30/7" });
+            return Ok(new { message = "17:05 30/7" });
 
         }
         catch (Exception ex)
