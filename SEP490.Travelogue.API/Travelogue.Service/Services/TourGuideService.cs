@@ -6,6 +6,7 @@ using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.ReviewModels;
 using Travelogue.Service.BusinessModels.TourGuideModels;
 using Travelogue.Service.Commons.Implementations;
 using Travelogue.Service.Commons.Interfaces;
@@ -14,7 +15,7 @@ namespace Travelogue.Service.Services;
 
 public interface ITourGuideService
 {
-    Task<TourGuideDataModel?> GetTourGuideByIdAsync(Guid id, CancellationToken cancellationToken);
+    Task<TourGuideDetailResponse?> GetTourGuideByIdAsync(Guid id, CancellationToken cancellationToken);
     Task<List<TourGuideDataModel>> GetAllTourGuidesAsync(CancellationToken cancellationToken);
     Task<TourGuideDataModel?> AssignToTourGuideAsync(List<string> emails, CancellationToken cancellationToken);
     // Task<TourGuideDataModel> AddTourGuideAsync(TourGuideCreateModel tourGuideCreateModel, CancellationToken cancellationToken);
@@ -149,17 +150,46 @@ public class TourGuideService : ITourGuideService
     {
         try
         {
-            var existingTourGuide = await _unitOfWork.TourGuideRepository.ActiveEntities
+            var existingTourGuides = await _unitOfWork.TourGuideRepository.ActiveEntities
                 .Include(tg => tg.User)
                 .ToListAsync(cancellationToken);
-            if (existingTourGuide == null || existingTourGuide.Count == 0)
+
+            if (existingTourGuides == null || !existingTourGuides.Any())
             {
                 return new List<TourGuideDataModel>();
             }
 
-            var dataModel = _mapper.Map<List<TourGuideDataModel>>(existingTourGuide);
+            var tourGuideIds = existingTourGuides.Select(tg => tg.Id).ToList();
 
-            return dataModel;
+            var allReviews = await _unitOfWork.ReviewRepository.ActiveEntities
+                .Where(r => r.TourGuideId.HasValue && tourGuideIds.Contains(r.TourGuideId.Value))
+                .ToListAsync(cancellationToken);
+
+            var result = new List<TourGuideDataModel>();
+
+            foreach (var tg in existingTourGuides)
+            {
+                var reviewsForGuide = allReviews.Where(r => r.TourGuideId == tg.Id).ToList();
+
+                var model = new TourGuideDataModel
+                {
+                    Id = tg.Id,
+                    Email = tg.User.Email,
+                    UserName = tg.User.FullName,
+                    Sex = tg.User.Sex,
+                    Address = tg.User.Address,
+                    Rating = tg.Rating,
+                    Price = tg.Price,
+                    Introduction = tg.Introduction,
+                    AvatarUrl = tg.User.AvatarUrl,
+                    TotalReviews = reviewsForGuide.Count,
+                    AverageRating = reviewsForGuide.Any() ? reviewsForGuide.Average(r => r.Rating) : 0.0
+                };
+
+                result.Add(model);
+            }
+
+            return result;
         }
         catch (CustomException)
         {
@@ -169,26 +199,23 @@ public class TourGuideService : ITourGuideService
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
-        finally
-        {
-            ////  _unitOfWork.Dispose();
-        }
     }
+
 
     public async Task<List<TourGuideDataModel>> GetTourGuidesByFilterAsync(TourGuideFilterRequest request, CancellationToken cancellationToken)
     {
         try
         {
-            var existingTourGuide = await _unitOfWork.TourGuideRepository.ActiveEntities
+            var existingTourGuides = await _unitOfWork.TourGuideRepository.ActiveEntities
                 .Include(tg => tg.User)
                 .Include(tg => tg.TourGuideSchedules)
                 .ToListAsync(cancellationToken);
-            if (existingTourGuide == null || existingTourGuide.Count() == 0)
+            if (existingTourGuides == null || existingTourGuides.Count() == 0)
             {
                 return new List<TourGuideDataModel>();
             }
 
-            existingTourGuide = existingTourGuide
+            existingTourGuides = existingTourGuides
                 .Where(tg => string.IsNullOrEmpty(request.FullName) || tg.User.FullName.ToLower().Contains(request.FullName.ToLower()))
                 .Where(tg => !request.MinRating.HasValue || tg.Rating >= request.MinRating.Value)
                 .Where(tg => !request.MaxRating.HasValue || tg.Rating <= request.MaxRating.Value)
@@ -199,7 +226,36 @@ public class TourGuideService : ITourGuideService
                      !tg.TourGuideSchedules.Any(s => s.Date >= request.StartDate.Value && s.Date <= request.EndDate.Value))
                 .ToList();
 
-            var result = _mapper.Map<List<TourGuideDataModel>>(existingTourGuide);
+            var tourGuideIds = existingTourGuides.Select(tg => tg.Id).ToList();
+
+            var allReviews = await _unitOfWork.ReviewRepository.ActiveEntities
+                .Where(r => r.TourGuideId.HasValue && tourGuideIds.Contains(r.TourGuideId.Value))
+                .ToListAsync(cancellationToken);
+
+            var result = new List<TourGuideDataModel>();
+
+            foreach (var tg in existingTourGuides)
+            {
+                var reviewsForGuide = allReviews.Where(r => r.TourGuideId == tg.Id).ToList();
+
+                var guideModel = new TourGuideDataModel
+                {
+                    Id = tg.Id,
+                    Email = tg.User.Email,
+                    UserName = tg.User.FullName,
+                    Sex = tg.User.Sex,
+                    Address = tg.User.Address,
+                    Rating = tg.Rating,
+                    Price = tg.Price,
+                    Introduction = tg.Introduction,
+                    AvatarUrl = tg.User.AvatarUrl,
+                    TotalReviews = reviewsForGuide.Count,
+                    AverageRating = reviewsForGuide.Any() ? Math.Round(reviewsForGuide.Average(r => r.Rating), 2) : 0.0
+                }
+            ;
+
+                result.Add(guideModel);
+            }
 
             return result;
         }
@@ -263,7 +319,7 @@ public class TourGuideService : ITourGuideService
         }
     }
 
-    public async Task<TourGuideDataModel?> GetTourGuideByIdAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<TourGuideDetailResponse?> GetTourGuideByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
@@ -277,10 +333,51 @@ public class TourGuideService : ITourGuideService
                 return null;
             }
 
-            var tourGuideDetailResponse = _mapper.Map<TourGuideDataModel>(tourGuide);
+            var reviews = await _unitOfWork.ReviewRepository.ActiveEntities
+                .Include(r => r.User)
+                .Where(r => r.TourGuideId == id)
+                .ToListAsync();
+
+            double averageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0.0;
+
+            var rating = new RatingDetailsDto
+            {
+                AverageRating = Math.Round(averageRating, 2),
+                TotalReviews = reviews.Count,
+                Reviews = reviews.Select(r => new ReviewResponseDto
+                {
+                    Id = r.Id,
+                    UserId = r.UserId,
+                    UserName = r.User?.FullName ?? string.Empty,
+                    BookingId = r.BookingId,
+                    TourId = r.TourId,
+                    WorkshopId = r.WorkshopId,
+                    TourGuideId = r.TourGuideId,
+                    Comment = r.Comment,
+                    Rating = r.Rating,
+                    CreatedAt = r.CreatedTime,
+                    UpdatedAt = r.LastUpdatedTime
+                }).ToList()
+            };
+
+            var tourGuideDetail = new TourGuideDetailResponse
+            {
+                Id = tourGuide.Id,
+                Email = tourGuide.User.Email,
+                UserName = tourGuide.User.FullName,
+                Sex = tourGuide.User.Sex,
+                Address = tourGuide.User.Address,
+                Rating = tourGuide.Rating,
+                Price = tourGuide.Price,
+                Introduction = tourGuide.Introduction,
+                AvatarUrl = tourGuide.User.AvatarUrl,
+                Reviews = rating.Reviews,
+                TotalReviews = rating.TotalReviews,
+                AverageRating = rating.AverageRating,
+            };
 
             await transaction.CommitAsync(cancellationToken);
-            return tourGuideDetailResponse;
+            return tourGuideDetail;
         }
         catch (CustomException)
         {

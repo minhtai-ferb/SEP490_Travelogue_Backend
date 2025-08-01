@@ -5,6 +5,7 @@ using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.ReviewModels;
 using Travelogue.Service.BusinessModels.TourModels;
 using Travelogue.Service.BusinessModels.WorkshopModels;
 using Travelogue.Service.Commons.Implementations;
@@ -58,7 +59,8 @@ public class WorkshopService : IWorkshopService
         {
             var workshops = _unitOfWork.WorkshopRepository.ActiveEntities
                 .Include(w => w.CraftVillage)
-                .ThenInclude(cv => cv.Location)
+                    .ThenInclude(cv => cv.Location)
+                .Include(w => w.Reviews)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(name))
@@ -75,10 +77,15 @@ public class WorkshopService : IWorkshopService
                 .OrderBy(w => w.Name)
                 .ToListAsync(cancellationToken);
 
+
+
             var workshopResponses = new List<WorkshopResponseDto>();
             foreach (var workshop in workshopItems)
             {
-                workshopResponses.Add(new WorkshopResponseDto
+                var averageRating = workshop.Reviews.Any() ? workshop.Reviews.Average(r => r.Rating) : 0.0;
+                var totalReviews = workshop.Reviews.Count;
+
+                var response = new WorkshopResponseDto
                 {
                     Id = workshop.Id,
                     Name = workshop.Name ?? string.Empty,
@@ -86,8 +93,12 @@ public class WorkshopService : IWorkshopService
                     Content = workshop.Content,
                     Status = workshop.Status,
                     CraftVillageId = workshop.CraftVillageId,
-                    CraftVillageName = workshop.CraftVillage?.Location.Name
-                });
+                    CraftVillageName = workshop.CraftVillage?.Location?.Name,
+                    AverageRating = averageRating,
+                    TotalReviews = totalReviews,
+                };
+
+                workshopResponses.Add(response);
             }
 
             return workshopResponses;
@@ -101,6 +112,7 @@ public class WorkshopService : IWorkshopService
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
+
     public async Task<WorkshopResponseDto> CreateWorkshopAsync(CreateWorkshopDto dto)
     {
         try
@@ -336,6 +348,10 @@ public class WorkshopService : IWorkshopService
                 .ThenInclude(w => w.Location)
             .Include(w => w.WorkshopActivities)
             .Include(w => w.WorkshopSchedules)
+            .Include(w => w.PromotionApplicables)
+                .ThenInclude(p => p.Promotion)
+            .Include(w => w.Reviews)
+                .ThenInclude(r => r.User)
             .FirstOrDefaultAsync(w => w.Id == workshopId)
             ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
 
@@ -357,7 +373,6 @@ public class WorkshopService : IWorkshopService
             childrenPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.ChildrenPrice) : 0m;
         }
 
-        // tính giá khuyến mãi
         var activePromotions = workshop.PromotionApplicables
             .Where(p => !p.IsDeleted && p.Promotion != null
                         && p.Promotion.StartDate <= DateTime.UtcNow
@@ -378,26 +393,28 @@ public class WorkshopService : IWorkshopService
 
         var dayDetails = BuildDayDetails(workshop);
 
-        return new WorkshopDetailsResponseDto
+        double averageRating = workshop.Reviews.Any() ? workshop.Reviews.Average(r => r.Rating) : 0.0;
+        int totalReviews = workshop.Reviews.Count;
+        var reviews = workshop.Reviews.Select(r => new ReviewResponseDto
+        {
+            Id = r.Id,
+            Rating = r.Rating,
+            Comment = r.Comment,
+            CreatedAt = r.CreatedTime,
+            UserName = r.User?.FullName ?? "Unknown",
+            UserId = r.UserId
+        }).ToList();
+
+        var response = new WorkshopDetailsResponseDto
         {
             WorkshopId = workshop.Id,
             Name = workshop.Name,
             Description = workshop.Description,
             Content = workshop.Content,
             CraftVillageId = workshop.CraftVillageId,
-            CraftVillageName = workshop.CraftVillage.Location.Name,
+            CraftVillageName = workshop.CraftVillage?.Location?.Name,
             Status = workshop.Status,
-            // Activities = workshop.WorkshopActivities.Select(a => new ActivityResponseDto
-            // {
-            //     ActivityId = a.Id,
-            //     Activity = a.Activity,
-            //     Description = a.Description,
-            //     StartTime = a.StartTime,
-            //     EndTime = a.EndTime,
-            //     Notes = a.Notes,
-            //     DayOrder = a.DayOrder
-            // }).ToList(),
-            Schedules = workshop.WorkshopSchedules.Select(s => new ScheduleResponseDto
+            Schedules = activeSchedules.Select(s => new ScheduleResponseDto
             {
                 ScheduleId = s.Id,
                 StartTime = s.StartTime,
@@ -408,8 +425,13 @@ public class WorkshopService : IWorkshopService
                 ChildrenPrice = s.ChildrenPrice,
                 Notes = s.Notes
             }).ToList(),
-            Days = dayDetails
+            Days = dayDetails,
+            AverageRating = averageRating,
+            TotalReviews = totalReviews,
+            Reviews = reviews
         };
+
+        return response;
     }
 
     public async Task<WorkshopResponseDto> SubmitWorkshopForReviewAsync(Guid workshopId, CancellationToken cancellationToken)

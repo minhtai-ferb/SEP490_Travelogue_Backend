@@ -24,5 +24,6 @@ public sealed class Workshop : BaseEntity
     public ICollection<WorkshopActivity> WorkshopActivities { get; set; } = new List<WorkshopActivity>();
     public ICollection<WorkshopSchedule> WorkshopSchedules { get; set; } = new List<WorkshopSchedule>();
     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
+    public ICollection<Review> Reviews { get; set; } = new List<Review>();
     public ICollection<PromotionApplicable> PromotionApplicables { get; set; } = new List<PromotionApplicable>();
 }

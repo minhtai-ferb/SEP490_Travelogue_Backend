@@ -1,4 +1,5 @@
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.ReviewModels;
 using Travelogue.Service.BusinessModels.TourGuideModels;
 
 namespace Travelogue.Service.BusinessModels.TourModels;
@@ -36,4 +37,7 @@ public class TourDetailsResponseDto
     public List<TourGuideDataModel>? TourGuide { get; set; }
     public List<PromotionDto>? Promotions { get; set; } = new List<PromotionDto>();
     public List<TourDayDetail> Days { get; set; } = new List<TourDayDetail>();
+    public double AverageRating { get; set; }
+    public int TotalReviews { get; set; }
+    public List<ReviewResponseDto> Reviews { get; set; } = new List<ReviewResponseDto>();
 }
