@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
@@ -6,11 +5,10 @@ using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
-using Travelogue.Service.BusinessModels.DistrictModels;
 using Travelogue.Service.BusinessModels.MediaModel;
+using Travelogue.Service.BusinessModels.ReviewModels;
 using Travelogue.Service.BusinessModels.TourGuideModels;
 using Travelogue.Service.BusinessModels.TourModels;
-using Travelogue.Service.BusinessModels.WorkshopModels;
 using Travelogue.Service.Commons.Implementations;
 using Travelogue.Service.Commons.Interfaces;
 
@@ -322,6 +320,8 @@ public class TourService : ITourService
                 .Include(t => t.TourSchedules)
                 .Include(t => t.PromotionApplicables)
                     .ThenInclude(p => p.Promotion)
+                .Include(t => t.Reviews)
+                    .ThenInclude(r => r.User)
                 .ToListAsync();
 
             if (!tours.Any())
@@ -349,6 +349,25 @@ public class TourService : ITourService
 
                 var dayDetails = BuildDayDetails(tour);
 
+                var reviews = tour.Reviews
+                    .Where(r => !r.IsDeleted)
+                    .Select(r => new ReviewResponseDto
+                    {
+                        Id = r.Id,
+                        UserId = r.UserId,
+                        UserName = r.User?.FullName ?? string.Empty,
+                        BookingId = r.BookingId,
+                        TourId = r.TourId,
+                        WorkshopId = r.WorkshopId,
+                        TourGuideId = r.TourGuideId,
+                        Comment = r.Comment,
+                        Rating = r.Rating,
+                        CreatedAt = r.CreatedTime,
+                        UpdatedAt = r.LastUpdatedTime
+                    }).ToList();
+
+                double averageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0.0;
+
                 tourResponses.Add(new TourResponseDto
                 {
                     TourId = tour.Id,
@@ -365,6 +384,8 @@ public class TourService : ITourService
                     ChildrenPrice = childrenPrice,
                     FinalPrice = finalPrice,
                     Status = tour.Status,
+                    AverageRating = Math.Round(averageRating, 2),
+                    TotalReviews = reviews.Count,
                 });
             }
 
@@ -430,6 +451,33 @@ public class TourService : ITourService
 
             var dayDetails = await BuildDayDetails(tour);
 
+            var reviews = await _unitOfWork.ReviewRepository.ActiveEntities
+            .Include(r => r.User)
+            .Where(r => r.TourId == tourId)
+            .ToListAsync();
+
+            double averageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0.0;
+
+            var rating = new RatingDetailsDto
+            {
+                AverageRating = Math.Round(averageRating, 2),
+                TotalReviews = reviews.Count,
+                Reviews = reviews.Select(r => new ReviewResponseDto
+                {
+                    Id = r.Id,
+                    UserId = r.UserId,
+                    UserName = r.User?.FullName ?? string.Empty,
+                    BookingId = r.BookingId,
+                    TourId = r.TourId,
+                    WorkshopId = r.WorkshopId,
+                    TourGuideId = r.TourGuideId,
+                    Comment = r.Comment,
+                    Rating = r.Rating,
+                    CreatedAt = r.CreatedTime,
+                    UpdatedAt = r.LastUpdatedTime
+                }).ToList()
+            };
+
             return new TourDetailsResponseDto
             {
                 TourId = tour.Id,
@@ -471,7 +519,10 @@ public class TourService : ITourService
                     }).ToList(),
                 TourGuide = tourGuide,
                 Promotions = activePromotions,
-                Days = dayDetails
+                Days = dayDetails,
+                Reviews = rating.Reviews,
+                TotalReviews = rating.TotalReviews,
+                AverageRating = rating.AverageRating,
             };
         }
         catch (CustomException)
@@ -541,6 +592,33 @@ public class TourService : ITourService
             var tourGuide = GetTourGuidesInfo(tour);
             var dayDetails = await BuildDayDetails(tour);
 
+            var reviews = await _unitOfWork.ReviewRepository.ActiveEntities
+            .Include(r => r.User)
+            .Where(r => r.TourId == tourId)
+            .ToListAsync();
+
+            double averageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0.0;
+
+            var rating = new RatingDetailsDto
+            {
+                AverageRating = Math.Round(averageRating, 2),
+                TotalReviews = reviews.Count,
+                Reviews = reviews.Select(r => new ReviewResponseDto
+                {
+                    Id = r.Id,
+                    UserId = r.UserId,
+                    UserName = r.User?.FullName ?? string.Empty,
+                    BookingId = r.BookingId,
+                    TourId = r.TourId,
+                    WorkshopId = r.WorkshopId,
+                    TourGuideId = r.TourGuideId,
+                    Comment = r.Comment,
+                    Rating = r.Rating,
+                    CreatedAt = r.CreatedTime,
+                    UpdatedAt = r.LastUpdatedTime
+                }).ToList()
+            };
+
             return new TourDetailsResponseDto
             {
                 TourId = tour.Id,
@@ -571,7 +649,10 @@ public class TourService : ITourService
                     }).ToList(),
                 TourGuide = tourGuide,
                 Promotions = activePromotions,
-                Days = dayDetails
+                Days = dayDetails,
+                Reviews = rating.Reviews,
+                TotalReviews = rating.TotalReviews,
+                AverageRating = rating.AverageRating,
             };
         }
         catch (CustomException)
@@ -597,14 +678,14 @@ public class TourService : ITourService
                 throw CustomExceptionFactory.CreateForbiddenError();
             }
 
-            var tour = _unitOfWork.TripPlanRepository.ActiveEntities
+            var tour = _unitOfWork.TourRepository.ActiveEntities
                 .FirstOrDefault(tp => tp.Id == id);
             if (tour == null || tour.IsDeleted)
             {
-                throw CustomExceptionFactory.CreateNotFoundError("trip plan");
+                throw CustomExceptionFactory.CreateNotFoundError("tour");
             }
             tour.IsDeleted = true;
-            _unitOfWork.TripPlanRepository.Update(tour);
+            _unitOfWork.TourRepository.Update(tour);
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);
         }

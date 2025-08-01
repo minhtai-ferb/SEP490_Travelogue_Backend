@@ -29,4 +29,6 @@ public class TourResponseDto
             };
         }
     }
+    public double AverageRating { get; set; }
+    public int TotalReviews { get; set; }
 }

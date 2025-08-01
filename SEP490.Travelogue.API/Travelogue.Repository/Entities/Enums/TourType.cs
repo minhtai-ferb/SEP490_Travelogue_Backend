@@ -5,9 +5,6 @@ namespace Travelogue.Repository.Entities.Enums;
 public enum TourType
 {
     [Display(Name = "Du lịch trong nước")]
-    Domestic = 0,
-
-    [Display(Name = "Du lịch nước ngoài")]
     International = 1,
 
     [Display(Name = "Du lịch nghỉ dưỡng")]

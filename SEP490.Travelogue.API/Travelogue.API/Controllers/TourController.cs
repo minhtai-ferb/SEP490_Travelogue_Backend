@@ -537,25 +537,4 @@ public class TourController : ControllerBase
             return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
         }
     }
-
-    [HttpGet("guide/email")]
-    public async Task<ActionResult<PagedResult<TourResponseDto>>> GetToursByGuideEmail(
-        [FromQuery] string email,
-        [FromQuery] int pageNumber = 1,
-        [FromQuery] int pageSize = 10,
-        CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(email))
-        {
-            return BadRequest("Email cannot be empty.");
-        }
-
-        if (pageNumber < 1 || pageSize < 1)
-        {
-            return BadRequest("Page number and page size must be greater than 0.");
-        }
-
-        var result = await _tourService.GetPagedToursByGuideEmailAsync(email, pageNumber, pageSize, cancellationToken);
-        return Ok(result);
-    }
 }

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Travelogue.Repository.Bases.Responses;
 using Travelogue.Service.BusinessModels.BookingModels;
+using Travelogue.Service.BusinessModels.ReviewModels;
 using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 
@@ -12,9 +13,12 @@ namespace Travelogue.API.Controllers
     public class BookingController : ControllerBase
     {
         private readonly IBookingService _bookingService;
-        public BookingController(IBookingService bookingService)
+        private readonly IReviewService _reviewService;
+
+        public BookingController(IBookingService bookingService, IReviewService reviewService)
         {
             _bookingService = bookingService;
+            _reviewService = reviewService;
         }
 
         [HttpPost("create-booking-tour")]
@@ -121,6 +125,16 @@ namespace Travelogue.API.Controllers
                 message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "booking")
             ));
 
+        }
+
+        [HttpPost("review-booking")]
+        public async Task<IActionResult> ReviewBookingAsync([FromBody] CreateReviewRequestDto dto, CancellationToken cancellationToken)
+        {
+            var result = await _reviewService.CreateReviewAsync(dto, cancellationToken);
+            return Ok(ResponseModel<object>.OkResponseModel(
+                data: result,
+                message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "review")
+            ));
         }
     }
 }

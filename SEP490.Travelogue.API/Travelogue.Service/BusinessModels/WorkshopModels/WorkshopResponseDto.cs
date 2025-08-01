@@ -27,4 +27,6 @@ public class WorkshopResponseDto
             };
         }
     }
+    public double AverageRating { get; set; }
+    public int TotalReviews { get; set; }
 }

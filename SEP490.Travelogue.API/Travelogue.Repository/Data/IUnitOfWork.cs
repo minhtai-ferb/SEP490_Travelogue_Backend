@@ -40,6 +40,7 @@ public interface IUnitOfWork //: IDisposable
     ITransactionEntryRepository TransactionEntryRepository { get; }
     IBookingPriceRequestRepository BookingPriceRequestRepository { get; }
     IRejectionRequestRepository RejectionRequestRepository { get; }
+    IReviewRepository ReviewRepository { get; }
 
     IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity;
     void Save();
