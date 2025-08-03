@@ -315,58 +315,50 @@ public class TourService : ITourService
         {
             var tours = await _unitOfWork.TourRepository
                 .ActiveEntities
-                .Include(t => t.TourPlanLocations)
-                    .ThenInclude(l => l.Location)
                 .Include(t => t.TourSchedules)
                 .Include(t => t.PromotionApplicables)
-                    .ThenInclude(p => p.Promotion)
-                .Include(t => t.Reviews)
-                    .ThenInclude(r => r.User)
                 .ToListAsync();
 
             if (!tours.Any())
-            {
                 throw CustomExceptionFactory.CreateNotFoundError("tours");
-            }
+
+            var tourIds = tours.Select(t => t.Id).ToList();
+
+            var bookings = await _unitOfWork.BookingRepository
+                .ActiveEntities
+                .Where(b => tourIds.Contains(b.TourId.Value))
+                .Include(b => b.User)
+                .ToListAsync();
+
+            var tourPlanLocations = await _unitOfWork.TourPlanLocationRepository
+                .ActiveEntities
+                .Where(l => tourIds.Contains(l.TourId))
+                .Include(l => l.Location)
+                .ToListAsync();
+
+            var reviews = await _unitOfWork.ReviewRepository
+                .ActiveEntities
+                .Include(r => r.Booking)
+                .Where(r => r.Booking.TourId.HasValue && tourIds.Contains(r.Booking.TourId.Value))
+                .ToListAsync();
 
             var tourResponses = new List<TourResponseDto>();
 
             foreach (var tour in tours)
             {
-                // tính giá thấp nhất
-                var activeSchedules = tour.TourSchedules.Where(s => !s.IsDeleted).ToList();
+                var activeSchedules = tour.TourSchedules?.Where(s => !s.IsDeleted).ToList() ?? new();
                 var adultPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.AdultPrice) : 0m;
                 var childrenPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.ChildrenPrice) : 0m;
                 var finalPrice = adultPrice;
 
-                var tourGuide = GetTourGuidesInfo(tour);
+                var tourBookings = bookings.Where(b => b.TourId == tour.Id).ToList();
+                var reviewsForTour = reviews.Where(r => r.Booking.TourId == tour.Id).ToList();
 
-                var groupedLocations = tour.TourPlanLocations
-                    .Where(l => !l.IsDeleted)
-                    .GroupBy(l => l.DayOrder)
-                    .OrderBy(g => g.Key)
+                var tourLocations = tourPlanLocations
+                    .Where(l => l.TourId == tour.Id && !l.IsDeleted)
                     .ToList();
 
-                var dayDetails = BuildDayDetails(tour);
-
-                var reviews = tour.Reviews
-                    .Where(r => !r.IsDeleted)
-                    .Select(r => new ReviewResponseDto
-                    {
-                        Id = r.Id,
-                        UserId = r.UserId,
-                        UserName = r.User?.FullName ?? string.Empty,
-                        BookingId = r.BookingId,
-                        TourId = r.TourId,
-                        WorkshopId = r.WorkshopId,
-                        TourGuideId = r.TourGuideId,
-                        Comment = r.Comment,
-                        Rating = r.Rating,
-                        CreatedAt = r.CreatedTime,
-                        UpdatedAt = r.LastUpdatedTime
-                    }).ToList();
-
-                double averageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0.0;
+                var tourGuideInfo = GetTourGuidesInfo(tour);
 
                 tourResponses.Add(new TourResponseDto
                 {
@@ -375,7 +367,9 @@ public class TourService : ITourService
                     Description = tour.Description,
                     Content = tour.Content,
                     TotalDays = tour.TotalDays,
-                    TotalDaysText = tour.TotalDays == 1 ? "1 ngày" : $"{tour.TotalDays} ngày {tour.TotalDays - 1} đêm",
+                    TotalDaysText = tour.TotalDays == 1
+                        ? "1 ngày"
+                        : $"{tour.TotalDays} ngày {tour.TotalDays - 1} đêm",
                     TourType = tour.TourType,
                     TourTypeText = tour.TourType != null
                         ? _enumService.GetEnumDisplayName(tour.TourType.Value)
@@ -384,8 +378,10 @@ public class TourService : ITourService
                     ChildrenPrice = childrenPrice,
                     FinalPrice = finalPrice,
                     Status = tour.Status,
-                    AverageRating = Math.Round(averageRating, 2),
-                    TotalReviews = reviews.Count,
+                    TotalReviews = reviewsForTour.Count,
+                    AverageRating = reviewsForTour.Any()
+                        ? reviewsForTour.Average(r => r.Rating)
+                        : 0.0
                 });
             }
 
@@ -407,24 +403,43 @@ public class TourService : ITourService
         {
             var tour = await _unitOfWork.TourRepository
                 .ActiveEntities
-                .Include(t => t.TourPlanLocations)
-                    .ThenInclude(l => l.Location)
-                .Include(t => t.TourSchedules)
-                    .ThenInclude(t => t.TourGuideSchedules)
-                        .ThenInclude(tg => tg.TourGuide)
-                            .ThenInclude(tg => tg.User)
-                .Include(t => t.PromotionApplicables)
-                    .ThenInclude(p => p.Promotion)
                 .FirstOrDefaultAsync(t => t.Id == tourId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Tour");
 
-            // tính giá thấp nhất
-            var activeSchedules = tour.TourSchedules.Where(s => !s.IsDeleted).ToList();
+            var tourSchedules = await _unitOfWork.TourScheduleRepository
+                .ActiveEntities
+                .Where(s => s.TourId == tourId)
+                .Include(s => s.TourGuideSchedules)
+                    .ThenInclude(tg => tg.TourGuide)
+                        .ThenInclude(tg => tg.User)
+                .ToListAsync();
+
+            var tourPlanLocations = await _unitOfWork.TourPlanLocationRepository
+                .ActiveEntities
+                .Where(l => l.TourId == tourId)
+                .Include(l => l.Location)
+                .ToListAsync();
+
+            var promotionApplicables = await _unitOfWork.PromotionApplicableRepository
+                .ActiveEntities
+                .Where(p => p.TourId == tourId)
+                .Include(p => p.Promotion)
+                .ToListAsync();
+
+            var reviews = await _unitOfWork.ReviewRepository
+                .ActiveEntities
+                .Include(r => r.User)
+                .Include(r => r.Booking)
+                .Where(r => r.Booking.TourId.HasValue && r.Booking.TourId.Value == tourId)
+                .ToListAsync();
+
+            // Tính giá
+            var activeSchedules = tourSchedules.Where(s => !s.IsDeleted).ToList();
             var adultPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.AdultPrice) : 0m;
             var childrenPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.ChildrenPrice) : 0m;
 
-            // tính khuyến mãi
-            var activePromotions = tour.PromotionApplicables
+            // Tính khuyến mãi
+            var activePromotions = promotionApplicables
                 .Where(p => !p.IsDeleted && p.Promotion != null && p.Promotion.StartDate <= DateTime.UtcNow && p.Promotion.EndDate >= DateTime.UtcNow)
                 .Select(p => new PromotionDto
                 {
@@ -437,13 +452,14 @@ public class TourService : ITourService
                     EndDate = p.Promotion.EndDate
                 })
                 .ToList();
+
             var isDiscount = activePromotions.Any();
             var maxDiscount = isDiscount ? activePromotions.Max(p => p.DiscountPercentage) : 0;
             var finalPrice = adultPrice * (1 - maxDiscount / 100);
 
-            var tourGuide = GetTourGuidesInfo(tour);
+            var tourGuide = GetTourGuidesInfo(tourSchedules);
 
-            var groupedLocations = tour.TourPlanLocations
+            var groupedLocations = tourPlanLocations
                 .Where(l => !l.IsDeleted)
                 .GroupBy(l => l.DayOrder)
                 .OrderBy(g => g.Key)
@@ -451,11 +467,7 @@ public class TourService : ITourService
 
             var dayDetails = await BuildDayDetails(tour);
 
-            var reviews = await _unitOfWork.ReviewRepository.ActiveEntities
-            .Include(r => r.User)
-            .Where(r => r.TourId == tourId)
-            .ToListAsync();
-
+            // Xử lý đánh giá
             double averageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0.0;
 
             var rating = new RatingDetailsDto
@@ -468,9 +480,9 @@ public class TourService : ITourService
                     UserId = r.UserId,
                     UserName = r.User?.FullName ?? string.Empty,
                     BookingId = r.BookingId,
-                    TourId = r.TourId,
-                    WorkshopId = r.WorkshopId,
-                    TourGuideId = r.TourGuideId,
+                    TourId = r.Booking.TourId,
+                    WorkshopId = r.Booking.WorkshopId,
+                    TourGuideId = r.Booking.TourGuideId,
                     Comment = r.Comment,
                     Rating = r.Rating,
                     CreatedAt = r.CreatedTime,
@@ -495,17 +507,6 @@ public class TourService : ITourService
                 FinalPrice = finalPrice,
                 IsDiscount = isDiscount,
                 Status = tour.Status,
-                // Locations = tour.TourPlanLocations
-                //     .Where(l => !l.IsDeleted)
-                //     .Select(l => new TourPlanLocationResponseDto
-                //     {
-                //         TourPlanLocationId = l.Id,
-                //         LocationId = l.LocationId,
-                //         DayOrder = l.DayOrder,
-                //         StartTime = l.StartTime,
-                //         EndTime = l.EndTime,
-                //         Notes = l.Notes
-                //     }).ToList(),
                 Schedules = activeSchedules
                     .Select(s => new TourScheduleResponseDto
                     {
@@ -594,7 +595,7 @@ public class TourService : ITourService
 
             var reviews = await _unitOfWork.ReviewRepository.ActiveEntities
             .Include(r => r.User)
-            .Where(r => r.TourId == tourId)
+            .Where(r => r.Booking.TourId == tourId)
             .ToListAsync();
 
             double averageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0.0;
@@ -609,9 +610,9 @@ public class TourService : ITourService
                     UserId = r.UserId,
                     UserName = r.User?.FullName ?? string.Empty,
                     BookingId = r.BookingId,
-                    TourId = r.TourId,
-                    WorkshopId = r.WorkshopId,
-                    TourGuideId = r.TourGuideId,
+                    TourId = r.Booking.TourId,
+                    WorkshopId = r.Booking.WorkshopId,
+                    TourGuideId = r.Booking.TourGuideId,
                     Comment = r.Comment,
                     Rating = r.Rating,
                     CreatedAt = r.CreatedTime,
@@ -1608,6 +1609,29 @@ public class TourService : ITourService
             .DistinctBy(g => g.Id)
             .ToList();
     }
+
+    private List<TourGuideDataModel> GetTourGuidesInfo(List<TourSchedule> tourSchedules)
+    {
+        return tourSchedules
+            .Where(ts => !ts.IsDeleted)
+            .SelectMany(ts => ts.TourGuideSchedules)
+            .Where(tg => !tg.IsDeleted && tg.TourGuide != null && tg.TourGuide.User != null)
+            .Select(tg => new TourGuideDataModel
+            {
+                Id = tg.TourGuide.Id,
+                UserName = tg.TourGuide.User.FullName,
+                Email = tg.TourGuide.User.Email,
+                Sex = tg.TourGuide.User.Sex,
+                Address = tg.TourGuide.User.Address,
+                Rating = tg.TourGuide.Rating,
+                Price = tg.TourGuide.Price,
+                Introduction = tg.TourGuide.Introduction,
+                AvatarUrl = tg.TourGuide.User.AvatarUrl,
+            })
+            .DistinctBy(g => g.Id)
+            .ToList();
+    }
+
 
     // Location
     private void ValidateDto(UpdateTourPlanLocationDto dto, List<TourPlanLocation> existingLocations)

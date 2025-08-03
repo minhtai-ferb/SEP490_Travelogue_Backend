@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Bases.Responses;
 using Travelogue.Service.BusinessModels.TourModels;
@@ -199,23 +198,6 @@ public class TourController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Xóa tour
-    /// </summary>
-    /// <param name="id"></param>
-    /// <param name="deletedImages"></param>
-    /// <returns></returns>
-    [HttpDelete]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> DeleteMedia(Guid id)
-    {
-        await _tourService.DeleteTourAsync(id, new CancellationToken());
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: true,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "media")
-        ));
-    }
-
     #region Tour Locations
 
     /// <summary>
@@ -325,29 +307,29 @@ public class TourController : ControllerBase
     /// <param name="tourId">ID của tour</param>
     /// <param name="cancellationToken">Token để hủy thao tác</param>
     /// <returns>Danh sách lịch trình</returns>
-    [HttpGet("{tourId}/schedules")]
-    [ProducesResponseType(typeof(ResponseModel<List<TourScheduleResponseDto>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetSchedules(Guid tourId, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var result = await _tourService.GetSchedulesAsync(tourId);
-            return Ok(ResponseModel<List<TourScheduleResponseDto>>.OkResponseModel(
-                data: result,
-                message: "Tour schedules retrieved successfully."
-            ));
-        }
-        catch (CustomException ex)
-        {
-            return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
-        }
-    }
+    // [HttpGet("{tourId}/schedules")]
+    // [ProducesResponseType(typeof(ResponseModel<List<TourScheduleResponseDto>>), StatusCodes.Status200OK)]
+    // [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
+    // [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
+    // public async Task<IActionResult> GetSchedules(Guid tourId, CancellationToken cancellationToken)
+    // {
+    //     try
+    //     {
+    //         var result = await _tourService.GetSchedulesAsync(tourId);
+    //         return Ok(ResponseModel<List<TourScheduleResponseDto>>.OkResponseModel(
+    //             data: result,
+    //             message: "Tour schedules retrieved successfully."
+    //         ));
+    //     }
+    //     catch (CustomException ex)
+    //     {
+    //         return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+    //     }
+    // }
 
     /// <summary>
     /// Cập nhật lịch trình của tour

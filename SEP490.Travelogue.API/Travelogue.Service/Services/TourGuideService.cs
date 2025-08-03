@@ -162,14 +162,15 @@ public class TourGuideService : ITourGuideService
             var tourGuideIds = existingTourGuides.Select(tg => tg.Id).ToList();
 
             var allReviews = await _unitOfWork.ReviewRepository.ActiveEntities
-                .Where(r => r.TourGuideId.HasValue && tourGuideIds.Contains(r.TourGuideId.Value))
+                .Include(r => r.Booking)
+                .Where(r => r.Booking.TourGuideId.HasValue && tourGuideIds.Contains(r.Booking.TourGuideId.Value))
                 .ToListAsync(cancellationToken);
 
             var result = new List<TourGuideDataModel>();
 
             foreach (var tg in existingTourGuides)
             {
-                var reviewsForGuide = allReviews.Where(r => r.TourGuideId == tg.Id).ToList();
+                var reviewsForGuide = allReviews.Where(r => r.Booking.TourGuideId == tg.Id).ToList();
 
                 var model = new TourGuideDataModel
                 {
@@ -229,14 +230,15 @@ public class TourGuideService : ITourGuideService
             var tourGuideIds = existingTourGuides.Select(tg => tg.Id).ToList();
 
             var allReviews = await _unitOfWork.ReviewRepository.ActiveEntities
-                .Where(r => r.TourGuideId.HasValue && tourGuideIds.Contains(r.TourGuideId.Value))
+                .Include(r => r.Booking)
+                .Where(r => r.Booking.TourGuideId.HasValue && tourGuideIds.Contains(r.Booking.TourGuideId.Value))
                 .ToListAsync(cancellationToken);
 
             var result = new List<TourGuideDataModel>();
 
             foreach (var tg in existingTourGuides)
             {
-                var reviewsForGuide = allReviews.Where(r => r.TourGuideId == tg.Id).ToList();
+                var reviewsForGuide = allReviews.Where(r => r.Booking.TourGuideId == tg.Id).ToList();
 
                 var guideModel = new TourGuideDataModel
                 {
@@ -326,6 +328,7 @@ public class TourGuideService : ITourGuideService
         {
             var tourGuide = await _unitOfWork.TourGuideRepository.ActiveEntities
                 .Include(tg => tg.User)
+                .Include(tg => tg.Bookings)
                 .FirstOrDefaultAsync(tg => tg.Id == id, cancellationToken);
 
             if (tourGuide == null)
@@ -335,7 +338,7 @@ public class TourGuideService : ITourGuideService
 
             var reviews = await _unitOfWork.ReviewRepository.ActiveEntities
                 .Include(r => r.User)
-                .Where(r => r.TourGuideId == id)
+                .Where(r => r.Booking.TourGuideId == id)
                 .ToListAsync();
 
             double averageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0.0;
@@ -350,9 +353,9 @@ public class TourGuideService : ITourGuideService
                     UserId = r.UserId,
                     UserName = r.User?.FullName ?? string.Empty,
                     BookingId = r.BookingId,
-                    TourId = r.TourId,
-                    WorkshopId = r.WorkshopId,
-                    TourGuideId = r.TourGuideId,
+                    TourId = r.Booking.TourId,
+                    WorkshopId = r.Booking.WorkshopId,
+                    TourGuideId = r.Booking.TourGuideId,
                     Comment = r.Comment,
                     Rating = r.Rating,
                     CreatedAt = r.CreatedTime,

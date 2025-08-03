@@ -58,7 +58,7 @@ public class ReviewService : IReviewService
             {
                 UserId = currentUserId,
                 BookingId = dto.BookingId,
-                TourId = dto.TourId,
+                // TourId = dto.TourId,
                 Comment = dto.Comment,
                 Rating = dto.Rating
             };
@@ -73,9 +73,9 @@ public class ReviewService : IReviewService
                 UserId = review.UserId,
                 UserName = booking.User?.FullName ?? string.Empty,
                 BookingId = review.BookingId,
-                TourId = review.TourId,
-                WorkshopId = review.WorkshopId,
-                TourGuideId = review.TourGuideId,
+                TourId = booking.TourId,
+                WorkshopId = booking.WorkshopId,
+                TourGuideId = booking.TourGuideId,
                 Comment = review.Comment,
                 Rating = review.Rating,
                 CreatedAt = review.CreatedTime,
@@ -121,7 +121,7 @@ public class ReviewService : IReviewService
             {
                 UserId = currentUserId,
                 BookingId = dto.BookingId,
-                WorkshopId = dto.WorkshopId,
+                // WorkshopId = dto.WorkshopId,
                 Comment = dto.Comment,
                 Rating = dto.Rating
             };
@@ -136,9 +136,9 @@ public class ReviewService : IReviewService
                 UserId = review.UserId,
                 UserName = booking.User?.FullName ?? string.Empty,
                 BookingId = review.BookingId,
-                TourId = review.TourId,
-                WorkshopId = review.WorkshopId,
-                TourGuideId = review.TourGuideId,
+                TourId = booking.TourId,
+                WorkshopId = booking.WorkshopId,
+                TourGuideId = booking.TourGuideId,
                 Comment = review.Comment,
                 Rating = review.Rating,
                 CreatedAt = review.CreatedTime,
@@ -184,7 +184,7 @@ public class ReviewService : IReviewService
             {
                 UserId = currentUserId,
                 BookingId = dto.BookingId,
-                TourGuideId = dto.TourGuideId,
+                // TourGuideId = dto.TourGuideId,
                 Comment = dto.Comment,
                 Rating = dto.Rating
             };
@@ -199,9 +199,9 @@ public class ReviewService : IReviewService
                 UserId = review.UserId,
                 UserName = booking.User?.FullName ?? string.Empty,
                 BookingId = review.BookingId,
-                TourId = review.TourId,
-                WorkshopId = review.WorkshopId,
-                TourGuideId = review.TourGuideId,
+                TourId = booking.TourId,
+                WorkshopId = booking.WorkshopId,
+                TourGuideId = booking.TourGuideId,
                 Comment = review.Comment,
                 Rating = review.Rating,
                 CreatedAt = review.CreatedTime,
@@ -403,7 +403,8 @@ public class ReviewService : IReviewService
         {
             var reviews = await _unitOfWork.ReviewRepository.ActiveEntities
                 .Include(r => r.User)
-                .Where(r => r.TourId == tourId)
+                .Include(r => r.Booking)
+                .Where(r => r.Booking.TourId == tourId)
                 .ToListAsync(cancellationToken);
 
             return reviews.Select(r => new ReviewResponseDto
@@ -412,9 +413,9 @@ public class ReviewService : IReviewService
                 UserId = r.UserId,
                 UserName = r.User?.FullName ?? string.Empty,
                 BookingId = r.BookingId,
-                TourId = r.TourId,
-                WorkshopId = r.WorkshopId,
-                TourGuideId = r.TourGuideId,
+                TourId = r.Booking.TourId,
+                WorkshopId = r.Booking.WorkshopId,
+                TourGuideId = r.Booking.TourGuideId,
                 Comment = r.Comment,
                 Rating = r.Rating,
                 CreatedAt = r.CreatedTime,
@@ -435,7 +436,8 @@ public class ReviewService : IReviewService
     {
         var reviews = await _unitOfWork.ReviewRepository.ActiveEntities
             .Include(r => r.User)
-            .Where(r => r.WorkshopId == workshopId)
+             .Include(r => r.Booking)
+            .Where(r => r.Booking.WorkshopId == workshopId)
             .ToListAsync(cancellationToken);
 
         return reviews.Select(r => new ReviewResponseDto
@@ -444,9 +446,9 @@ public class ReviewService : IReviewService
             UserId = r.UserId,
             UserName = r.User?.FullName ?? string.Empty,
             BookingId = r.BookingId,
-            TourId = r.TourId,
-            WorkshopId = r.WorkshopId,
-            TourGuideId = r.TourGuideId,
+            TourId = r.Booking.TourId,
+            WorkshopId = r.Booking.WorkshopId,
+            TourGuideId = r.Booking.TourGuideId,
             Comment = r.Comment,
             Rating = r.Rating,
             CreatedAt = r.CreatedTime,
@@ -458,7 +460,8 @@ public class ReviewService : IReviewService
     {
         var reviews = await _unitOfWork.ReviewRepository.ActiveEntities
             .Include(r => r.User)
-            .Where(r => r.TourGuideId == tourGuideId)
+            .Include(r => r.Booking)
+            .Where(r => r.Booking.TourGuideId == tourGuideId)
             .ToListAsync(cancellationToken);
 
         return reviews.Select(r => new ReviewResponseDto
@@ -467,9 +470,9 @@ public class ReviewService : IReviewService
             UserId = r.UserId,
             UserName = r.User?.FullName ?? string.Empty,
             BookingId = r.BookingId,
-            TourId = r.TourId,
-            WorkshopId = r.WorkshopId,
-            TourGuideId = r.TourGuideId,
+            TourId = r.Booking.TourId,
+            WorkshopId = r.Booking.WorkshopId,
+            TourGuideId = r.Booking.TourGuideId,
             Comment = r.Comment,
             Rating = r.Rating,
             CreatedAt = r.CreatedTime,

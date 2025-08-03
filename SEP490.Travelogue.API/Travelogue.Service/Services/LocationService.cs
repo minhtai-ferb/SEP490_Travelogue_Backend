@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Bases.Responses;
-using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
@@ -123,11 +122,9 @@ public class LocationService : ILocationService
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
-            // Validate user role
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
 
-            // Map and set common fields
             var newLocation = _mapper.Map<Location>(model);
             newLocation.CreatedBy = currentUserId;
             newLocation.LastUpdatedBy = currentUserId;
@@ -136,8 +133,54 @@ public class LocationService : ILocationService
 
             await _unitOfWork.LocationRepository.AddAsync(newLocation);
             await _unitOfWork.SaveAsync();
+
+            List<LocationMedia> locationMedias = new();
+            if (model.MediaDtos.Any())
+            {
+                locationMedias = model.MediaDtos.Select(media => new LocationMedia
+                {
+                    Id = Guid.NewGuid(),
+                    LocationId = newLocation.Id,
+                    MediaUrl = media.Url,
+                    IsThumbnail = media.IsThumbnail,
+                    CreatedBy = currentUserId,
+                    LastUpdatedBy = currentUserId,
+                    CreatedTime = currentTime,
+                    LastUpdatedTime = currentTime
+                }).ToList();
+
+                await _unitOfWork.LocationMediaRepository.AddRangeAsync(locationMedias);
+                await _unitOfWork.SaveAsync();
+            }
+
             await transaction.CommitAsync(cancellationToken);
-            var response = _mapper.Map<LocationDataModel>(newLocation);
+
+            var district = newLocation.DistrictId.HasValue
+                ? await _unitOfWork.DistrictRepository.GetByIdAsync(newLocation.DistrictId.Value, cancellationToken)
+                : null;
+
+            var response = new LocationDataModel
+            {
+                Id = newLocation.Id,
+                Name = newLocation.Name,
+                Description = newLocation.Description,
+                Content = newLocation.Content,
+                Address = newLocation.Address,
+                Latitude = newLocation.Latitude,
+                Longitude = newLocation.Longitude,
+                OpenTime = newLocation.OpenTime,
+                CloseTime = newLocation.CloseTime,
+                Rating = 0,
+                Category = "",
+                DistrictId = newLocation.DistrictId,
+                DistrictName = district?.Name,
+                Medias = locationMedias.Select(m => new MediaResponse
+                {
+                    MediaUrl = m.MediaUrl,
+                    IsThumbnail = m.IsThumbnail
+                }).ToList()
+            };
+
             return response;
         }
         catch (CustomException)
@@ -150,11 +193,8 @@ public class LocationService : ILocationService
             await _unitOfWork.RollBackAsync();
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
-        finally
-        {
-            //  _unitOfWork.Dispose();
-        }
     }
+
 
     public async Task<LocationDataModel> AddCuisineDataAsync(Guid locationId, CuisineCreateModel? model, CancellationToken cancellationToken)
     {

@@ -57,33 +57,51 @@ public class WorkshopService : IWorkshopService
     {
         try
         {
-            var workshops = _unitOfWork.WorkshopRepository.ActiveEntities
+            var workshopsQuery = _unitOfWork.WorkshopRepository.ActiveEntities
                 .Include(w => w.CraftVillage)
                     .ThenInclude(cv => cv.Location)
-                .Include(w => w.Reviews)
+                .Include(w => w.Bookings)
+                    .ThenInclude(b => b.User)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(name))
             {
-                workshops = workshops.Where(w => w.Name.ToLower().Contains(name.ToLower()));
+                workshopsQuery = workshopsQuery.Where(w => w.Name.ToLower().Contains(name.ToLower()));
             }
 
             if (craftVillageId.HasValue)
             {
-                workshops = workshops.Where(w => w.CraftVillageId == craftVillageId.Value);
+                workshopsQuery = workshopsQuery.Where(w => w.CraftVillageId == craftVillageId.Value);
             }
 
-            var workshopItems = await workshops
+            var workshopItems = await workshopsQuery
                 .OrderBy(w => w.Name)
                 .ToListAsync(cancellationToken);
 
+            if (!workshopItems.Any())
+            {
+                return new List<WorkshopResponseDto>();
+            }
 
+            // Lấy tất cả workshopId
+            var workshopIds = workshopItems.Select(w => w.Id).ToList();
+
+            // Lấy tất cả review liên quan tới các booking có WorkshopId nằm trong danh sách
+            var allReviews = await _unitOfWork.ReviewRepository.ActiveEntities
+                .Include(r => r.Booking)
+                .Where(r => r.Booking.WorkshopId.HasValue && workshopIds.Contains(r.Booking.WorkshopId.Value))
+                .ToListAsync(cancellationToken);
 
             var workshopResponses = new List<WorkshopResponseDto>();
+
             foreach (var workshop in workshopItems)
             {
-                var averageRating = workshop.Reviews.Any() ? workshop.Reviews.Average(r => r.Rating) : 0.0;
-                var totalReviews = workshop.Reviews.Count;
+                var reviewsForWorkshop = allReviews
+                    .Where(r => r.Booking.WorkshopId == workshop.Id)
+                    .ToList();
+
+                var averageRating = reviewsForWorkshop.Any() ? reviewsForWorkshop.Average(r => r.Rating) : 0.0;
+                var totalReviews = reviewsForWorkshop.Count;
 
                 var response = new WorkshopResponseDto
                 {
@@ -94,7 +112,7 @@ public class WorkshopService : IWorkshopService
                     Status = workshop.Status,
                     CraftVillageId = workshop.CraftVillageId,
                     CraftVillageName = workshop.CraftVillage?.Location?.Name,
-                    AverageRating = averageRating,
+                    AverageRating = Math.Round(averageRating, 2),
                     TotalReviews = totalReviews,
                 };
 
@@ -350,8 +368,8 @@ public class WorkshopService : IWorkshopService
             .Include(w => w.WorkshopSchedules)
             .Include(w => w.PromotionApplicables)
                 .ThenInclude(p => p.Promotion)
-            .Include(w => w.Reviews)
-                .ThenInclude(r => r.User)
+            .Include(w => w.Bookings)
+                .ThenInclude(b => b.User)
             .FirstOrDefaultAsync(w => w.Id == workshopId)
             ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
 
@@ -393,16 +411,25 @@ public class WorkshopService : IWorkshopService
 
         var dayDetails = BuildDayDetails(workshop);
 
-        double averageRating = workshop.Reviews.Any() ? workshop.Reviews.Average(r => r.Rating) : 0.0;
-        int totalReviews = workshop.Reviews.Count;
-        var reviews = workshop.Reviews.Select(r => new ReviewResponseDto
+        var reviews = await _unitOfWork.ReviewRepository.ActiveEntities
+            .Include(r => r.User)
+            .Include(r => r.Booking)
+            .Where(r => r.Booking.WorkshopId == workshopId && !r.IsDeleted)
+            .ToListAsync();
+
+        double averageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0.0;
+        int totalReviews = reviews.Count;
+
+        var reviewDtos = reviews.Select(r => new ReviewResponseDto
         {
             Id = r.Id,
             Rating = r.Rating,
             Comment = r.Comment,
             CreatedAt = r.CreatedTime,
             UserName = r.User?.FullName ?? "Unknown",
-            UserId = r.UserId
+            UserId = r.UserId,
+            BookingId = r.BookingId,
+            WorkshopId = r.Booking?.WorkshopId
         }).ToList();
 
         var response = new WorkshopDetailsResponseDto
@@ -426,9 +453,9 @@ public class WorkshopService : IWorkshopService
                 Notes = s.Notes
             }).ToList(),
             Days = dayDetails,
-            AverageRating = averageRating,
+            AverageRating = Math.Round(averageRating, 2),
             TotalReviews = totalReviews,
-            Reviews = reviews
+            Reviews = reviewDtos
         };
 
         return response;
