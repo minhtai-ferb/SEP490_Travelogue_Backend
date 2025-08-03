@@ -58,5 +58,6 @@ public sealed class Booking : BaseEntity
     [ForeignKey("PromotionId")]
     public Promotion? Promotion { get; set; }
     public ICollection<TransactionEntry> Transactions { get; set; } = new List<TransactionEntry>();
+    public ICollection<Review> Reviews { get; set; } = new List<Review>();
     public ICollection<BookingParticipant> Participants { get; set; } = new List<BookingParticipant>();
 }

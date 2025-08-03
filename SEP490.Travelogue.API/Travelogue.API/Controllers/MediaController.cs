@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Travelogue.Service.Commons.Interfaces;
 using Travelogue.Service.BusinessModels.MediaModel;
+using Travelogue.Service.Commons.BaseResponses;
+using Travelogue.Repository.Bases.Responses;
 
 namespace Travelogue.API.Controllers;
 
@@ -19,35 +21,50 @@ public class MediaController : ControllerBase
     [HttpPost("upload")]
     public async Task<IActionResult> UploadImage([FromForm] IFormFile image)
     {
-        var url = await _mediaService.UploadImageAsync(image);
-        return Ok(new { imageUrl = url });
+        var response = await _mediaService.UploadImageAsync(image);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
+        ));
     }
 
     [HttpPost("upload-multiple")]
     public async Task<IActionResult> UploadMultiple([FromForm] List<IFormFile> images)
     {
-        var urls = await _mediaService.UploadMultipleImagesAsync(images);
-        return Ok(urls);
+        var response = await _mediaService.UploadMultipleImagesAsync(images);
+        return Ok(ResponseModel<object>.OkResponseModel(
+             data: response,
+             message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
+         ));
     }
 
     [HttpDelete("delete/{fileName}")]
     public async Task<IActionResult> DeleteImage(string fileName)
     {
-        var result = await _mediaService.DeleteImageAsync(fileName);
-        return Ok(new { deleted = result });
+        var response = await _mediaService.DeleteImageAsync(fileName);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
+        ));
     }
 
     [HttpPost("delete-multiple")]
     public async Task<IActionResult> DeleteMultiple([FromBody] List<string> fileNames)
     {
-        var result = await _mediaService.DeleteImagesAsync(fileNames);
-        return Ok(new { deleted = result });
+        var response = await _mediaService.DeleteImagesAsync(fileNames);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
+        ));
     }
 
     [HttpGet("all")]
     public async Task<IActionResult> GetAllImages()
     {
-        var result = await _mediaService.GetAllImagesAsync();
-        return Ok(result);
+        var response = await _mediaService.GetAllImagesAsync();
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
+        ));
     }
 }
