@@ -26,7 +26,7 @@ public class TourController : ControllerBase
     [ProducesResponseType(typeof(ResponseModel<List<TourResponseDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetTours(TourFilterModel filter)
+    public async Task<IActionResult> GetTours([FromQuery] TourFilterModel filter)
     {
         try
         {

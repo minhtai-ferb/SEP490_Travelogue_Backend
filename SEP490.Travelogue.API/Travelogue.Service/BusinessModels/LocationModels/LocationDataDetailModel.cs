@@ -11,6 +11,7 @@ public class LocationDataDetailModel
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? Content { get; set; }
+    public string? Address { get; set; }
     public double Latitude { get; set; }
     public double Longitude { get; set; }
     public double Rating { get; set; } = 0;
