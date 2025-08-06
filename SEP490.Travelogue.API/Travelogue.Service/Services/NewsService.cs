@@ -1003,13 +1003,13 @@ public class NewsService : INewsService
 
             foreach (var mediaDto in mediaList)
             {
-                string fileName = mediaDto.Url.Split('/').Last();
+                string fileName = mediaDto.MediaUrl.Split('/').Last();
                 string fileType = Path.GetExtension(fileName).TrimStart('.');
 
                 var newMedia = new NewsMedia
                 {
                     NewsId = newsId,
-                    MediaUrl = mediaDto.Url,
+                    MediaUrl = mediaDto.MediaUrl,
                     FileName = fileName,
                     FileType = fileType,
                     SizeInBytes = 0,
