@@ -952,8 +952,7 @@ public class UserService : IUserService
 
                 await _unitOfWork.TourGuideRepository.AddAsync(tourGuide);
 
-                // Gán vai trò TourGuide
-                var role = await _unitOfWork.RoleRepository.GetByNameAsync("TourGuide");
+                var role = await _unitOfWork.RoleRepository.GetByNameAsync(AppRole.TOUR_GUIDE);
                 if (role == null)
                 {
                     throw new CustomException(StatusCodes.Status400BadRequest, ResponseCodeConstants.BAD_REQUEST, "TourGuide role not found");

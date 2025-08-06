@@ -14,4 +14,5 @@ public class NewsCreateModel
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public bool IsHighlighted { get; set; }
+    public TypeExperience? TypeExperience { get; set; }
 }

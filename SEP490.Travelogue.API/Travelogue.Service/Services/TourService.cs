@@ -926,13 +926,13 @@ public class TourService : ITourService
             _unitOfWork.TourRepository.Update(tour);
 
             // Validate TotalDays
-            // var maxDayOrder = Math.Max(
-            //     existingLocations.Any() ? existingLocations.Max(l => l.DayOrder) : 0,
-            //     toAdd.Any() ? toAdd.Max(l => l.DayOrder) : 0
-            // );
-            // maxDayOrder = Math.Max(maxDayOrder, toUpdate.Any() ? toUpdate.Max(u => u.DayOrder) : 0);
-            // if (tour.TotalDays < maxDayOrder)
-            //     throw CustomExceptionFactory.CreateBadRequestError($"Tổng số ngày ({tour.TotalDays}) không được nhỏ hơn Ngày lớn nhất ({maxDayOrder}).");
+            var maxDayOrder = Math.Max(
+                existingLocations.Any() ? existingLocations.Max(l => l.DayOrder) : 0,
+                toAdd.Any() ? toAdd.Max(l => l.DayOrder) : 0
+            );
+            maxDayOrder = Math.Max(maxDayOrder, toUpdate.Any() ? toUpdate.Max(u => u.DayOrder) : 0);
+            if (tour.TotalDays < maxDayOrder)
+                throw CustomExceptionFactory.CreateBadRequestError($"Tổng số ngày ({tour.TotalDays}) không được nhỏ hơn Ngày lớn nhất ({maxDayOrder}).");
 
             // Kiểm tra số lượng lịch trình
             // var scheduleDates = tour.TourSchedules.Select(s => s.DepartureDate.Date).Distinct().Count();
