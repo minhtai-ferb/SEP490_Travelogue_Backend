@@ -468,6 +468,11 @@ public class TourService : ITourService
                 .FirstOrDefaultAsync(t => t.Id == tourId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Tour");
 
+            if (tour.Status == TourStatus.Draft && !_userContextService.HasAnyRole(AppRole.MODERATOR, AppRole.ADMIN))
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Tour đang ở trạng thái nháp, không thể xem chi tiết.");
+            }
+
             var tourSchedules = await _unitOfWork.TourScheduleRepository
                 .ActiveEntities
                 .Where(s => s.TourId == tourId)
@@ -615,6 +620,11 @@ public class TourService : ITourService
                     .ThenInclude(p => p.Promotion)
                 .FirstOrDefaultAsync(t => t.Id == tourId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Tour");
+
+            if (tour.Status == TourStatus.Draft && !_userContextService.HasAnyRole(AppRole.MODERATOR, AppRole.ADMIN))
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Tour đang ở trạng thái nháp, không thể xem chi tiết.");
+            }
 
             var activeSchedules = tour.TourSchedules.Where(s => !s.IsDeleted).ToList();
 
