@@ -24,6 +24,7 @@ public interface IBookingService
         BookingStatus? bookingStatus = null,
         CancellationToken cancellationToken = default);
     Task<List<BookingDataModel>> GetUserBookingsAsync(BookingFilterDto filter);
+    Task<List<BookingDataModel>> GetAllBookingsAsync(BookingFilterDto filter);
     Task<BookingDataModel> GetBookingByIdAsync(Guid bookingId);
     Task<CreatePaymentResult> CreatePaymentLink(Guid bookingId, CancellationToken cancellationToken = default);
     Task<bool> ProcessPaymentResponseAsync(PaymentResponse paymentResponse);
@@ -857,6 +858,92 @@ public class BookingService : IBookingService
         }
     }
 
+    public async Task<List<BookingDataModel>> GetAllBookingsAsync(BookingFilterDto filter)
+    {
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            var isAllowed = _userContextService.HasAnyRole(AppRole.MODERATOR, AppRole.ADMIN);
+            if (!isAllowed)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
+            IQueryable<Booking> query = _unitOfWork.BookingRepository
+                .ActiveEntities
+                .Include(b => b.TourGuide)
+                    .ThenInclude(tg => tg != null ? tg.User : null)
+                .Include(b => b.Tour)
+                .Include(b => b.TourSchedule)
+                .Include(b => b.TripPlan)
+                .Include(b => b.Workshop)
+                .Include(b => b.WorkshopSchedule)
+                .Include(b => b.Promotion);
+
+            // status
+            if (filter.Status.HasValue)
+            {
+                query = query.Where(b => b.Status == filter.Status.Value);
+            }
+
+            // ngày tháng
+            if (filter.StartDate.HasValue && filter.EndDate.HasValue)
+            {
+                if (filter.StartDate > filter.EndDate)
+                {
+                    throw CustomExceptionFactory.CreateBadRequestError("Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.");
+                }
+                query = query.Where(b => b.BookingDate >= filter.StartDate.Value && b.BookingDate <= filter.EndDate.Value);
+            }
+            else if (filter.StartDate.HasValue)
+            {
+                query = query.Where(b => b.BookingDate >= filter.StartDate.Value);
+            }
+            else if (filter.EndDate.HasValue)
+            {
+                query = query.Where(b => b.BookingDate <= filter.EndDate.Value);
+            }
+
+            var bookings = await query
+                .OrderBy(b => b.BookingDate)
+                .ToListAsync();
+
+            var result = bookings.Select(b => new BookingDataModel
+            {
+                Id = b.Id,
+                UserId = b.UserId,
+                TourId = b.TourId,
+                TourScheduleId = b.TourScheduleId,
+                TourGuideId = b.TourGuideId,
+                TripPlanId = b.TripPlanId,
+                WorkshopId = b.WorkshopId,
+                WorkshopScheduleId = b.WorkshopScheduleId,
+                PaymentLinkId = b.PaymentLinkId,
+                Status = b.Status,
+                StatusText = _enumService.GetEnumDisplayName<BookingStatus>(b.Status),
+                BookingType = b.BookingType,
+                BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(b.BookingType),
+                BookingDate = b.BookingDate,
+                CancelledAt = b.CancelledAt,
+                PromotionId = b.PromotionId,
+                OriginalPrice = b.OriginalPrice,
+                DiscountAmount = b.DiscountAmount,
+                FinalPrice = b.FinalPrice
+            }).ToList();
+
+            return result;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
     public async Task<BookingDataModel> GetBookingByIdAsync(Guid bookingId)
     {
         try
@@ -864,14 +951,23 @@ public class BookingService : IBookingService
             var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
 
             var isUser = _userContextService.HasRole(AppRole.USER);
-            if (!isUser)
+            var isAdminOrModerator = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
+
+            if (!isUser && !isAdminOrModerator)
             {
                 throw CustomExceptionFactory.CreateForbiddenError();
             }
 
-            var booking = await _unitOfWork.BookingRepository
+            var query = _unitOfWork.BookingRepository
                 .ActiveEntities
-                .Where(b => b.Id == bookingId && b.UserId == currentUserId)
+                .Where(b => b.Id == bookingId);
+
+            if (!isAdminOrModerator)
+            {
+                query = query.Where(b => b.UserId == currentUserId);
+            }
+
+            var booking = await query
                 .Include(b => b.TourGuide)
                     .ThenInclude(tg => tg != null ? tg.User : null)
                 .Include(b => b.Tour)

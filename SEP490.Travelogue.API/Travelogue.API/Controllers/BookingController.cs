@@ -105,6 +105,17 @@ namespace Travelogue.API.Controllers
              ));
         }
 
+
+        [HttpGet("bookings")]
+        public async Task<IActionResult> GetBookings([FromQuery] BookingFilterDto filter)
+        {
+            var result = await _bookingService.GetAllBookingsAsync(filter);
+            return Ok(ResponseModel<object>.OkResponseModel(
+                 data: result,
+                 message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "booking")
+             ));
+        }
+
         [HttpGet("{bookingId}")]
         public async Task<IActionResult> GetBookingById(Guid bookingId)
         {
