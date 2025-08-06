@@ -688,7 +688,7 @@ public class BookingService : IBookingService
 
             var order = new TransactionEntry
             {
-                BookingId = existingBooking.Id,
+                // BookingId = existingBooking.Id,
                 AccountNumber = paymentResponse.Data.AccountNumber,
                 PaidAmount = paymentResponse.Data.Amount,
                 PaymentReference = paymentResponse.Data.Reference,

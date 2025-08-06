@@ -19,5 +19,7 @@ public sealed class News : BaseEntity
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
 
+    public TypeExperience? TypeExperience { get; set; }
+
     public bool IsHighlighted { get; set; } = false;
 }

@@ -39,8 +39,8 @@ public interface INewsService
 
     Task<List<NewsDataModel>> GetNewsByCategoryAsync(NewsCategory? category, CancellationToken cancellationToken);
     Task<List<NewsDataModel>> GetPagedEventWithFilterAsync(string? title, int? month, int? year, int pageNumber, int pageSize, CancellationToken cancellationToken);
-    Task<List<NewsDataModel>> GetPagedNewsWithFilterAsync(string title, int pageNumber, int pageSize, CancellationToken cancellationToken);
-    Task<List<NewsDataModel>> GetPagedExperienceWithFilterAsync(string title, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<List<NewsDataModel>> GetPagedNewsWithFilterAsync(string? title, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<List<NewsDataModel>> GetPagedExperienceWithFilterAsync(string? title, Guid? locationId, int pageNumber, int pageSize, CancellationToken cancellationToken);
 }
 
 public class NewsService : INewsService
@@ -82,6 +82,11 @@ public class NewsService : INewsService
                 {
                     throw CustomExceptionFactory.CreateNotFoundError("location");
                 }
+            }
+
+            if (newsCreateModel.TypeExperience.HasValue && newsCreateModel.NewsCategory != NewsCategory.Experience)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("TypeExperience can only be set for Experience news category.");
             }
 
             var newNews = _mapper.Map<News>(newsCreateModel);
@@ -172,6 +177,7 @@ public class NewsService : INewsService
                     .Select(x => x.Name)
                     .FirstOrDefaultAsync(cancellationToken);
                 item.CategoryName = _enumService.GetEnumDisplayName<NewsCategory>(item.NewsCategory);
+                item.TypeExperienceText = _enumService.GetEnumDisplayName<TypeExperience>(item.TypeExperience);
             }
 
             return result;
@@ -217,6 +223,7 @@ public class NewsService : INewsService
                     .Select(x => x.Name)
                     .FirstOrDefaultAsync(cancellationToken);
                 item.CategoryName = _enumService.GetEnumDisplayName<NewsCategory>(item.NewsCategory);
+                item.TypeExperienceText = _enumService.GetEnumDisplayName<TypeExperience>(item.TypeExperience);
             }
 
             return result;
@@ -255,6 +262,7 @@ public class NewsService : INewsService
                     .FirstOrDefaultAsync(cancellationToken);
 
                 item.CategoryName = _enumService.GetEnumDisplayName<NewsCategory>(item.NewsCategory);
+                item.TypeExperienceText = _enumService.GetEnumDisplayName<TypeExperience>(item.TypeExperience);
             }
 
             if (year.HasValue && month.HasValue &&
@@ -305,6 +313,7 @@ public class NewsService : INewsService
                     .FirstOrDefaultAsync(cancellationToken);
 
                 item.CategoryName = _enumService.GetEnumDisplayName<NewsCategory>(item.NewsCategory);
+                item.TypeExperienceText = _enumService.GetEnumDisplayName<TypeExperience>(item.TypeExperience);
             }
 
             return newsDataModels;
@@ -319,7 +328,7 @@ public class NewsService : INewsService
         }
     }
 
-    public async Task<List<NewsDataModel>> GetPagedExperienceWithFilterAsync(string title, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<List<NewsDataModel>> GetPagedExperienceWithFilterAsync(string? title, Guid? locationId, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
@@ -329,6 +338,11 @@ public class NewsService : INewsService
             pagedResult.Items = pagedResult.Items.Where(a =>
                 a.NewsCategory == NewsCategory.Experience
             ).ToList();
+
+            if (locationId.HasValue)
+            {
+                pagedResult.Items = pagedResult.Items.Where(a => a.LocationId == locationId.Value).ToList();
+            }
 
             var newsDataModels = _mapper.Map<List<NewsDataModel>>(pagedResult.Items);
 
@@ -343,6 +357,7 @@ public class NewsService : INewsService
                     .FirstOrDefaultAsync(cancellationToken);
 
                 item.CategoryName = _enumService.GetEnumDisplayName<NewsCategory>(item.NewsCategory);
+                item.TypeExperienceText = _enumService.GetEnumDisplayName<TypeExperience>(item.TypeExperience);
             }
 
             return newsDataModels;
@@ -488,6 +503,7 @@ public class NewsService : INewsService
                     .Select(x => x.Name)
                     .FirstOrDefaultAsync(cancellationToken);
                 item.CategoryName = _enumService.GetEnumDisplayName<NewsCategory>(item.NewsCategory);
+                item.TypeExperienceText = _enumService.GetEnumDisplayName<TypeExperience>(item.TypeExperience);
             }
 
             return result;
@@ -530,6 +546,7 @@ public class NewsService : INewsService
                     .Select(x => x.Name)
                     .FirstOrDefaultAsync(cancellationToken);
                 item.CategoryName = _enumService.GetEnumDisplayName<NewsCategory>(item.NewsCategory);
+                item.TypeExperienceText = _enumService.GetEnumDisplayName<TypeExperience>(item.TypeExperience);
             }
 
             return result;
@@ -570,6 +587,11 @@ public class NewsService : INewsService
                 {
                     throw CustomExceptionFactory.CreateNotFoundError("location");
                 }
+            }
+
+            if (newsUpdateModel.TypeExperience.HasValue && newsUpdateModel.NewsCategory != NewsCategory.Experience)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Type Experience chỉ có thể dành cho news thuộc loại Experience.");
             }
 
             _mapper.Map(newsUpdateModel, existingNews);

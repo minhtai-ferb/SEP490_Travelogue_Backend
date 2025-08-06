@@ -7,9 +7,10 @@ namespace Travelogue.Repository.Entities;
 
 public sealed class TransactionEntry : BaseEntity
 {
-    public Guid? BookingId { get; set; }
+    // public Guid? BookingId { get; set; }
 
     public Guid? WalletId { get; set; }
+    public Guid? UserId { get; set; }
 
     public string? AccountNumber { get; set; }
     [Column(TypeName = "decimal(10,2)")]
@@ -32,6 +33,9 @@ public sealed class TransactionEntry : BaseEntity
     [ForeignKey("WalletId")]
     public Wallet Wallet { get; set; }
 
-    [ForeignKey("BookingId")]
-    public Booking Booking { get; set; }
+    // [ForeignKey("BookingId")]
+    // public Booking Booking { get; set; }
+
+    [ForeignKey("UserId")]
+    public User User { get; set; }
 }

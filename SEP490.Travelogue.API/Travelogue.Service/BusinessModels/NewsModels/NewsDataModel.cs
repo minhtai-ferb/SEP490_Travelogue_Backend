@@ -18,6 +18,8 @@ public class NewsDataModel : BaseDataModel
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public bool IsHighlighted { get; set; }
+    public TypeExperience? TypeExperience { get; set; }
+    public string? TypeExperienceText { get; set; } = string.Empty;
 
     public List<MediaResponse> Medias { get; set; } = new List<MediaResponse>();
 }

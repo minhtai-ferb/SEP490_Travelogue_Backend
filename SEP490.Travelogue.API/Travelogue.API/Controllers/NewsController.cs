@@ -108,11 +108,12 @@ public class NewsController : ControllerBase
     [HttpGet("experiences")]
     public async Task<IActionResult> GetPagedExperiences(
         [FromQuery] string? title,
+        [FromQuery] Guid? locationId,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
-        var result = await _newsService.GetPagedExperienceWithFilterAsync(title, pageNumber, pageSize, cancellationToken);
+        var result = await _newsService.GetPagedExperienceWithFilterAsync(title, locationId, pageNumber, pageSize, cancellationToken);
 
         return Ok(ResponseModel<List<NewsDataModel>>.OkResponseModel(
             data: result,
