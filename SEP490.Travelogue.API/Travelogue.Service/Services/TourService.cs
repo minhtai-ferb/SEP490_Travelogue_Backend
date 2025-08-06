@@ -439,14 +439,18 @@ public class TourService : ITourService
 
                 var medias = await GetMediaWithoutVideoByIdAsync(tour.Id, cancellationToken: default);
 
-                var createUserName = tour.CreatedBy != null
-                    ? await _unitOfWork.UserRepository.GetUserNameByIdAsync(tour.CreatedBy) ?? "Unknown User"
+                string createUserName = TryParseGuid(tour.CreatedBy, out var createdByGuid)
+                    ? await _unitOfWork.UserRepository.GetUserNameByIdAsync(createdByGuid) ?? "Unknown User"
                     : "Unknown User";
 
-                var lastUpdateUserName = tour.LastUpdatedBy != null
-                    ? await _unitOfWork.UserRepository.GetUserNameByIdAsync(tour.LastUpdatedBy) ?? "Unknown User"
+                string lastUpdateUserName = TryParseGuid(tour.LastUpdatedBy, out var lastUpdatedByGuid)
+                    ? await _unitOfWork.UserRepository.GetUserNameByIdAsync(lastUpdatedByGuid) ?? "Unknown User"
                     : "Unknown User";
 
+                bool TryParseGuid(string? input, out Guid result)
+                {
+                    return Guid.TryParse(input, out result);
+                }
                 tourResponses.Add(new TourResponseDto
                 {
                     TourId = tour.Id,
