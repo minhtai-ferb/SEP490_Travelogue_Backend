@@ -141,7 +141,7 @@ public class LocationService : ILocationService
                 {
                     Id = Guid.NewGuid(),
                     LocationId = newLocation.Id,
-                    MediaUrl = media.Url,
+                    MediaUrl = media.MediaUrl,
                     IsThumbnail = media.IsThumbnail,
                     CreatedBy = currentUserId,
                     LastUpdatedBy = currentUserId,
@@ -2417,10 +2417,10 @@ public class LocationService : ILocationService
 
             foreach (var mediaDto in mediaDtos)
             {
-                string fileName = Path.GetFileName(new Uri(mediaDto.Url).LocalPath);
+                string fileName = Path.GetFileName(new Uri(mediaDto.MediaUrl).LocalPath);
                 string fileType = Path.GetExtension(fileName).TrimStart('.');
 
-                var existingMedia = existingMedias.FirstOrDefault(m => m.MediaUrl == mediaDto.Url);
+                var existingMedia = existingMedias.FirstOrDefault(m => m.MediaUrl == mediaDto.MediaUrl);
 
                 if (existingMedia != null)
                 {
@@ -2435,7 +2435,7 @@ public class LocationService : ILocationService
                     var newMedia = new LocationMedia
                     {
                         LocationId = locationId,
-                        MediaUrl = mediaDto.Url,
+                        MediaUrl = mediaDto.MediaUrl,
                         FileName = fileName,
                         FileType = fileType,
                         SizeInBytes = 0,
