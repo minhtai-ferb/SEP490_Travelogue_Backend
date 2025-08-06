@@ -10,7 +10,7 @@ public class RejectionRequestResponseDto
     public Guid? BookingId { get; set; }
     public string Reason { get; set; } = null!;
     public RejectionRequestStatus Status { get; set; }
-    public string StatusText { get; set; } = null!;
+    public string? StatusText { get; set; } = null!;
     public string? ModeratorComment { get; set; }
     public DateTimeOffset? ReviewedAt { get; set; }
     public Guid? ReviewedBy { get; set; }

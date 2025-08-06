@@ -26,11 +26,11 @@ public class TourController : ControllerBase
     [ProducesResponseType(typeof(ResponseModel<List<TourResponseDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetTours()
+    public async Task<IActionResult> GetTours(TourFilterModel filter)
     {
         try
         {
-            var result = await _tourService.GetAllToursAsync();
+            var result = await _tourService.GetAllToursAsync(filter);
             return Ok(ResponseModel<List<TourResponseDto>>.OkResponseModel(
                 data: result,
                 message: "Tour details retrieved successfully."

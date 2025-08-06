@@ -1,4 +1,5 @@
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.BusinessModels.ReviewModels;
 using Travelogue.Service.BusinessModels.TourGuideModels;
 
@@ -40,4 +41,5 @@ public class TourDetailsResponseDto
     public double AverageRating { get; set; }
     public int TotalReviews { get; set; }
     public List<ReviewResponseDto> Reviews { get; set; } = new List<ReviewResponseDto>();
+    public List<MediaResponse> Medias { get; set; } = new List<MediaResponse>();
 }

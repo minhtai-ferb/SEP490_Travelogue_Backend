@@ -73,8 +73,8 @@ public class OrderService : IOrderService
                     throw CustomExceptionFactory.CreateBadRequestError("Tour guide is not assigned to this tour schedule.");
 
                 startDate = tourSchedule.DepartureDate;
-                endDate = tourSchedule.DepartureDate.AddDays(tourSchedule.TotalDays - 1);
-                totalDays = tourSchedule.TotalDays;
+                endDate = tourSchedule.DepartureDate.AddDays(tourSchedule.Tour.TotalDays - 1);
+                totalDays = tourSchedule.Tour.TotalDays;
 
                 int totalParticipants = request.AdultCount + request.ChildCount;
                 if (totalParticipants <= 0)

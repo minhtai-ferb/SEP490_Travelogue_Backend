@@ -21,18 +21,21 @@ public interface INewsService
     Task<NewsDataModel> AddNewsAsync(NewsCreateModel newsCreateModel, CancellationToken cancellationToken);
     Task UpdateNewsAsync(Guid id, NewsUpdateModel newsUpdateModel, CancellationToken cancellationToken);
     Task DeleteNewsAsync(Guid id, CancellationToken cancellationToken);
-    Task<PagedResult<NewsDataModel>> GetPagedNewsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
+    // Task<PagedResult<NewsDataModel>> GetPagedNewsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<PagedResult<NewsDataModel>> GetPagedNewsWithSearchAsync(string? title, int pageNumber, int pageSize, CancellationToken cancellationToken);
-    Task<NewsMediaResponse> AddNewsWithMediaAsync(NewsCreateWithMediaFileModel newsCreateModel, string? thumbnailSelected, CancellationToken cancellationToken);
-    Task UpdateNewsAsync(Guid id, NewsUpdateWithMediaFileModel newsUpdateModel, string? thumbnailSelected, CancellationToken cancellationToken);
+    // Task<NewsMediaResponse> AddNewsWithMediaAsync(NewsCreateWithMediaFileModel newsCreateModel, string? thumbnailSelected, CancellationToken cancellationToken);
+    // Task UpdateNewsAsync(Guid id, NewsUpdateWithMediaFileModel newsUpdateModel, string? thumbnailSelected, CancellationToken cancellationToken);
     Task<bool> DeleteMediaAsync(Guid id, List<string> deletedImages, CancellationToken cancellationToken);
     //Task<CraftVillageMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
-    Task<NewsMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
+    // Task<NewsMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
     Task<NewsMediaResponse> UploadMediaAsync(
         Guid id,
         List<IFormFile>? imageUploads,
         string? thumbnailSelected,
         CancellationToken cancellationToken);
+
+    Task<NewsDataModel?> AddNewsImagesAsync(Guid newsId, List<MediaDto> mediaList, CancellationToken cancellationToken);
+    Task<NewsDataModel?> RemoveNewsImagesAsync(Guid newsId, List<string> fileNames, CancellationToken cancellationToken);
 
     Task<List<NewsDataModel>> GetNewsByCategoryAsync(NewsCategory? category, CancellationToken cancellationToken);
 }
@@ -45,8 +48,9 @@ public class NewsService : INewsService
     private readonly ITimeService _timeService;
     private readonly ICloudinaryService _cloudinaryService;
     private readonly IEnumService _enumService;
+    private readonly IMediaService _mediaService;
 
-    public NewsService(IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService, ICloudinaryService cloudinaryService, IEnumService enumService)
+    public NewsService(IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService, ICloudinaryService cloudinaryService, IEnumService enumService, IMediaService mediaService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -54,6 +58,7 @@ public class NewsService : INewsService
         _timeService = timeService;
         _cloudinaryService = cloudinaryService;
         _enumService = enumService;
+        _mediaService = mediaService;
     }
 
     public async Task<NewsDataModel> AddNewsAsync(NewsCreateModel newsCreateModel, CancellationToken cancellationToken)
@@ -63,6 +68,18 @@ public class NewsService : INewsService
         {
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
+
+            if (newsCreateModel.LocationId.HasValue)
+            {
+                var location = await _unitOfWork.LocationRepository
+                    .ActiveEntities
+                    .FirstOrDefaultAsync(l => l.Id == newsCreateModel.LocationId.Value, cancellationToken);
+
+                if (location == null)
+                {
+                    throw CustomExceptionFactory.CreateNotFoundError("location");
+                }
+            }
 
             var newNews = _mapper.Map<News>(newsCreateModel);
             newNews.CreatedBy = currentUserId;
@@ -151,7 +168,7 @@ public class NewsService : INewsService
                     .Where(x => x.Id == item.LocationId)
                     .Select(x => x.Name)
                     .FirstOrDefaultAsync(cancellationToken);
-                item.CategoryName = _enumService.GetEnumDisplayName(item.NewsCategory);
+                item.CategoryName = _enumService.GetEnumDisplayName<NewsCategory>(item.NewsCategory);
             }
 
             return result;
@@ -196,7 +213,7 @@ public class NewsService : INewsService
                     .Where(x => x.Id == item.LocationId)
                     .Select(x => x.Name)
                     .FirstOrDefaultAsync(cancellationToken);
-                item.CategoryName = _enumService.GetEnumDisplayName(item.NewsCategory);
+                item.CategoryName = _enumService.GetEnumDisplayName<NewsCategory>(item.NewsCategory);
             }
 
             return result;
@@ -231,8 +248,8 @@ public class NewsService : INewsService
             result.LocationName = existingNews.Location?.Name;
 
             result.CategoryName = result.NewsCategory.HasValue
-    ? _enumService.GetEnumDisplayName(result.NewsCategory.Value)
-    : null;
+                ? _enumService.GetEnumDisplayName<NewsCategory>(result.NewsCategory.Value)
+                : null;
 
             result.Medias = await GetMediaByIdAsync(result.Id, cancellationToken);
 
@@ -268,7 +285,7 @@ public class NewsService : INewsService
                     Description = x.Description,
                     LocationName = x.Location?.Name,
                     CategoryName = x.NewsCategory.HasValue
-                        ? _enumService.GetEnumDisplayName(x.NewsCategory.Value)
+                        ? _enumService.GetEnumDisplayName<NewsCategory>(x.NewsCategory.Value)
                         : null,
                     Medias = media
                 });
@@ -341,7 +358,7 @@ public class NewsService : INewsService
                     .Where(x => x.Id == item.LocationId)
                     .Select(x => x.Name)
                     .FirstOrDefaultAsync(cancellationToken);
-                item.CategoryName = _enumService.GetEnumDisplayName(item.NewsCategory);
+                item.CategoryName = _enumService.GetEnumDisplayName<NewsCategory>(item.NewsCategory);
             }
 
             return result;
@@ -383,7 +400,7 @@ public class NewsService : INewsService
                     .Where(x => x.Id == item.LocationId)
                     .Select(x => x.Name)
                     .FirstOrDefaultAsync(cancellationToken);
-                item.CategoryName = _enumService.GetEnumDisplayName(item.NewsCategory);
+                item.CategoryName = _enumService.GetEnumDisplayName<NewsCategory>(item.NewsCategory);
             }
 
             return result;
@@ -412,6 +429,18 @@ public class NewsService : INewsService
             if (existingNews == null || existingNews.IsDeleted)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("news");
+            }
+
+            if (newsUpdateModel.LocationId.HasValue)
+            {
+                var location = await _unitOfWork.LocationRepository
+                    .ActiveEntities
+                    .FirstOrDefaultAsync(l => l.Id == newsUpdateModel.LocationId.Value, cancellationToken);
+
+                if (location == null)
+                {
+                    throw CustomExceptionFactory.CreateNotFoundError("location");
+                }
             }
 
             _mapper.Map(newsUpdateModel, existingNews);
@@ -942,6 +971,117 @@ public class NewsService : INewsService
         catch (Exception ex)
         {
             await _unitOfWork.RollBackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<NewsDataModel?> AddNewsImagesAsync(Guid newsId, List<MediaDto> mediaList, CancellationToken cancellationToken)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var existingNews = await _unitOfWork.NewsRepository.GetByIdAsync(newsId, cancellationToken);
+            if (existingNews == null || existingNews.IsDeleted)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("news");
+            }
+
+            var hasThumbnail = mediaList.Any(m => m.IsThumbnail);
+            if (hasThumbnail)
+            {
+                // Bỏ đánh dấu thumbnail cũ nếu có
+                var oldThumbnails = await _unitOfWork.NewsMediaRepository.ActiveEntities
+                    .Where(m => m.NewsId == newsId && m.IsThumbnail)
+                    .ToListAsync(cancellationToken);
+
+                foreach (var oldThumb in oldThumbnails)
+                {
+                    oldThumb.IsThumbnail = false;
+                    _unitOfWork.NewsMediaRepository.Update(oldThumb);
+                }
+            }
+
+            foreach (var mediaDto in mediaList)
+            {
+                string fileName = mediaDto.Url.Split('/').Last();
+                string fileType = Path.GetExtension(fileName).TrimStart('.');
+
+                var newMedia = new NewsMedia
+                {
+                    NewsId = newsId,
+                    MediaUrl = mediaDto.Url,
+                    FileName = fileName,
+                    FileType = fileType,
+                    SizeInBytes = 0,
+                    CreatedTime = DateTime.UtcNow,
+                    IsDeleted = false,
+                    IsThumbnail = mediaDto.IsThumbnail
+                };
+
+                await _unitOfWork.NewsMediaRepository.AddAsync(newMedia);
+            }
+
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+
+            return _mapper.Map<NewsDataModel>(existingNews);
+        }
+        catch (CustomException)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<NewsDataModel?> RemoveNewsImagesAsync(Guid newsId, List<string> fileNames, CancellationToken cancellationToken)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var existingNews = await _unitOfWork.NewsRepository.GetByIdAsync(newsId, cancellationToken);
+            if (existingNews == null || existingNews.IsDeleted)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("news");
+            }
+
+            var medias = await _unitOfWork.NewsMediaRepository.ActiveEntities
+                .Where(m => m.NewsId == newsId && fileNames.Contains(m.FileName))
+                .ToListAsync(cancellationToken);
+
+            if (!medias.Any())
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("media");
+            }
+
+            var urlsToDelete = new List<string>();
+
+            foreach (var media in medias)
+            {
+                media.IsDeleted = true;
+                media.DeletedTime = DateTime.UtcNow;
+                urlsToDelete.Add(media.MediaUrl);
+                _unitOfWork.NewsMediaRepository.Update(media);
+            }
+
+            await _mediaService.DeleteImagesAsync(urlsToDelete);
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+
+            return _mapper.Map<NewsDataModel>(existingNews);
+        }
+        catch (CustomException)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }

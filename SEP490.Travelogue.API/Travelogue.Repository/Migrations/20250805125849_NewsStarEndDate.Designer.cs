@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Travelogue.Repository.Data;
 
@@ -11,9 +12,11 @@ using Travelogue.Repository.Data;
 namespace Travelogue.Repository.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250805125849_NewsStarEndDate")]
+    partial class NewsStarEndDate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2723,6 +2726,10 @@ namespace Travelogue.Repository.Migrations
                     b.Property<int>("MaxParticipant")
                         .HasColumnType("int")
                         .HasColumnName("max_participant");
+
+                    b.Property<int>("TotalDays")
+                        .HasColumnType("int")
+                        .HasColumnName("total_days");
 
                     b.Property<Guid>("TourId")
                         .HasColumnType("char(36)")

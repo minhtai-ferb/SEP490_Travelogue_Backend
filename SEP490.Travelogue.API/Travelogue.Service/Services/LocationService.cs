@@ -323,7 +323,11 @@ public class LocationService : ILocationService
                 cuisine.LastUpdatedTime = DateTime.UtcNow;
             }
 
+            await UpdateLocationMediasAsync(locationId, dto.MediaDtos, cancellationToken);
+
             await _unitOfWork.SaveAsync();
+
+            await transaction.CommitAsync(cancellationToken);
 
             var model = new LocationDataModel
             {
@@ -341,7 +345,6 @@ public class LocationService : ILocationService
                 Medias = await GetMediaWithoutVideoByIdAsync(location.Id, cancellationToken),
             };
 
-            await transaction.CommitAsync(cancellationToken);
             return model;
         }
         catch (CustomException)
@@ -492,7 +495,11 @@ public class LocationService : ILocationService
                 location.CraftVillage.LastUpdatedTime = DateTime.UtcNow;
             }
 
+            await UpdateLocationMediasAsync(locationId, dto.MediaDtos, cancellationToken);
+
             await _unitOfWork.SaveAsync();
+
+            await transaction.CommitAsync(cancellationToken);
 
             var model = new LocationDataModel
             {
@@ -509,8 +516,6 @@ public class LocationService : ILocationService
                 DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(location.DistrictId ?? Guid.Empty),
                 Medias = await GetMediaWithoutVideoByIdAsync(location.Id, cancellationToken),
             };
-
-            await transaction.CommitAsync(cancellationToken);
             return model;
         }
         catch (CustomException)
@@ -874,6 +879,78 @@ public class LocationService : ILocationService
                 location.HistoricalLocation.TypeHistoricalLocation = dto.TypeHistoricalLocation;
                 location.HistoricalLocation.LastUpdatedTime = DateTime.UtcNow;
             }
+
+            await UpdateLocationMediasAsync(locationId, dto.MediaDtos, cancellationToken);
+
+            await _unitOfWork.SaveAsync();
+
+            await transaction.CommitAsync(cancellationToken);
+
+            var model = new LocationDataModel
+            {
+                Id = location.Id,
+                Name = location.Name,
+                Description = location.Description,
+                Content = location.Content,
+                Latitude = location.Latitude,
+                Longitude = location.Longitude,
+                OpenTime = location.OpenTime,
+                CloseTime = location.CloseTime,
+                Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(location.Id),
+                DistrictId = location.DistrictId,
+                DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(location.DistrictId ?? Guid.Empty),
+                Medias = await GetMediaWithoutVideoByIdAsync(location.Id, cancellationToken),
+            };
+
+            return model;
+        }
+        catch (CustomException)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<LocationDataModel> UpdateScenicSpotDataAsync(Guid locationId, LocationUpdateDto dto, CancellationToken cancellationToken = default)
+    {
+        if (dto == null)
+        {
+            throw CustomExceptionFactory.CreateBadRequestError("Craft village data cannot be null.");
+        }
+
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var location = await _unitOfWork.LocationRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(l => l.Id == locationId, cancellationToken);
+
+            if (location == null)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Location not found.");
+            }
+
+            if (location.LocationType != LocationType.HistoricalSite)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("The specified location is not a Craft Village.");
+            }
+
+            location.Name = dto.Name;
+            location.Description = dto.Description;
+            location.Content = dto.Content;
+            location.Address = dto.Address;
+            location.Latitude = dto.Latitude;
+            location.Longitude = dto.Longitude;
+            location.OpenTime = dto.OpenTime;
+            location.CloseTime = dto.CloseTime;
+            location.DistrictId = dto.DistrictId;
+            location.LocationType = LocationType.HistoricalSite;
+            location.LastUpdatedTime = DateTime.UtcNow;
 
             await _unitOfWork.SaveAsync();
 
@@ -2324,6 +2401,86 @@ public class LocationService : ILocationService
             location.Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(location.Id);
 
             // location.HeritageRankName = _enumService.GetEnumDisplayName(location.HeritageRank);
+        }
+    }
+
+    private async Task UpdateLocationMediasAsync(Guid locationId, List<MediaDto> mediaDtos, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (mediaDtos == null || !mediaDtos.Any())
+                return;
+
+            var existingMedias = await _unitOfWork.LocationMediaRepository.ActiveEntities
+                .Where(m => m.LocationId == locationId)
+                .ToListAsync(cancellationToken);
+
+            foreach (var mediaDto in mediaDtos)
+            {
+                string fileName = Path.GetFileName(new Uri(mediaDto.Url).LocalPath);
+                string fileType = Path.GetExtension(fileName).TrimStart('.');
+
+                var existingMedia = existingMedias.FirstOrDefault(m => m.MediaUrl == mediaDto.Url);
+
+                if (existingMedia != null)
+                {
+                    if (existingMedia.IsThumbnail != mediaDto.IsThumbnail)
+                    {
+                        existingMedia.IsThumbnail = mediaDto.IsThumbnail;
+                        _unitOfWork.LocationMediaRepository.Update(existingMedia);
+                    }
+                }
+                else
+                {
+                    var newMedia = new LocationMedia
+                    {
+                        LocationId = locationId,
+                        MediaUrl = mediaDto.Url,
+                        FileName = fileName,
+                        FileType = fileType,
+                        SizeInBytes = 0,
+                        IsThumbnail = mediaDto.IsThumbnail,
+                        CreatedTime = DateTime.UtcNow,
+                        IsDeleted = false
+                    };
+
+                    await _unitOfWork.LocationMediaRepository.AddAsync(newMedia);
+                }
+            }
+
+            var allMediasAfterUpdate = await _unitOfWork.LocationMediaRepository.ActiveEntities
+                .Where(m => m.LocationId == locationId)
+                .ToListAsync(cancellationToken);
+
+            var thumbnails = allMediasAfterUpdate.Where(m => m.IsThumbnail).ToList();
+
+            if (!thumbnails.Any())
+            {
+                // kh có ảnh nào là thumbnail, chọn ảnh đầu tiên
+                var first = allMediasAfterUpdate.FirstOrDefault();
+                if (first != null)
+                {
+                    first.IsThumbnail = true;
+                    _unitOfWork.LocationMediaRepository.Update(first);
+                }
+            }
+            else if (thumbnails.Count > 1)
+            {
+                // giữ lại 1 ảnh đầu tiên làm thumbnail
+                foreach (var extraThumb in thumbnails.Skip(1))
+                {
+                    extraThumb.IsThumbnail = false;
+                    _unitOfWork.LocationMediaRepository.Update(extraThumb);
+                }
+            }
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
