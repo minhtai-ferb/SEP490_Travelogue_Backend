@@ -1123,19 +1123,20 @@ public class LocationService : ILocationService
             if (cuisine != null)
             {
                 locationDataModel.Cuisine = _mapper.Map<CuisineDataModel>(cuisine);
-                locationDataModel.Cuisine.CuisineId = cuisine.Id;
+                // locationDataModel.Cuisine.CuisineId = cuisine.Id;
             }
 
             if (craftVillage != null)
             {
                 locationDataModel.CraftVillage = _mapper.Map<CraftVillageDataModel>(craftVillage);
-                locationDataModel.CraftVillage.CraftVillageId = craftVillage.Id;
+                // locationDataModel.CraftVillage.CraftVillageId = craftVillage.Id;
             }
 
             if (historicalLocation != null)
             {
                 locationDataModel.HistoricalLocation = _mapper.Map<HistoricalLocationDataModel>(historicalLocation);
-                locationDataModel.HistoricalLocation.HistoricalLocationId = historicalLocation.Id;
+                // locationDataModel.HistoricalLocation.HistoricalLocationId = historicalLocation.Id;
+                locationDataModel.HistoricalLocation.HeritageRankName = _enumService.GetEnumDisplayName<HeritageRank>(historicalLocation.HeritageRank) ?? string.Empty;
             }
 
             locationDataModel.Medias = await GetMediaWithoutVideoByIdAsync(id, cancellationToken);

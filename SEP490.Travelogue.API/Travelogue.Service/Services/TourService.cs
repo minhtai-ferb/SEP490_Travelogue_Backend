@@ -386,16 +386,6 @@ public class TourService : ITourService
                 toursQuery = toursQuery.Where(t => t.TourSchedules.Any(s => s.AdultPrice <= filter.PriceMax.Value));
             }
 
-            if (filter.CreatedTime != default)
-            {
-                toursQuery = toursQuery.Where(t => t.CreatedTime >= filter.CreatedTime);
-            }
-
-            if (filter.LastUpdatedTime != default)
-            {
-                toursQuery = toursQuery.Where(t => t.LastUpdatedTime >= filter.LastUpdatedTime);
-            }
-
             var tours = await toursQuery.ToListAsync();
 
             if (!tours.Any())
@@ -449,6 +439,14 @@ public class TourService : ITourService
 
                 var medias = await GetMediaWithoutVideoByIdAsync(tour.Id, cancellationToken: default);
 
+                var createUserName = tour.CreatedBy != null
+                    ? await _unitOfWork.UserRepository.GetUserNameByIdAsync(tour.CreatedBy) ?? "Unknown User"
+                    : "Unknown User";
+
+                var lastUpdateUserName = tour.LastUpdatedBy != null
+                    ? await _unitOfWork.UserRepository.GetUserNameByIdAsync(tour.LastUpdatedBy) ?? "Unknown User"
+                    : "Unknown User";
+
                 tourResponses.Add(new TourResponseDto
                 {
                     TourId = tour.Id,
@@ -467,6 +465,12 @@ public class TourService : ITourService
                     Status = tour.Status,
                     TotalReviews = reviewsForTour.Count,
                     AverageRating = averageRating,
+                    CreatedBy = tour.CreatedBy,
+                    CreatedByName = createUserName,
+                    CreatedTime = tour.CreatedTime,
+                    LastUpdatedBy = tour.LastUpdatedBy,
+                    LastUpdatedByName = lastUpdateUserName,
+                    LastUpdatedTime = tour.LastUpdatedTime,
                     Medias = medias ?? new List<MediaResponse>(),
                 });
             }
