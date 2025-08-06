@@ -18,6 +18,8 @@ public interface IReviewService
     Task<List<ReviewResponseDto>> GetReviewsByWorkshopIdAsync(Guid workshopId, CancellationToken cancellationToken);
     Task<List<ReviewResponseDto>> GetReviewsByTourGuideIdAsync(Guid tourGuideId, CancellationToken cancellationToken);
     Task<bool> DeleteReviewAsync(Guid reviewId, Guid userId, CancellationToken cancellationToken);
+    Task<List<ReviewResponseDto>> GetMyReviewsAsync(int? rating = null, CancellationToken cancellationToken = default);
+    Task<List<ReviewResponseDto>> GetReviewsByIdAsync(Guid id, CancellationToken cancellationToken);
 }
 
 public class ReviewService : IReviewService
@@ -393,6 +395,87 @@ public class ReviewService : IReviewService
         catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<ReviewResponseDto>> GetMyReviewsAsync(int? rating = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            if (string.IsNullOrWhiteSpace(currentUserId.ToString()))
+                throw CustomExceptionFactory.CreateForbiddenError();
+
+            var query = _unitOfWork.ReviewRepository.ActiveEntities
+                .Include(r => r.User)
+                .Include(r => r.Booking)
+                .Where(r => r.UserId == currentUserId);
+
+            if (rating.HasValue)
+            {
+                query = query.Where(r => r.Rating == rating.Value);
+            }
+
+            var reviews = await query.ToListAsync(cancellationToken);
+
+            return reviews.Select(r => new ReviewResponseDto
+            {
+                Id = r.Id,
+                UserId = r.UserId,
+                UserName = r.User?.FullName ?? string.Empty,
+                BookingId = r.BookingId,
+                TourId = r.Booking.TourId,
+                WorkshopId = r.Booking.WorkshopId,
+                TourGuideId = r.Booking.TourGuideId,
+                Comment = r.Comment,
+                Rating = r.Rating,
+                CreatedAt = r.CreatedTime,
+                UpdatedAt = r.LastUpdatedTime
+            }).ToList();
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<ReviewResponseDto>> GetReviewsByIdAsync(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var reviews = await _unitOfWork.ReviewRepository.ActiveEntities
+                .Include(r => r.User)
+                .Include(r => r.Booking)
+                .Where(r => r.Id == id)
+                .ToListAsync(cancellationToken);
+
+            return reviews.Select(r => new ReviewResponseDto
+            {
+                Id = r.Id,
+                UserId = r.UserId,
+                UserName = r.User?.FullName ?? string.Empty,
+                BookingId = r.BookingId,
+                TourId = r.Booking.TourId,
+                WorkshopId = r.Booking.WorkshopId,
+                TourGuideId = r.Booking.TourGuideId,
+                Comment = r.Comment,
+                Rating = r.Rating,
+                CreatedAt = r.CreatedTime,
+                UpdatedAt = r.LastUpdatedTime
+            }).ToList();
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }

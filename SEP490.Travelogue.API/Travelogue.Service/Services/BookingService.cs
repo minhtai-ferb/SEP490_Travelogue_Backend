@@ -94,7 +94,7 @@ public class BookingService : IBookingService
                 Status = BookingStatus.Pending,
                 BookingDate = DateTimeOffset.UtcNow,
                 StartDate = tourSchedule.DepartureDate,
-                EndDate = tourSchedule.DepartureDate.AddDays(tourSchedule.TotalDays - 1),
+                EndDate = tourSchedule.DepartureDate.AddDays(tourSchedule.Tour.TotalDays - 1),
                 PromotionId = promotion?.Id,
                 OriginalPrice = originalPrice,
                 DiscountAmount = discountAmount,
@@ -137,9 +137,9 @@ public class BookingService : IBookingService
                 WorkshopId = booking.WorkshopId,
                 PaymentLinkId = booking.PaymentLinkId,
                 Status = booking.Status,
-                StatusText = _enumService.GetEnumDisplayName(booking.Status),
+                StatusText = _enumService.GetEnumDisplayName<BookingStatus>(booking.Status),
                 BookingType = booking.BookingType,
-                BookingTypeText = _enumService.GetEnumDisplayName(booking.BookingType),
+                BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(booking.BookingType),
                 BookingDate = booking.BookingDate,
                 StartDate = booking.StartDate,
                 EndDate = booking.EndDate,
@@ -237,7 +237,7 @@ public class BookingService : IBookingService
                 });
             }
 
-            workshopSchedule.CurrentBooked += totalParticipants;
+            // workshopSchedule.CurrentBooked += totalParticipants;
 
             await _unitOfWork.BookingRepository.AddAsync(booking);
             await _unitOfWork.SaveAsync();
@@ -254,9 +254,9 @@ public class BookingService : IBookingService
                 WorkshopScheduleId = booking.WorkshopScheduleId,
                 PaymentLinkId = booking.PaymentLinkId,
                 Status = booking.Status,
-                StatusText = _enumService.GetEnumDisplayName(booking.Status),
+                StatusText = _enumService.GetEnumDisplayName<BookingStatus>(booking.Status),
                 BookingType = booking.BookingType,
-                BookingTypeText = _enumService.GetEnumDisplayName(booking.BookingType),
+                BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(booking.BookingType),
                 BookingDate = booking.BookingDate,
                 StartDate = booking.StartDate,
                 EndDate = booking.EndDate,
@@ -378,22 +378,6 @@ public class BookingService : IBookingService
                 });
             }
 
-            // Gán lịch cho TourGuide 
-            if (tourGuide != null)
-            {
-                foreach (var date in dateRange)
-                {
-                    var schedule = new TourGuideSchedule
-                    {
-                        TourGuideId = tourGuide.Id,
-                        Date = date,
-                        Note = dto.Note,
-                        Booking = booking
-                    };
-                    await _unitOfWork.TourGuideScheduleRepository.AddAsync(schedule);
-                }
-            }
-
             await _unitOfWork.BookingRepository.AddAsync(booking);
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync();
@@ -405,9 +389,9 @@ public class BookingService : IBookingService
                 TripPlanId = booking.TourId,
                 TourGuideId = booking.TourGuideId,
                 Status = booking.Status,
-                StatusText = _enumService.GetEnumDisplayName(booking.Status),
+                StatusText = _enumService.GetEnumDisplayName<BookingStatus>(booking.Status),
                 BookingType = booking.BookingType,
-                BookingTypeText = _enumService.GetEnumDisplayName(booking.BookingType),
+                BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(booking.BookingType),
                 BookingDate = booking.BookingDate,
                 StartDate = booking.StartDate,
                 EndDate = booking.EndDate,
@@ -825,9 +809,9 @@ public class BookingService : IBookingService
                 WorkshopScheduleId = b.WorkshopScheduleId,
                 PaymentLinkId = b.PaymentLinkId,
                 Status = b.Status,
-                StatusText = _enumService.GetEnumDisplayName(b.Status),
+                StatusText = _enumService.GetEnumDisplayName<BookingStatus>(b.Status),
                 BookingType = b.BookingType,
-                BookingTypeText = _enumService.GetEnumDisplayName(b.BookingType),
+                BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(b.BookingType),
                 BookingDate = b.BookingDate,
                 CancelledAt = b.CancelledAt,
                 PromotionId = b.PromotionId,
@@ -915,9 +899,9 @@ public class BookingService : IBookingService
                 WorkshopScheduleId = booking.WorkshopScheduleId,
                 PaymentLinkId = booking.PaymentLinkId,
                 Status = booking.Status,
-                StatusText = _enumService.GetEnumDisplayName(booking.Status),
+                StatusText = _enumService.GetEnumDisplayName<BookingStatus>(booking.Status),
                 BookingType = booking.BookingType,
-                BookingTypeText = _enumService.GetEnumDisplayName(booking.BookingType),
+                BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(booking.BookingType),
                 BookingDate = booking.BookingDate,
                 CancelledAt = booking.CancelledAt,
                 PromotionId = booking.PromotionId,

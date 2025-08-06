@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Travelogue.Repository.Entities;
+using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.CraftVillageModels;
 using Travelogue.Service.BusinessModels.CuisineModels;
 using Travelogue.Service.BusinessModels.HistoricalLocationModels;
@@ -48,6 +49,6 @@ public class HeritageRankDisplayNameResolver : IValueResolver<HistoricalLocation
 
     public string Resolve(HistoricalLocation source, HistoricalLocationDataModel destination, string destMember, ResolutionContext context)
     {
-        return _enumService.GetEnumDisplayName(source.HeritageRank);
+        return _enumService.GetEnumDisplayName<HeritageRank>(source.HeritageRank) ?? string.Empty;
     }
 }

@@ -1,7 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Travelogue.Service.Commons.Interfaces;
-using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Repository.Bases.Responses;
 
@@ -18,25 +16,46 @@ public class MediaController : ControllerBase
         _mediaService = mediaService;
     }
 
-    [HttpPost("upload")]
+    [HttpPost("upload-image")]
     public async Task<IActionResult> UploadImage([FromForm] IFormFile image)
     {
         var response = await _mediaService.UploadImageAsync(image);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: response,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "image")
         ));
     }
 
-    [HttpPost("upload-multiple")]
-    public async Task<IActionResult> UploadMultiple([FromForm] List<IFormFile> images)
+    [HttpPost("upload-multiple-images")]
+    public async Task<IActionResult> UploadMultipleImages([FromForm] List<IFormFile> images)
     {
         var response = await _mediaService.UploadMultipleImagesAsync(images);
         return Ok(ResponseModel<object>.OkResponseModel(
-             data: response,
-             message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
-         ));
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "images")
+        ));
     }
+
+    [HttpPost("upload-certification")]
+    public async Task<IActionResult> UploadCertification([FromForm] IFormFile certification)
+    {
+        var response = await _mediaService.UploadDocumentAsync(certification);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "certification")
+        ));
+    }
+
+    [HttpPost("upload-multiple-certifications")]
+    public async Task<IActionResult> UploadMultipleCertifications([FromForm] List<IFormFile> certifications)
+    {
+        var response = await _mediaService.UploadMultipleDocumentsAsync(certifications);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "certifications")
+        ));
+    }
+
 
     [HttpDelete("delete/{fileName}")]
     public async Task<IActionResult> DeleteImage(string fileName)

@@ -5,6 +5,7 @@ using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.BusinessModels.ReviewModels;
 using Travelogue.Service.BusinessModels.TourModels;
 using Travelogue.Service.BusinessModels.WorkshopModels;
@@ -83,10 +84,8 @@ public class WorkshopService : IWorkshopService
                 return new List<WorkshopResponseDto>();
             }
 
-            // Lấy tất cả workshopId
             var workshopIds = workshopItems.Select(w => w.Id).ToList();
 
-            // Lấy tất cả review liên quan tới các booking có WorkshopId nằm trong danh sách
             var allReviews = await _unitOfWork.ReviewRepository.ActiveEntities
                 .Include(r => r.Booking)
                 .Where(r => r.Booking.WorkshopId.HasValue && workshopIds.Contains(r.Booking.WorkshopId.Value))
@@ -103,6 +102,8 @@ public class WorkshopService : IWorkshopService
                 var averageRating = reviewsForWorkshop.Any() ? reviewsForWorkshop.Average(r => r.Rating) : 0.0;
                 var totalReviews = reviewsForWorkshop.Count;
 
+                var medias = await GetMediaWithoutVideoByIdAsync(workshop.Id, cancellationToken: default);
+
                 var response = new WorkshopResponseDto
                 {
                     Id = workshop.Id,
@@ -114,6 +115,7 @@ public class WorkshopService : IWorkshopService
                     CraftVillageName = workshop.CraftVillage?.Location?.Name,
                     AverageRating = Math.Round(averageRating, 2),
                     TotalReviews = totalReviews,
+                    Medias = medias ?? new List<MediaResponse>(),
                 };
 
                 workshopResponses.Add(response);
@@ -182,11 +184,18 @@ public class WorkshopService : IWorkshopService
     {
         try
         {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+            var currentTime = _timeService.SystemTimeNow;
+
+            var isValidRole = _userContextService.HasAnyRole(AppRole.CRAFT_VILLAGE_OWNER);
+            if (!isValidRole)
+                throw CustomExceptionFactory.CreateForbiddenError();
+
             if (string.IsNullOrWhiteSpace(dto.Name))
                 throw CustomExceptionFactory.CreateBadRequestError("Tên workshop là bắt buộc.");
 
-            if (dto.CraftVillageId == Guid.Empty)
-                throw CustomExceptionFactory.CreateBadRequestError("ID làng nghề là bắt buộc.");
+            // if (dto.CraftVillageId == Guid.Empty)
+            //     throw CustomExceptionFactory.CreateBadRequestError("ID làng nghề là bắt buộc.");
 
             var workshop = await _unitOfWork.WorkshopRepository
                 .ActiveEntities
@@ -197,8 +206,11 @@ public class WorkshopService : IWorkshopService
 
             var craftVillage = await _unitOfWork.CraftVillageRepository
                 .ActiveEntities
-                .FirstOrDefaultAsync(c => c.Id == dto.CraftVillageId)
+                .FirstOrDefaultAsync(c => c.Id == workshop.CraftVillageId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Craft village");
+
+            if (craftVillage.OwnerId != currentUserId)
+                throw CustomExceptionFactory.CreateForbiddenError();
 
             if (workshop.Status == WorkshopStatus.Rejected)
                 throw new InvalidOperationException("Không thể cập nhật một workshop đã bị hủy.");
@@ -211,13 +223,13 @@ public class WorkshopService : IWorkshopService
                 changes.Add($"Mô tả đã thay đổi từ '{workshop.Description}' thành '{dto.Description}'");
             if (workshop.Content != dto.Content)
                 changes.Add($"Nội dung đã thay đổi từ '{workshop.Content}' thành '{dto.Content}'");
-            if (workshop.CraftVillageId != dto.CraftVillageId)
-                changes.Add($"CraftVillageId đã thay đổi từ '{workshop.CraftVillageId}' thành '{dto.CraftVillageId}'");
+            // if (workshop.CraftVillageId != dto.CraftVillageId)
+            //     changes.Add($"CraftVillageId đã thay đổi từ '{workshop.CraftVillageId}' thành '{dto.CraftVillageId}'");
 
             workshop.Name = dto.Name;
             workshop.Description = dto.Description;
             workshop.Content = dto.Content;
-            workshop.CraftVillageId = dto.CraftVillageId;
+            // workshop.CraftVillageId = dto.CraftVillageId;
             workshop.LastUpdatedTime = DateTimeOffset.UtcNow;
 
             using (var transaction = await _unitOfWork.BeginTransactionAsync())
@@ -271,6 +283,13 @@ public class WorkshopService : IWorkshopService
 
     public async Task<WorkshopResponseDto> ConfirmWorkshopAsync(Guid workshopId, ConfirmWorkshopDto dto)
     {
+        var currentUserId = _userContextService.GetCurrentUserId();
+        var currentTime = _timeService.SystemTimeNow;
+
+        var isValidRole = _userContextService.HasAnyRole(AppRole.MODERATOR, AppRole.ADMIN);
+        if (!isValidRole)
+            throw CustomExceptionFactory.CreateForbiddenError();
+
         var workshop = await _unitOfWork.WorkshopRepository
             .ActiveEntities
             .Include(w => w.WorkshopActivities)
@@ -360,20 +379,36 @@ public class WorkshopService : IWorkshopService
 
     public async Task<WorkshopDetailsResponseDto> GetWorkshopDetailsAsync(Guid workshopId, Guid? scheduleId = null)
     {
-        var workshop = await _unitOfWork.WorkshopRepository
-            .ActiveEntities
-            .Include(w => w.CraftVillage)
-                .ThenInclude(w => w.Location)
-            .Include(w => w.WorkshopActivities)
-            .Include(w => w.WorkshopSchedules)
-            .Include(w => w.PromotionApplicables)
-                .ThenInclude(p => p.Promotion)
-            .Include(w => w.Bookings)
-                .ThenInclude(b => b.User)
-            .FirstOrDefaultAsync(w => w.Id == workshopId)
+        var workshop = await _unitOfWork.WorkshopRepository.ActiveEntities
+            .Where(w => w.Id == workshopId)
+            .Select(w => new
+            {
+                Workshop = w,
+                CraftVillageName = w.CraftVillage.Location.Name
+            })
+            .FirstOrDefaultAsync()
             ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
 
-        var activeSchedules = workshop.WorkshopSchedules.Where(s => !s.IsDeleted).ToList();
+        var activeSchedules = await _unitOfWork.WorkshopScheduleRepository.ActiveEntities
+            .Where(s => s.WorkshopId == workshopId && !s.IsDeleted)
+            .ToListAsync();
+
+        var now = DateTime.UtcNow;
+        var activePromotions = await _unitOfWork.PromotionApplicableRepository.ActiveEntities
+            .Where(p => p.WorkshopId == workshopId
+                && !p.IsDeleted
+                && p.Promotion != null
+                && p.Promotion.StartDate <= now
+                && p.Promotion.EndDate >= now)
+            .Select(p => new PromotionDto
+            {
+                Id = p.Promotion.Id,
+                Name = p.Promotion.PromotionName,
+                DiscountPercentage = p.Promotion.DiscountType == DiscountType.Percentage ? p.Promotion.DiscountValue : 0,
+                StartDate = p.Promotion.StartDate,
+                EndDate = p.Promotion.EndDate
+            })
+            .ToListAsync();
 
         decimal adultPrice, childrenPrice;
         if (scheduleId.HasValue)
@@ -391,30 +426,14 @@ public class WorkshopService : IWorkshopService
             childrenPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.ChildrenPrice) : 0m;
         }
 
-        var activePromotions = workshop.PromotionApplicables
-            .Where(p => !p.IsDeleted && p.Promotion != null
-                        && p.Promotion.StartDate <= DateTime.UtcNow
-                        && p.Promotion.EndDate >= DateTime.UtcNow)
-            .Select(p => new PromotionDto
-            {
-                Id = p.Promotion.Id,
-                Name = p.Promotion.PromotionName,
-                DiscountPercentage = p.Promotion.DiscountType == DiscountType.Percentage ? p.Promotion.DiscountValue : 0,
-                StartDate = p.Promotion.StartDate,
-                EndDate = p.Promotion.EndDate
-            })
-            .ToList();
-
         var isDiscount = activePromotions.Any();
         var maxDiscount = isDiscount ? activePromotions.Max(p => p.DiscountPercentage) : 0;
         var finalPrice = adultPrice * (1 - maxDiscount / 100);
 
-        var dayDetails = BuildDayDetails(workshop);
-
         var reviews = await _unitOfWork.ReviewRepository.ActiveEntities
+            .Where(r => r.Booking.WorkshopId == workshopId && !r.IsDeleted)
             .Include(r => r.User)
             .Include(r => r.Booking)
-            .Where(r => r.Booking.WorkshopId == workshopId && !r.IsDeleted)
             .ToListAsync();
 
         double averageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0.0;
@@ -432,15 +451,17 @@ public class WorkshopService : IWorkshopService
             WorkshopId = r.Booking?.WorkshopId
         }).ToList();
 
+        var medias = await GetMediaWithoutVideoByIdAsync(workshopId, cancellationToken: default);
+
         var response = new WorkshopDetailsResponseDto
         {
-            WorkshopId = workshop.Id,
-            Name = workshop.Name,
-            Description = workshop.Description,
-            Content = workshop.Content,
-            CraftVillageId = workshop.CraftVillageId,
-            CraftVillageName = workshop.CraftVillage?.Location?.Name,
-            Status = workshop.Status,
+            WorkshopId = workshop.Workshop.Id,
+            Name = workshop.Workshop.Name,
+            Description = workshop.Workshop.Description,
+            Content = workshop.Workshop.Content,
+            CraftVillageId = workshop.Workshop.CraftVillageId,
+            CraftVillageName = workshop.CraftVillageName,
+            Status = workshop.Workshop.Status,
             Schedules = activeSchedules.Select(s => new ScheduleResponseDto
             {
                 ScheduleId = s.Id,
@@ -452,10 +473,12 @@ public class WorkshopService : IWorkshopService
                 ChildrenPrice = s.ChildrenPrice,
                 Notes = s.Notes
             }).ToList(),
-            Days = dayDetails,
+            Days = BuildDayDetails(workshop.Workshop),
             AverageRating = Math.Round(averageRating, 2),
             TotalReviews = totalReviews,
-            Reviews = reviewDtos
+            Reviews = reviewDtos,
+            Medias = medias ?? new List<MediaResponse>(),
+            Promotions = activePromotions
         };
 
         return response;
@@ -502,7 +525,6 @@ public class WorkshopService : IWorkshopService
                 "Cập nhật trạng thái workshop",
                 "Cập nhật trạng thái workshop"
             );
-
 
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);
@@ -1382,6 +1404,25 @@ public class WorkshopService : IWorkshopService
         {
             return new List<WorkshopMedia>();
         }
+    }
+
+    public async Task<List<MediaResponse>> GetMediaWithoutVideoByIdAsync(Guid workshopId, CancellationToken cancellationToken)
+    {
+        var locationMedias = await _unitOfWork.WorkshopMediaRepository
+            .ActiveEntities
+            .Where(em => em.WorkshopId == workshopId && !em.IsDeleted)
+            .Where(em => !EF.Functions.Like(em.FileType, "%video%"))
+            .ToListAsync(cancellationToken);
+
+        return locationMedias.Select(x => new MediaResponse
+        {
+            MediaUrl = x.MediaUrl,
+            FileName = x.FileName ?? string.Empty,
+            FileType = x.FileType,
+            IsThumbnail = x.IsThumbnail,
+            SizeInBytes = x.SizeInBytes,
+            CreatedTime = x.CreatedTime
+        }).ToList();
     }
 
     #endregion

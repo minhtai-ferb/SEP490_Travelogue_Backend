@@ -1,4 +1,5 @@
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.MediaModel;
 
 namespace Travelogue.Service.BusinessModels.WorkshopModels;
 
@@ -29,4 +30,5 @@ public class WorkshopResponseDto
     }
     public double AverageRating { get; set; }
     public int TotalReviews { get; set; }
+    public List<MediaResponse> Medias { get; set; } = new List<MediaResponse>();
 }

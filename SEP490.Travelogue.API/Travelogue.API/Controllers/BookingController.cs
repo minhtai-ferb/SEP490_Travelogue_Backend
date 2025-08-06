@@ -136,5 +136,25 @@ namespace Travelogue.API.Controllers
                 message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "review")
             ));
         }
+
+        [HttpGet("my-reviews")]
+        public async Task<IActionResult> GetMyReviewsAsync([FromQuery] int? rating, CancellationToken cancellationToken = default)
+        {
+            var result = await _reviewService.GetMyReviewsAsync(rating, cancellationToken);
+            return Ok(ResponseModel<object>.OkResponseModel(
+                data: result,
+                message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "reviews")
+            ));
+        }
+
+        [HttpGet("reviews/{id}")]
+        public async Task<IActionResult> GetReviewsByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var result = await _reviewService.GetReviewsByIdAsync(id, cancellationToken);
+            return Ok(ResponseModel<object>.OkResponseModel(
+                data: result,
+                message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "reviews")
+            ));
+        }
     }
 }

@@ -16,9 +16,9 @@ public sealed class TourSchedule : BaseEntity
 
     public int CurrentBooked { get; set; } = 0;
 
-    [Required]
-    [Range(1, int.MaxValue)]
-    public int TotalDays { get; set; }
+    // [Required]
+    // [Range(1, int.MaxValue)]
+    // public int TotalDays { get; set; }
 
     [Range(0, double.MaxValue)]
     public decimal AdultPrice { get; set; }

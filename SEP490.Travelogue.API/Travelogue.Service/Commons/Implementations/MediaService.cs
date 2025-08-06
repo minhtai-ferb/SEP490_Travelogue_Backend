@@ -10,19 +10,29 @@ public class MediaService : IMediaService
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ITimeService _timeService;
     private readonly string _uploadPath;
+    private readonly string _documentUploadPath;
+
     private readonly long _maxFileSize = 10 * 1024 * 1024; // 10MB 
     private readonly string[] _allowedExtensions = { ".jpg", ".jpeg", ".png", ".gif" };
+    private readonly string[] _allowedImageExtensions = { ".jpg", ".jpeg", ".png", ".gif" };
+    private readonly string[] _allowedDocumentExtensions = { ".pdf", ".doc", ".docx", ".xls", ".xlsx" };
 
     public MediaService(IHttpContextAccessor httpContextAccessor, ITimeService timeService)
     {
         _httpContextAccessor = httpContextAccessor;
         _timeService = timeService;
         _uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "images");
+        _documentUploadPath = Path.Combine(Directory.GetCurrentDirectory(), "documents");
 
         // Ensure upload directory exists
         if (!Directory.Exists(_uploadPath))
         {
             Directory.CreateDirectory(_uploadPath);
+        }
+
+        if (!Directory.Exists(_documentUploadPath))
+        {
+            Directory.CreateDirectory(_documentUploadPath);
         }
     }
 
@@ -38,6 +48,56 @@ public class MediaService : IMediaService
             await SaveFileAsync(image, filePath);
 
             return CreateMediaResponse_2(fileName, image);
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<string> UploadDocumentAsync(IFormFile document)
+    {
+        try
+        {
+            ValidateDocumentFile(document);
+
+            var fileName = GenerateUniqueFileName(document.FileName);
+            var filePath = Path.Combine(_documentUploadPath, fileName);
+
+            await SaveFileAsync(document, filePath);
+
+            return GenerateDocumentUrl(fileName);
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<string>> UploadMultipleDocumentsAsync(IEnumerable<IFormFile> documents)
+    {
+        try
+        {
+            if (documents == null || !documents.Any())
+                throw CustomExceptionFactory.CreateNotFoundError("documents");
+
+            var urls = new List<string>();
+
+            foreach (var doc in documents)
+            {
+                var url = await UploadDocumentAsync(doc);
+                urls.Add(url);
+            }
+
+            return urls;
         }
         catch (CustomException)
         {
@@ -205,6 +265,14 @@ public class MediaService : IMediaService
             : $"/images/{fileName}";
     }
 
+    private string GenerateDocumentUrl(string fileName)
+    {
+        var request = _httpContextAccessor.HttpContext?.Request;
+        return request != null
+            ? $"{request.Scheme}://{request.Host}/documents/{fileName}"
+            : $"/documents/{fileName}";
+    }
+
     private MediaResponse CreateMediaResponse(string fileName, IFormFile image)
     {
         return new MediaResponse
@@ -223,6 +291,34 @@ public class MediaService : IMediaService
         return
             GenerateImageUrl(fileName);
     }
+
+    private void ValidateImageFile(IFormFile file)
+    {
+        ValidateCommon(file);
+
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!_allowedImageExtensions.Contains(extension))
+            throw CustomExceptionFactory.CreateBadRequestError("Invalid image file extension");
+    }
+
+    private void ValidateDocumentFile(IFormFile file)
+    {
+        ValidateCommon(file);
+
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!_allowedDocumentExtensions.Contains(extension))
+            throw CustomExceptionFactory.CreateBadRequestError("Invalid document file extension");
+    }
+
+    private void ValidateCommon(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            throw CustomExceptionFactory.CreateNotFoundError("file");
+
+        if (file.Length > _maxFileSize)
+            throw CustomExceptionFactory.CreateBadRequestError("File size exceeds maximum limit");
+    }
+
 }
 
 // Helper class for MIME types
@@ -242,4 +338,6 @@ public static class MimeTypeMap
             ? mimeType
             : "application/octet-stream";
     }
+
+
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Travelogue.Repository.Bases.Responses;
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.BusinessModels.NewsModels;
 using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
@@ -143,25 +144,47 @@ public class NewsController : ControllerBase
         ));
     }
 
-    [HttpPost("upload-media")]
+    [HttpPatch("update-media/{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> UploadMedia(Guid id, [FromForm] List<IFormFile> imageUploads, string? thumbnailFileName)
+    public async Task<IActionResult> AddNewsImage(Guid id, List<MediaDto> mediaDtos)
     {
-        var result = await _newsService.UploadMediaAsync(id, imageUploads, thumbnailFileName, new CancellationToken());
+        var result = await _newsService.AddNewsImagesAsync(id, mediaDtos, new CancellationToken());
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPLOAD_SUCCESS, "media")
         ));
     }
 
-    [HttpDelete("delete-media")]
+    [HttpPatch("delete-media/{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> DeleteMedia(Guid id, List<string> deletedImages)
+    public async Task<IActionResult> DeleteMedia(Guid id, List<string> fileNames)
     {
-        var result = await _newsService.DeleteMediaAsync(id, deletedImages, new CancellationToken());
+        var result = await _newsService.RemoveNewsImagesAsync(id, fileNames, new CancellationToken());
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "media")
         ));
     }
+
+    // [HttpPost("upload-media")]
+    // [ProducesResponseType(StatusCodes.Status200OK)]
+    // public async Task<IActionResult> UploadMedia(Guid id, [FromForm] List<IFormFile> imageUploads, string? thumbnailFileName)
+    // {
+    //     var result = await _newsService.UploadMediaAsync(id, imageUploads, thumbnailFileName, new CancellationToken());
+    //     return Ok(ResponseModel<object>.OkResponseModel(
+    //         data: result,
+    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPLOAD_SUCCESS, "media")
+    //     ));
+    // }
+
+    // [HttpDelete("delete-media")]
+    // [ProducesResponseType(StatusCodes.Status200OK)]
+    // public async Task<IActionResult> DeleteMedia(Guid id, List<string> deletedImages)
+    // {
+    //     var result = await _newsService.DeleteMediaAsync(id, deletedImages, new CancellationToken());
+    //     return Ok(ResponseModel<object>.OkResponseModel(
+    //         data: result,
+    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "media")
+    //     ));
+    // }
 }

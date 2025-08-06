@@ -10,4 +10,6 @@ public interface IMediaService
     Task<bool> DeleteImageAsync(string fileName);
     Task<bool> DeleteImagesAsync(List<string> fileNames);
     Task<List<MediaResponse>> GetAllImagesAsync();
+    Task<string> UploadDocumentAsync(IFormFile document);
+    Task<List<string>> UploadMultipleDocumentsAsync(IEnumerable<IFormFile> documents);
 }
