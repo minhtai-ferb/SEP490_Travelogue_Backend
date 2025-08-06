@@ -27,6 +27,7 @@ services:
       - ConnectionStrings__DefaultConnectionMySQL=server=mysql;port=3306;user=server;password=12345;database=travelogue
     volumes:
       - ./images:/app/images
+      - ./documents:/app/documents 
     networks:
       - travelogue-net
     restart: unless-stopped
