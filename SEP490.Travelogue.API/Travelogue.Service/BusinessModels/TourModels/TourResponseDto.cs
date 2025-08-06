@@ -3,7 +3,7 @@ using Travelogue.Service.BusinessModels.MediaModel;
 
 namespace Travelogue.Service.BusinessModels.TourModels;
 
-public class TourResponseDto
+public class TourResponseDto : BaseDataModel
 {
     public Guid TourId { get; set; }
     public string? Name { get; set; }

@@ -256,40 +256,40 @@ public class CuisineService : ICuisineService
         }
     }
 
-    public async Task<PagedResult<CuisineDataModel>> GetPagedCuisinesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var pagedResult = await _unitOfWork.CuisineRepository.GetPageAsync(pageNumber, pageSize);
+    // public async Task<PagedResult<CuisineDataModel>> GetPagedCuisinesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken)
+    // {
+    //     try
+    //     {
+    //         var pagedResult = await _unitOfWork.CuisineRepository.GetPageAsync(pageNumber, pageSize);
 
-            var cuisineDataModels = _mapper.Map<List<CuisineDataModel>>(pagedResult.Items);
+    //         var cuisineDataModels = _mapper.Map<List<CuisineDataModel>>(pagedResult.Items);
 
-            foreach (var cuisine in cuisineDataModels)
-            {
-                cuisine.Medias = await GetMediaByIdAsync(cuisine.CuisineId, cancellationToken);
-            }
+    //         foreach (var cuisine in cuisineDataModels)
+    //         {
+    //             cuisine.Medias = await GetMediaByIdAsync(cuisine.CuisineId, cancellationToken);
+    //         }
 
-            return new PagedResult<CuisineDataModel>
-            {
-                Items = cuisineDataModels,
-                TotalCount = pagedResult.TotalCount,
-                PageNumber = pageNumber,
-                PageSize = pageSize
-            };
-        }
-        catch (CustomException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-        finally
-        {
-            //  _unitOfWork.Dispose();
-        }
-    }
+    //         return new PagedResult<CuisineDataModel>
+    //         {
+    //             Items = cuisineDataModels,
+    //             TotalCount = pagedResult.TotalCount,
+    //             PageNumber = pageNumber,
+    //             PageSize = pageSize
+    //         };
+    //     }
+    //     catch (CustomException)
+    //     {
+    //         throw;
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+    //     }
+    //     finally
+    //     {
+    //         //  _unitOfWork.Dispose();
+    //     }
+    // }
 
     public async Task<PagedResult<LocationDataModel>> GetPagedCuisinesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {

@@ -26,7 +26,7 @@ public interface ICraftVillageService
     Task DeleteCraftVillageAsync(Guid id, CancellationToken cancellationToken);
     // Task<CraftVillageMediaResponse> AddCraftVillageWithMediaAsync(CraftVillageCreateWithMediaFileModel craftVillageCreateModel, string? thumbnailSelected, CancellationToken cancellationToken);
     // Task UpdateCraftVillageAsync(Guid id, CraftVillageUpdateWithMediaFileModel craftVillageUpdateModel, string? thumbnailSelected, CancellationToken cancellationToken);
-    Task<PagedResult<CraftVillageDataModel>> GetPagedCraftVillagesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
+    // Task<PagedResult<CraftVillageDataModel>> GetPagedCraftVillagesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
     // Task<CraftVillageMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
     // Task<CraftVillageMediaResponse> UploadMediaAsync(
     //     Guid id,
@@ -257,40 +257,40 @@ public class CraftVillageService : ICraftVillageService
         }
     }
 
-    public async Task<PagedResult<CraftVillageDataModel>> GetPagedCraftVillagesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var pagedResult = await _unitOfWork.CraftVillageRepository.GetPageAsync(pageNumber, pageSize);
+    // public async Task<PagedResult<CraftVillageDataModel>> GetPagedCraftVillagesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken)
+    // {
+    //     try
+    //     {
+    //         var pagedResult = await _unitOfWork.CraftVillageRepository.GetPageAsync(pageNumber, pageSize);
 
-            var craftVillageDataModels = _mapper.Map<List<CraftVillageDataModel>>(pagedResult.Items);
+    //         var craftVillageDataModels = _mapper.Map<List<CraftVillageDataModel>>(pagedResult.Items);
 
-            foreach (var craftVillage in craftVillageDataModels)
-            {
-                craftVillage.Medias = await GetMediaByIdAsync(craftVillage.CraftVillageId, cancellationToken);
-            }
+    //         foreach (var craftVillage in craftVillageDataModels)
+    //         {
+    //             craftVillage.Medias = await GetMediaByIdAsync(craftVillage.CraftVillageId, cancellationToken);
+    //         }
 
-            return new PagedResult<CraftVillageDataModel>
-            {
-                Items = craftVillageDataModels,
-                TotalCount = pagedResult.TotalCount,
-                PageNumber = pageNumber,
-                PageSize = pageSize
-            };
-        }
-        catch (CustomException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-        finally
-        {
-            //  _unitOfWork.Dispose();
-        }
-    }
+    //         return new PagedResult<CraftVillageDataModel>
+    //         {
+    //             Items = craftVillageDataModels,
+    //             TotalCount = pagedResult.TotalCount,
+    //             PageNumber = pageNumber,
+    //             PageSize = pageSize
+    //         };
+    //     }
+    //     catch (CustomException)
+    //     {
+    //         throw;
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+    //     }
+    //     finally
+    //     {
+    //         //  _unitOfWork.Dispose();
+    //     }
+    // }
 
     public async Task<PagedResult<LocationDataModel>> GetPagedCraftVillagesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
