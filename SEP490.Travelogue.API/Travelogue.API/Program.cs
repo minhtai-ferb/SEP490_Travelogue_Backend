@@ -84,11 +84,17 @@ app.UseSwaggerUI();
 //app.UseHttpsRedirection();
 app.UseHttpsRedirection();
 
-var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "images");
+var uploadImagesPath = Path.Combine(Directory.GetCurrentDirectory(), "images");
+var uploadDocumentsPath = Path.Combine(Directory.GetCurrentDirectory(), "documents");
 
-if (!Directory.Exists(uploadPath))
+if (!Directory.Exists(uploadImagesPath))
 {
-    Directory.CreateDirectory(uploadPath);
+    Directory.CreateDirectory(uploadImagesPath);
+}
+
+if (!Directory.Exists(uploadDocumentsPath))
+{
+    Directory.CreateDirectory(uploadDocumentsPath);
 }
 
 app.UseStaticFiles(new StaticFileOptions
@@ -96,6 +102,13 @@ app.UseStaticFiles(new StaticFileOptions
     FileProvider = new PhysicalFileProvider(
         Path.Combine(Directory.GetCurrentDirectory(), "images")),
     RequestPath = "/images"
+});
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(Directory.GetCurrentDirectory(), "documents")),
+    RequestPath = "/documents"
 });
 
 app.UseAuthentication();
