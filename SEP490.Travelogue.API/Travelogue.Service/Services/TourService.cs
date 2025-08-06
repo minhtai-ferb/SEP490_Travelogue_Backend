@@ -81,7 +81,11 @@ public class TourService : ITourService
                 Content = dto.Content,
                 TotalDays = dto.TotalDays,
                 TourType = dto.TourType,
-                Status = TourStatus.Draft
+                Status = TourStatus.Draft,
+                CreatedBy = currentUserId,
+                CreatedTime = currentTime,
+                LastUpdatedBy = currentUserId,
+                LastUpdatedTime = currentTime
             };
 
             await _unitOfWork.TourRepository.AddAsync(tour);
@@ -370,6 +374,26 @@ public class TourService : ITourService
             if (filter.TourType.HasValue)
             {
                 toursQuery = toursQuery.Where(t => t.TourType == filter.TourType.Value);
+            }
+
+            if (filter.PriceMin.HasValue)
+            {
+                toursQuery = toursQuery.Where(t => t.TourSchedules.Any(s => s.AdultPrice >= filter.PriceMin.Value));
+            }
+
+            if (filter.PriceMax.HasValue)
+            {
+                toursQuery = toursQuery.Where(t => t.TourSchedules.Any(s => s.AdultPrice <= filter.PriceMax.Value));
+            }
+
+            if (filter.CreatedTime != default)
+            {
+                toursQuery = toursQuery.Where(t => t.CreatedTime >= filter.CreatedTime);
+            }
+
+            if (filter.LastUpdatedTime != default)
+            {
+                toursQuery = toursQuery.Where(t => t.LastUpdatedTime >= filter.LastUpdatedTime);
             }
 
             var tours = await toursQuery.ToListAsync();
@@ -753,16 +777,34 @@ public class TourService : ITourService
                 throw CustomExceptionFactory.CreateForbiddenError();
             }
 
-            var tour = _unitOfWork.TourRepository.ActiveEntities
-                .FirstOrDefault(tp => tp.Id == id);
-            if (tour == null || tour.IsDeleted)
+            var tour = await _unitOfWork.TourRepository
+                .ActiveEntities
+                .Include(t => t.TourPlanLocations)
+                .Include(t => t.TourSchedules)
+                .Include(t => t.Bookings)
+                .ThenInclude(b => b.User)
+                .FirstOrDefaultAsync(t => t.Id == id)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Tour");
+
+            if (tour.Status == TourStatus.Cancelled)
+                throw CustomExceptionFactory.CreateBadRequestError("Không thể xóa tour đã bị hủy.");
+
+            if (tour.TourSchedules.Any(s => s.CurrentBooked > 0))
+                throw CustomExceptionFactory.CreateBadRequestError("Không thể xóa tour đã có người đặt.");
+
+            if (tour.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
             {
-                throw CustomExceptionFactory.CreateNotFoundError("tour");
+                throw CustomExceptionFactory.CreateBadRequestError("Không thể xóa tour đã có người đặt.");
             }
+
+            // var remainingSchedules = tour.TourSchedules.Where(s => s.Id != scheduleId).Select(s => s.DepartureDate.Date).Distinct().ToList();
+            // var maxDayOrder = tour.TourPlanLocations.Any() ? tour.TourPlanLocations.Max(l => l.DayOrder) : 0;
+            // if (remainingSchedules.Count < maxDayOrder)
+            //     throw CustomExceptionFactory.CreateBadRequestError($"Không đủ số ngày lịch trình ({remainingSchedules.Count}) để bao phủ các ngày trong kế hoạch ({maxDayOrder}).");
+
             tour.IsDeleted = true;
             _unitOfWork.TourRepository.Update(tour);
             await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync(cancellationToken);
         }
         catch (CustomException)
         {
@@ -786,6 +828,14 @@ public class TourService : ITourService
     {
         try
         {
+            Guid userId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            var hasPermission = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
+            if (!hasPermission)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
             var tour = await _unitOfWork.TourRepository
                 .ActiveEntities
                 .Include(t => t.TourPlanLocations)
@@ -1027,6 +1077,14 @@ public class TourService : ITourService
     {
         try
         {
+            Guid userId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            var hasPermission = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
+            if (!hasPermission)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
             var tour = await _unitOfWork.TourRepository
                 .ActiveEntities
                 .Include(t => t.TourPlanLocations)
@@ -1161,6 +1219,14 @@ public class TourService : ITourService
     {
         try
         {
+            Guid userId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            var hasPermission = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
+            if (!hasPermission)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
             var tour = await _unitOfWork.TourRepository
                 .ActiveEntities
                 .Include(t => t.TourPlanLocations)
@@ -1254,6 +1320,14 @@ public class TourService : ITourService
     {
         try
         {
+            Guid userId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            var hasPermission = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
+            if (!hasPermission)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
             var tour = await _unitOfWork.TourRepository
                 .ActiveEntities
                 .Include(t => t.TourPlanLocations)
@@ -1431,6 +1505,14 @@ public class TourService : ITourService
     {
         try
         {
+            Guid userId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            var hasPermission = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
+            if (!hasPermission)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
             var tourSchedule = await _unitOfWork.TourScheduleRepository
                 .ActiveEntities
                 .Include(ts => ts.Tour)
@@ -1528,6 +1610,14 @@ public class TourService : ITourService
     {
         try
         {
+            Guid userId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            var hasPermission = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
+            if (!hasPermission)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
             var tourSchedule = await _unitOfWork.TourScheduleRepository
                 .ActiveEntities
                 .Include(ts => ts.Tour)
@@ -1710,7 +1800,6 @@ public class TourService : ITourService
             .DistinctBy(g => g.Id)
             .ToList();
     }
-
 
     // Location
     private void ValidateDto(UpdateTourPlanLocationDto dto, List<TourPlanLocation> existingLocations)

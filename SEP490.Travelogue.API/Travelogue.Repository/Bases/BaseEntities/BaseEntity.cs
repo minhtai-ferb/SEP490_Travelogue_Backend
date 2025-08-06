@@ -3,8 +3,8 @@
 public class BaseEntity : IBaseEntity
 {
     public Guid Id { get; set; }
-    public DateTimeOffset CreatedTime { get; set; } = DateTimeOffset.Now;
-    public DateTimeOffset LastUpdatedTime { get; set; }
+    public DateTimeOffset CreatedTime { get; set; } = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(7));
+    public DateTimeOffset LastUpdatedTime { get; set; } = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(7));
     public DateTimeOffset? DeletedTime { get; set; }
 
     public string? CreatedBy { get; set; }
