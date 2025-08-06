@@ -38,6 +38,9 @@ public interface INewsService
     Task<NewsDataModel?> RemoveNewsImagesAsync(Guid newsId, List<string> fileNames, CancellationToken cancellationToken);
 
     Task<List<NewsDataModel>> GetNewsByCategoryAsync(NewsCategory? category, CancellationToken cancellationToken);
+    Task<List<NewsDataModel>> GetPagedEventWithFilterAsync(string? title, int? month, int? year, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<List<NewsDataModel>> GetPagedNewsWithFilterAsync(string title, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<List<NewsDataModel>> GetPagedExperienceWithFilterAsync(string title, int pageNumber, int pageSize, CancellationToken cancellationToken);
 }
 
 public class NewsService : INewsService
@@ -217,6 +220,132 @@ public class NewsService : INewsService
             }
 
             return result;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<NewsDataModel>> GetPagedEventWithFilterAsync(string? title, int? month, int? year, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var pagedResult = await _unitOfWork.NewsRepository.GetPageWithSearchAsync(
+                title, pageNumber, pageSize, cancellationToken);
+
+            pagedResult.Items = pagedResult.Items.Where(a =>
+                a.NewsCategory == NewsCategory.Event
+            ).ToList();
+
+            var newsDataModels = _mapper.Map<List<NewsDataModel>>(pagedResult.Items);
+
+            foreach (var item in newsDataModels)
+            {
+                item.Medias = await GetMediaByIdAsync(item.Id, cancellationToken);
+
+                item.LocationName = await _unitOfWork.LocationRepository
+                    .ActiveEntities
+                    .Where(x => x.Id == item.LocationId)
+                    .Select(x => x.Name)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                item.CategoryName = _enumService.GetEnumDisplayName<NewsCategory>(item.NewsCategory);
+            }
+
+            if (year.HasValue && month.HasValue &&
+                year.Value > 0 && month.Value > 0)
+            {
+                newsDataModels = newsDataModels.Where(a =>
+                    a.StartDate.HasValue &&
+                    a.EndDate.HasValue &&
+                    a.StartDate.Value.Year == year.Value &&
+                    (a.StartDate.Value.Month == month.Value ||
+                     a.EndDate.Value.Month == month.Value)
+                ).ToList();
+            }
+
+            return newsDataModels;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<NewsDataModel>> GetPagedNewsWithFilterAsync(string title, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var pagedResult = await _unitOfWork.NewsRepository.GetPageWithSearchAsync(
+                title, pageNumber, pageSize, cancellationToken);
+
+            pagedResult.Items = pagedResult.Items.Where(a =>
+                a.NewsCategory == NewsCategory.News
+            ).ToList();
+
+            var newsDataModels = _mapper.Map<List<NewsDataModel>>(pagedResult.Items);
+
+            foreach (var item in newsDataModels)
+            {
+                item.Medias = await GetMediaByIdAsync(item.Id, cancellationToken);
+
+                item.LocationName = await _unitOfWork.LocationRepository
+                    .ActiveEntities
+                    .Where(x => x.Id == item.LocationId)
+                    .Select(x => x.Name)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                item.CategoryName = _enumService.GetEnumDisplayName<NewsCategory>(item.NewsCategory);
+            }
+
+            return newsDataModels;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<NewsDataModel>> GetPagedExperienceWithFilterAsync(string title, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var pagedResult = await _unitOfWork.NewsRepository.GetPageWithSearchAsync(
+                title, pageNumber, pageSize, cancellationToken);
+
+            pagedResult.Items = pagedResult.Items.Where(a =>
+                a.NewsCategory == NewsCategory.Experience
+            ).ToList();
+
+            var newsDataModels = _mapper.Map<List<NewsDataModel>>(pagedResult.Items);
+
+            foreach (var item in newsDataModels)
+            {
+                item.Medias = await GetMediaByIdAsync(item.Id, cancellationToken);
+
+                item.LocationName = await _unitOfWork.LocationRepository
+                    .ActiveEntities
+                    .Where(x => x.Id == item.LocationId)
+                    .Select(x => x.Name)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                item.CategoryName = _enumService.GetEnumDisplayName<NewsCategory>(item.NewsCategory);
+            }
+
+            return newsDataModels;
         }
         catch (CustomException)
         {

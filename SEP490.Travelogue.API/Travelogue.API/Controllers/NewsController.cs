@@ -73,6 +73,53 @@ public class NewsController : ControllerBase
         ));
     }
 
+    [HttpGet("events")]
+    public async Task<IActionResult> GetPagedEvents(
+        [FromQuery] string? title,
+        [FromQuery] int? month,
+        [FromQuery] int? year,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _newsService.GetPagedEventWithFilterAsync(title, month, year, pageNumber, pageSize, cancellationToken);
+
+        return Ok(ResponseModel<List<NewsDataModel>>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "events")
+        ));
+    }
+
+    [HttpGet("news")]
+    public async Task<IActionResult> GetPagedNews(
+        [FromQuery] string? title,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _newsService.GetPagedNewsWithFilterAsync(title, pageNumber, pageSize, cancellationToken);
+
+        return Ok(ResponseModel<List<NewsDataModel>>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "news")
+        ));
+    }
+
+    [HttpGet("experiences")]
+    public async Task<IActionResult> GetPagedExperiences(
+        [FromQuery] string? title,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _newsService.GetPagedExperienceWithFilterAsync(title, pageNumber, pageSize, cancellationToken);
+
+        return Ok(ResponseModel<List<NewsDataModel>>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "experiences")
+        ));
+    }
+
     /// <summary>
     /// Lấy news theo id
     /// </summary>
