@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Travelogue.Repository.Bases.BaseEntities;
+using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Repository.Entities;
 
@@ -15,6 +16,9 @@ public sealed class TourSchedule : BaseEntity
     public int MaxParticipant { get; set; }
 
     public int CurrentBooked { get; set; } = 0;
+
+    public TourScheduleStatus Status { get; set; } = TourScheduleStatus.Active;
+    public string? Reason { get; set; }
 
     // [Required]
     // [Range(1, int.MaxValue)]
