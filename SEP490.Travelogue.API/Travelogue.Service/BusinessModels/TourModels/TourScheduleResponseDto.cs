@@ -1,3 +1,5 @@
+using Travelogue.Service.BusinessModels.TourGuideModels;
+
 namespace Travelogue.Service.BusinessModels.TourModels;
 
 public class TourScheduleResponseDto
@@ -9,4 +11,5 @@ public class TourScheduleResponseDto
     public int TotalDays { get; set; }
     public decimal AdultPrice { get; set; }
     public decimal ChildrenPrice { get; set; }
+    public TourGuideDataModel? TourGuide { get; set; }
 }
