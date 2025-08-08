@@ -23,9 +23,9 @@ public interface INewsService
     Task DeleteNewsAsync(Guid id, CancellationToken cancellationToken);
     Task<PagedResult<NewsDataModel>> GetPagedNewsWithSearchAsync(string? title, int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<List<NewsDataModel>> GetNewsByCategoryAsync(NewsCategory? category, CancellationToken cancellationToken);
-    Task<List<NewsDataModel>> GetPagedEventWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int? month, int? year, int pageNumber, int pageSize, CancellationToken cancellationToken);
-    Task<List<NewsDataModel>> GetPagedNewsWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken);
-    Task<List<NewsDataModel>> GetPagedExperienceWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<PagedResult<NewsDataModel>> GetPagedEventWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int? month, int? year, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<PagedResult<NewsDataModel>> GetPagedNewsWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<PagedResult<NewsDataModel>> GetPagedExperienceWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken);
 }
 
 public class NewsService : INewsService
@@ -307,16 +307,16 @@ public class NewsService : INewsService
         }
     }
 
-    public async Task<List<NewsDataModel>> GetPagedEventWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int? month, int? year, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<NewsDataModel>> GetPagedEventWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int? month, int? year, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
             var pagedResult = await _unitOfWork.NewsRepository.GetPageWithSearchAsync(
                 title, locationId, isHighlighted, pageNumber, pageSize, cancellationToken);
 
-            pagedResult.Items = pagedResult.Items.Where(a =>
-                a.NewsCategory == NewsCategory.Event
-            ).ToList();
+            var eventItems = pagedResult.Items
+            .Where(a => a.NewsCategory == NewsCategory.Event)
+            .ToList();
 
             var newsDataModels = _mapper.Map<List<NewsDataModel>>(pagedResult.Items);
 
@@ -346,7 +346,15 @@ public class NewsService : INewsService
                 ).ToList();
             }
 
-            return newsDataModels;
+            var result = new PagedResult<NewsDataModel>
+            {
+                Items = newsDataModels,
+                TotalCount = eventItems.Count,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
+            return result;
         }
         catch (CustomException)
         {
@@ -358,14 +366,14 @@ public class NewsService : INewsService
         }
     }
 
-    public async Task<List<NewsDataModel>> GetPagedNewsWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<NewsDataModel>> GetPagedNewsWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
             var pagedResult = await _unitOfWork.NewsRepository.GetPageWithSearchAsync(
                 title, locationId, isHighlighted, pageNumber, pageSize, cancellationToken);
 
-            pagedResult.Items = pagedResult.Items.Where(a =>
+            var newItems = pagedResult.Items = pagedResult.Items.Where(a =>
                 a.NewsCategory == NewsCategory.News
             ).ToList();
 
@@ -385,7 +393,15 @@ public class NewsService : INewsService
                 item.TypeExperienceText = _enumService.GetEnumDisplayName<TypeExperience>(item.TypeExperience);
             }
 
-            return newsDataModels;
+            var result = new PagedResult<NewsDataModel>
+            {
+                Items = newsDataModels,
+                TotalCount = newItems.Count,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
+            return result;
         }
         catch (CustomException)
         {
@@ -397,14 +413,14 @@ public class NewsService : INewsService
         }
     }
 
-    public async Task<List<NewsDataModel>> GetPagedExperienceWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<NewsDataModel>> GetPagedExperienceWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
             var pagedResult = await _unitOfWork.NewsRepository.GetPageWithSearchAsync(
                 title, locationId, isHighlighted, pageNumber, pageSize, cancellationToken);
 
-            pagedResult.Items = pagedResult.Items.Where(a =>
+            var experienceItems = pagedResult.Items = pagedResult.Items.Where(a =>
                 a.NewsCategory == NewsCategory.Experience
             ).ToList();
 
@@ -429,7 +445,15 @@ public class NewsService : INewsService
                 item.TypeExperienceText = _enumService.GetEnumDisplayName<TypeExperience>(item.TypeExperience);
             }
 
-            return newsDataModels;
+            var result = new PagedResult<NewsDataModel>
+            {
+                Items = newsDataModels,
+                TotalCount = experienceItems.Count,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
+            return result;
         }
         catch (CustomException)
         {
