@@ -626,10 +626,10 @@ public class TourService : ITourService
                 var scheduleDto = new TourScheduleResponseDto
                 {
                     ScheduleId = schedule.Id,
-                    DepartureDate = schedule.DepartureDate,
+                    StartTime = schedule.DepartureDate,
+                    EndTime = schedule.DepartureDate.AddDays(tour.TotalDays - 1),
                     MaxParticipant = schedule.MaxParticipant,
                     CurrentBooked = schedule.CurrentBooked,
-                    TotalDays = tour.TotalDays,
                     AdultPrice = schedule.AdultPrice,
                     ChildrenPrice = schedule.ChildrenPrice,
                     TourGuide = validTourGuide
@@ -799,10 +799,10 @@ public class TourService : ITourService
                 var scheduleDto = new TourScheduleResponseDto
                 {
                     ScheduleId = schedule.Id,
-                    DepartureDate = schedule.DepartureDate,
+                    StartTime = schedule.DepartureDate,
+                    EndTime = schedule.DepartureDate.AddDays(tour.TotalDays - 1),
                     MaxParticipant = schedule.MaxParticipant,
                     CurrentBooked = schedule.CurrentBooked,
-                    TotalDays = tour.TotalDays,
                     AdultPrice = schedule.AdultPrice,
                     ChildrenPrice = schedule.ChildrenPrice,
                     TourGuide = validTourGuide
@@ -1202,6 +1202,7 @@ public class TourService : ITourService
                 };
                 schedules.Add(schedule);
 
+                // tour guide
                 if (dto.TourGuideId != Guid.Empty)
                 {
                     var tourGuide = await _unitOfWork.TourGuideRepository
@@ -1273,10 +1274,10 @@ public class TourService : ITourService
             return schedules.Select(s => new TourScheduleResponseDto
             {
                 ScheduleId = s.Id,
-                DepartureDate = s.DepartureDate,
+                StartTime = s.DepartureDate,
+                EndTime = s.DepartureDate.AddDays(tour.TotalDays - 1),
                 MaxParticipant = s.MaxParticipant,
                 CurrentBooked = s.CurrentBooked,
-                TotalDays = tour.TotalDays,
                 AdultPrice = s.AdultPrice,
                 ChildrenPrice = s.ChildrenPrice
             }).ToList();
@@ -1303,10 +1304,10 @@ public class TourService : ITourService
                 .Select(s => new TourScheduleResponseDto
                 {
                     ScheduleId = s.Id,
-                    DepartureDate = s.DepartureDate,
+                    StartTime = s.DepartureDate,
+                    EndTime = s.DepartureDate.AddDays(tour.TotalDays - 1),
                     MaxParticipant = s.MaxParticipant,
                     CurrentBooked = s.CurrentBooked,
-                    TotalDays = tour.TotalDays,
                     AdultPrice = s.AdultPrice,
                     ChildrenPrice = s.ChildrenPrice
                 })
@@ -1451,10 +1452,10 @@ public class TourService : ITourService
             return new TourScheduleResponseDto
             {
                 ScheduleId = schedule.Id,
-                DepartureDate = schedule.DepartureDate,
+                StartTime = schedule.DepartureDate,
+                EndTime = schedule.DepartureDate.AddDays(tour.TotalDays - 1),
                 MaxParticipant = schedule.MaxParticipant,
                 CurrentBooked = schedule.CurrentBooked,
-                TotalDays = tour.TotalDays,
                 AdultPrice = schedule.AdultPrice,
                 ChildrenPrice = schedule.ChildrenPrice
             };
