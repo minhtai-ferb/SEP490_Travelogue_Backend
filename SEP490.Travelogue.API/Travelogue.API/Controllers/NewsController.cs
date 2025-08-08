@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Travelogue.Repository.Bases.Responses;
+using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.BusinessModels.NewsModels;
@@ -90,9 +91,12 @@ public class NewsController : ControllerBase
     {
         var result = await _newsService.GetPagedEventWithFilterAsync(title, locationId, isHighlighted, month, year, pageNumber, pageSize, cancellationToken);
 
-        return Ok(ResponseModel<List<NewsDataModel>>.OkResponseModel(
-            data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "events")
+        return Ok(PagedResponseModel<object>.OkResponseModel(
+            data: result.Items,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "events"),
+            totalCount: result.TotalCount,
+            pageSize: pageSize,
+            pageNumber: pageNumber
         ));
     }
 
@@ -120,9 +124,12 @@ public class NewsController : ControllerBase
     {
         var result = await _newsService.GetPagedNewsWithFilterAsync(title, locationId, isHighlighted, pageNumber, pageSize, cancellationToken);
 
-        return Ok(ResponseModel<List<NewsDataModel>>.OkResponseModel(
-            data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "news")
+        return Ok(PagedResponseModel<object>.OkResponseModel(
+            data: result.Items,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "news"),
+            totalCount: result.TotalCount,
+            pageSize: pageSize,
+            pageNumber: pageNumber
         ));
     }
 
@@ -150,9 +157,12 @@ public class NewsController : ControllerBase
     {
         var result = await _newsService.GetPagedExperienceWithFilterAsync(title, locationId, isHighlighted, pageNumber, pageSize, cancellationToken);
 
-        return Ok(ResponseModel<List<NewsDataModel>>.OkResponseModel(
-            data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "experiences")
+        return Ok(PagedResponseModel<object>.OkResponseModel(
+            data: result.Items,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "experiences"),
+            totalCount: result.TotalCount,
+            pageSize: pageSize,
+            pageNumber: pageNumber
         ));
     }
 
