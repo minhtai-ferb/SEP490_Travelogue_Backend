@@ -28,24 +28,9 @@ public class NewsController : ControllerBase
     public async Task<IActionResult> CreateNews([FromBody] NewsCreateModel model)
     {
         var result = await _newsService.AddNewsAsync(model, new CancellationToken());
-        return Ok(ResponseModel<object>.OkResponseModel(
+        return Ok(ResponseModel<NewsDataModel>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "news")
-        ));
-    }
-
-    /// <summary>
-    /// Xóa news theo id
-    /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteNews(Guid id)
-    {
-        await _newsService.DeleteNewsAsync(id, new CancellationToken());
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: true,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "news")
         ));
     }
 
@@ -63,6 +48,10 @@ public class NewsController : ControllerBase
         ));
     }
 
+    /// <summary>
+    /// Lấy tất cả news theo category
+    /// </summary>
+    /// <returns></returns>
     [HttpGet("by-category")]
     public async Task<IActionResult> GetByCategory([FromQuery] NewsCategory? category, CancellationToken cancellationToken)
     {
@@ -73,16 +62,33 @@ public class NewsController : ControllerBase
         ));
     }
 
-    [HttpGet("events")]
+    /// <summary>
+    /// Lấy danh sách sự kiện (Event) phân trang kèm bộ lọc.
+    /// </summary>
+    /// <param name="title">Tiêu đề cần tìm (tùy chọn).</param>
+    /// <param name="locationId">ID địa điểm cần lọc (tùy chọn).</param>
+    /// <param name="isHighlighted">Trạng thái nổi bật (tùy chọn).</param>
+    /// <param name="month">Tháng diễn ra sự kiện (tùy chọn).</param>
+    /// <param name="year">Năm diễn ra sự kiện (tùy chọn).</param>
+    /// <param name="pageNumber">Số trang (mặc định 1).</param>
+    /// <param name="pageSize">Kích thước trang (mặc định 10).</param>
+    /// <param name="cancellationToken">Token hủy bất đồng bộ.</param>
+    /// <returns>
+    /// Danh sách <see cref="NewsDataModel"/> của sự kiện,
+    /// bọc trong <see cref="ResponseModel{T}"/>.
+    /// </returns>
+    [HttpGet("event/search-paged")]
     public async Task<IActionResult> GetPagedEvents(
         [FromQuery] string? title,
+        [FromQuery] Guid? locationId,
+        [FromQuery] Boolean? isHighlighted,
         [FromQuery] int? month,
         [FromQuery] int? year,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
-        var result = await _newsService.GetPagedEventWithFilterAsync(title, month, year, pageNumber, pageSize, cancellationToken);
+        var result = await _newsService.GetPagedEventWithFilterAsync(title, locationId, isHighlighted, month, year, pageNumber, pageSize, cancellationToken);
 
         return Ok(ResponseModel<List<NewsDataModel>>.OkResponseModel(
             data: result,
@@ -90,14 +96,29 @@ public class NewsController : ControllerBase
         ));
     }
 
-    [HttpGet("news")]
+    /// <summary>
+    /// Lấy danh sách bản tin (News thường) phân trang kèm bộ lọc.
+    /// </summary>
+    /// <param name="title">Tiêu đề cần tìm (tùy chọn).</param>
+    /// <param name="locationId">ID địa điểm cần lọc (tùy chọn).</param>
+    /// <param name="isHighlighted">Trạng thái nổi bật (tùy chọn).</param>
+    /// <param name="pageNumber">Số trang (mặc định 1).</param>
+    /// <param name="pageSize">Kích thước trang (mặc định 10).</param>
+    /// <param name="cancellationToken">Token hủy bất đồng bộ.</param>
+    /// <returns>
+    /// Danh sách <see cref="NewsDataModel"/> của loại News,
+    /// bọc trong <see cref="ResponseModel{T}"/>.
+    /// </returns>
+    [HttpGet("new/search-paged")]
     public async Task<IActionResult> GetPagedNews(
         [FromQuery] string? title,
+        [FromQuery] Guid? locationId,
+        [FromQuery] Boolean? isHighlighted,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
-        var result = await _newsService.GetPagedNewsWithFilterAsync(title, pageNumber, pageSize, cancellationToken);
+        var result = await _newsService.GetPagedNewsWithFilterAsync(title, locationId, isHighlighted, pageNumber, pageSize, cancellationToken);
 
         return Ok(ResponseModel<List<NewsDataModel>>.OkResponseModel(
             data: result,
@@ -105,15 +126,29 @@ public class NewsController : ControllerBase
         ));
     }
 
-    [HttpGet("experiences")]
+    /// <summary>
+    /// Lấy danh sách trải nghiệm (Experience) phân trang kèm bộ lọc.
+    /// </summary>
+    /// <param name="title">Tiêu đề cần tìm (tùy chọn).</param>
+    /// <param name="locationId">ID địa điểm cần lọc (tùy chọn).</param>
+    /// <param name="isHighlighted">Trạng thái nổi bật (tùy chọn).</param>
+    /// <param name="pageNumber">Số trang (mặc định 1).</param>
+    /// <param name="pageSize">Kích thước trang (mặc định 10).</param>
+    /// <param name="cancellationToken">Token hủy bất đồng bộ.</param>
+    /// <returns>
+    /// Danh sách <see cref="NewsDataModel"/> của loại Experience,
+    /// bọc trong <see cref="ResponseModel{T}"/>.
+    /// </returns>
+    [HttpGet("experience/search-paged")]
     public async Task<IActionResult> GetPagedExperiences(
         [FromQuery] string? title,
         [FromQuery] Guid? locationId,
+        [FromQuery] Boolean? isHighlighted,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
-        var result = await _newsService.GetPagedExperienceWithFilterAsync(title, locationId, pageNumber, pageSize, cancellationToken);
+        var result = await _newsService.GetPagedExperienceWithFilterAsync(title, locationId, isHighlighted, pageNumber, pageSize, cancellationToken);
 
         return Ok(ResponseModel<List<NewsDataModel>>.OkResponseModel(
             data: result,
@@ -135,41 +170,6 @@ public class NewsController : ControllerBase
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "news")
         ));
     }
-    /// <summary>
-    /// Cập nhật news
-    /// </summary>
-    /// <param name="id"></param>
-    /// <param name="model"></param>
-    /// <returns></returns>
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateNews(Guid id, [FromBody] NewsUpdateModel model)
-    {
-        await _newsService.UpdateNewsAsync(id, model, new CancellationToken());
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: true,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "news")
-        ));
-    }
-
-    /// <summary>
-    /// Lấy danh sách news phân trang
-    /// </summary>
-    /// <param name="pageNumber">Số trang</param>
-    /// <param name="pageSize">Kích thước trang</param>
-    /// <returns>Trả về danh sách các news</returns>
-    // [HttpGet("get-paged")]
-    // [ProducesResponseType(StatusCodes.Status200OK)]
-    // public async Task<IActionResult> GetPagedNews(int pageNumber = 1, int pageSize = 10)
-    // {
-    //     var newss = await _newsService.GetPagedNewsAsync(pageNumber, pageSize, new CancellationToken());
-    //     return Ok(PagedResponseModel<object>.OkResponseModel(
-    //         data: newss.Items,
-    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "news"),
-    //         totalCount: newss.TotalCount,
-    //         pageSize: pageSize,
-    //         pageNumber: pageNumber
-    //     ));
-    // }
 
     /// <summary>
     /// Lấy danh sách news phân trang theo tiêu đề
@@ -192,47 +192,35 @@ public class NewsController : ControllerBase
         ));
     }
 
-    [HttpPatch("update-media/{id}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> AddNewsImage(Guid id, List<MediaDto> mediaDtos)
+    /// <summary>
+    /// Cập nhật news
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="model"></param>
+    /// <returns></returns>
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateNews(Guid id, [FromBody] NewsUpdateModel model)
     {
-        var result = await _newsService.AddNewsImagesAsync(id, mediaDtos, new CancellationToken());
+        await _newsService.UpdateNewsAsync(id, model, new CancellationToken());
         return Ok(ResponseModel<object>.OkResponseModel(
-            data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPLOAD_SUCCESS, "media")
+            data: true,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "news")
         ));
     }
 
-    [HttpPatch("delete-media/{id}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> DeleteMedia(Guid id, List<string> fileNames)
+
+    /// <summary>
+    /// Xóa news theo id
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteNews(Guid id)
     {
-        var result = await _newsService.RemoveNewsImagesAsync(id, fileNames, new CancellationToken());
+        await _newsService.DeleteNewsAsync(id, new CancellationToken());
         return Ok(ResponseModel<object>.OkResponseModel(
-            data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "media")
+            data: true,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "news")
         ));
     }
-
-    // [HttpPost("upload-media")]
-    // [ProducesResponseType(StatusCodes.Status200OK)]
-    // public async Task<IActionResult> UploadMedia(Guid id, [FromForm] List<IFormFile> imageUploads, string? thumbnailFileName)
-    // {
-    //     var result = await _newsService.UploadMediaAsync(id, imageUploads, thumbnailFileName, new CancellationToken());
-    //     return Ok(ResponseModel<object>.OkResponseModel(
-    //         data: result,
-    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPLOAD_SUCCESS, "media")
-    //     ));
-    // }
-
-    // [HttpDelete("delete-media")]
-    // [ProducesResponseType(StatusCodes.Status200OK)]
-    // public async Task<IActionResult> DeleteMedia(Guid id, List<string> deletedImages)
-    // {
-    //     var result = await _newsService.DeleteMediaAsync(id, deletedImages, new CancellationToken());
-    //     return Ok(ResponseModel<object>.OkResponseModel(
-    //         data: result,
-    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "media")
-    //     ));
-    // }
 }
