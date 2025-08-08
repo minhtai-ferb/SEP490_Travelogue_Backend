@@ -14,5 +14,6 @@ public class NewsMappingProfile : Profile
         CreateMap<NewsUpdateWithMediaFileModel, News>()
             .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
         CreateMap<NewsDataModel, News>().ReverseMap();
+        CreateMap<NewsDataDetailModel, News>().ReverseMap();
     }
 }
