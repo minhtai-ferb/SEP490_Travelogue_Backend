@@ -63,13 +63,15 @@ public class TripPlanService : ITripPlanService
     private readonly IMapper _mapper;
     private readonly IUserContextService _userContextService;
     private readonly ITimeService _timeService;
+    private readonly IEnumService _enumService;
 
-    public TripPlanService(IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService)
+    public TripPlanService(IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService, IEnumService enumService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _userContextService = userContextService;
         _timeService = timeService;
+        _enumService = enumService;
     }
     public async Task DeleteTripPlanAsync(Guid id, CancellationToken cancellationToken)
     {
@@ -122,6 +124,8 @@ public class TripPlanService : ITripPlanService
             foreach (var tripPlan in newsDataModels)
             {
                 tripPlan.OwnerName = await _unitOfWork.UserRepository.GetUserNameByIdAsync(tripPlan.UserId) ?? string.Empty;
+                tripPlan.Status = tripPlan.Status;
+                tripPlan.StatusText = _enumService.GetEnumDisplayName<TripPlanStatus>(tripPlan.Status);
             }
 
             var result = new PagedResult<TripPlanResponseDto>
@@ -205,8 +209,12 @@ public class TripPlanService : ITripPlanService
                 StartDate = tripPlan.StartDate,
                 EndDate = tripPlan.EndDate,
                 ImageUrl = tripPlan.ImageUrl,
+                Status = tripPlan.Status,
+                StatusText = _enumService.GetEnumDisplayName<TripPlanStatus>(tripPlan.Status),
                 UserId = tripPlan.UserId,
                 OwnerName = ownerName,
+                CreatedTime = tripPlan.CreatedTime,
+                LastUpdatedTime = tripPlan.LastUpdatedTime
             };
         }
         catch (CustomException)
@@ -241,6 +249,8 @@ public class TripPlanService : ITripPlanService
                 StartDate = tripPlan.StartDate,
                 EndDate = tripPlan.EndDate,
                 TotalDays = (tripPlan.EndDate - tripPlan.StartDate).Days + 1,
+                Status = tripPlan.Status,
+                StatusText = _enumService.GetEnumDisplayName<TripPlanStatus>(tripPlan.Status),
                 Days = BuildDaySchedule(tripPlan.StartDate, tripPlan.EndDate, activities)
             };
 
@@ -282,7 +292,7 @@ public class TripPlanService : ITripPlanService
             activities.Add(new TripActivity
             {
                 LocationId = tpl.LocationId,
-                Type = TripActivityTypeEnum.Location.ToString(),
+                Type = _enumService.GetEnumDisplayName<LocationType>(location.LocationType),
                 Name = location.Name,
                 Description = location.Description,
                 Address = location.Address,

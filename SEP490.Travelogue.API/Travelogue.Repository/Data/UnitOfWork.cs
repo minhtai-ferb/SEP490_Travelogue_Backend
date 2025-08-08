@@ -46,6 +46,7 @@ public class UnitOfWork : IUnitOfWork
     public IRejectionRequestRepository RejectionRequestRepository { get; }
     public IReviewRepository ReviewRepository { get; }
     public IPromotionApplicableRepository PromotionApplicableRepository { get; }
+    public IReportRepository ReportRepository { get; }
 
     public UnitOfWork(ApplicationDbContext dbContext)
     {
@@ -85,6 +86,7 @@ public class UnitOfWork : IUnitOfWork
         RejectionRequestRepository = new RejectionRequestRepository(_dbContext);
         ReviewRepository = new ReviewRepository(_dbContext);
         PromotionApplicableRepository = new PromotionApplicableRepository(_dbContext);
+        ReportRepository = new ReportRepository(_dbContext);
     }
 
     public IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity
