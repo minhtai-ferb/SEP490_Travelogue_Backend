@@ -314,7 +314,7 @@ public class NewsService : INewsService
             var pagedResult = await _unitOfWork.NewsRepository.GetPageWithSearchAsync(
                 title, locationId, isHighlighted, pageNumber, pageSize, cancellationToken);
 
-            var eventItems = pagedResult.Items
+            var eventItems = pagedResult.Items = pagedResult.Items
             .Where(a => a.NewsCategory == NewsCategory.Event)
             .ToList();
 
