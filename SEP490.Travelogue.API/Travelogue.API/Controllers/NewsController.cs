@@ -139,6 +139,7 @@ public class NewsController : ControllerBase
     /// <param name="title">Tiêu đề cần tìm (tùy chọn).</param>
     /// <param name="locationId">ID địa điểm cần lọc (tùy chọn).</param>
     /// <param name="isHighlighted">Trạng thái nổi bật (tùy chọn).</param>
+    /// <param name="typeExperience">Loại trải nghiệm (tùy chọn).</param>
     /// <param name="pageNumber">Số trang (mặc định 1).</param>
     /// <param name="pageSize">Kích thước trang (mặc định 10).</param>
     /// <param name="cancellationToken">Token hủy bất đồng bộ.</param>
@@ -151,11 +152,12 @@ public class NewsController : ControllerBase
         [FromQuery] string? title,
         [FromQuery] Guid? locationId,
         [FromQuery] Boolean? isHighlighted,
+        [FromQuery] TypeExperience? typeExperience,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
-        var result = await _newsService.GetPagedExperienceWithFilterAsync(title, locationId, isHighlighted, pageNumber, pageSize, cancellationToken);
+        var result = await _newsService.GetPagedExperienceWithFilterAsync(title, locationId, typeExperience , isHighlighted, pageNumber, pageSize, cancellationToken);
 
         return Ok(PagedResponseModel<object>.OkResponseModel(
             data: result.Items,

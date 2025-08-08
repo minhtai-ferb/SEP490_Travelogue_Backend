@@ -25,7 +25,7 @@ public interface INewsService
     Task<List<NewsDataModel>> GetNewsByCategoryAsync(NewsCategory? category, CancellationToken cancellationToken);
     Task<PagedResult<NewsDataModel>> GetPagedEventWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int? month, int? year, int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<PagedResult<NewsDataModel>> GetPagedNewsWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken);
-    Task<PagedResult<NewsDataModel>> GetPagedExperienceWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<PagedResult<NewsDataModel>> GetPagedExperienceWithFilterAsync(string? title, Guid? locationId, TypeExperience? typeExperience, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken);
 }
 
 public class NewsService : INewsService
@@ -59,6 +59,12 @@ public class NewsService : INewsService
                 throw CustomExceptionFactory.CreateBadRequestError("TypeExperience chỉ được set khi NewsCategory = Experience.");
             if (isExperience && !newsCreateModel.TypeExperience.HasValue)
                 throw CustomExceptionFactory.CreateBadRequestError("Experience bắt buộc phải có TypeExperience.");
+            if (newsCreateModel.NewsCategory == 0) 
+            {
+                throw CustomExceptionFactory.CreateBadRequestError(
+                    "Trường 'Loại tin tức' là bắt buộc."
+                );
+            }
 
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
@@ -413,12 +419,12 @@ public class NewsService : INewsService
         }
     }
 
-    public async Task<PagedResult<NewsDataModel>> GetPagedExperienceWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<NewsDataModel>> GetPagedExperienceWithFilterAsync(string? title, Guid? locationId, TypeExperience? typeExperience, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
             var pagedResult = await _unitOfWork.NewsRepository.GetPageWithSearchAsync(
-                title, locationId, isHighlighted, pageNumber, pageSize, cancellationToken);
+                title, locationId, isHighlighted, typeExperience, pageNumber, pageSize, cancellationToken);
 
             var experienceItems = pagedResult.Items = pagedResult.Items.Where(a =>
                 a.NewsCategory == NewsCategory.Experience
@@ -576,7 +582,16 @@ public class NewsService : INewsService
                 throw CustomExceptionFactory.CreateBadRequestError("TypeExperience chỉ được set khi NewsCategory = Experience.");
             if (isExperience && !newsUpdateModel.TypeExperience.HasValue)
                 throw CustomExceptionFactory.CreateBadRequestError("Experience bắt buộc phải có TypeExperience.");
-
+            if (newsUpdateModel.NewsCategory != existingNews.NewsCategory)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Không thể cập nhật NewsCategory. Vui lòng tạo mới nếu cần thay đổi loại tin tức.");
+            }
+            if (newsUpdateModel.NewsCategory == 0)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError(
+                    "Trường 'Loại tin tức' là bắt buộc."
+                );
+            }
 
             var keepCreatedBy = existingNews.CreatedBy;
             var keepCreatedTime = existingNews.CreatedTime;
