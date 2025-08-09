@@ -12,10 +12,10 @@ namespace Travelogue.Service.Services;
 public interface IReportService
 {
     Task<ReportResponseDto> CreateReportAsync(CreateReportRequestDto dto, CancellationToken cancellationToken);
-    Task<bool> DeleteReportAsync(Guid reportId, Guid userId, CancellationToken cancellationToken);
+    Task<bool> DeleteReportAsync(Guid reportId, CancellationToken cancellationToken);
     Task<List<ReportResponseDto>> GetMyReportsAsync(CancellationToken cancellationToken = default);
     Task<List<ReportResponseDto>> GetReportsByIdAsync(Guid id, CancellationToken cancellationToken);
-    Task<ReportResponseDto> UpdateReportAsync(Guid reportId, UpdateReportRequestDto dto, Guid userId, CancellationToken cancellationToken);
+    Task<ReportResponseDto> UpdateReportAsync(Guid reportId, UpdateReportRequestDto dto, CancellationToken cancellationToken);
     Task<List<ReportResponseDto>> GetAllReportsAsync(CancellationToken cancellationToken = default);
     Task<List<ReportResponseDto>> GetReportsByStatusAsync(ReportStatus status, CancellationToken cancellationToken = default);
     Task<ReportResponseDto> ProcessReportAsync(Guid reportId, ProcessReportRequestDto dto, CancellationToken cancellationToken);
@@ -86,13 +86,14 @@ public class ReportService : IReportService
         }
     }
 
-    public async Task<bool> DeleteReportAsync(Guid reportId, Guid userId, CancellationToken cancellationToken)
+    public async Task<bool> DeleteReportAsync(Guid reportId, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
+            var currentUserId = _userContextService.GetCurrentUserId();
             var report = await _unitOfWork.ReportRepository.ActiveEntities
-                .FirstOrDefaultAsync(r => r.Id == reportId && r.UserId == userId, cancellationToken)
+                .FirstOrDefaultAsync(r => r.Id == reportId && r.UserId == Guid.Parse(currentUserId), cancellationToken)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Report");
 
             if (report.Status != ReportStatus.Pending)
@@ -182,13 +183,14 @@ public class ReportService : IReportService
         }
     }
 
-    public async Task<ReportResponseDto> UpdateReportAsync(Guid reportId, UpdateReportRequestDto dto, Guid userId, CancellationToken cancellationToken)
+    public async Task<ReportResponseDto> UpdateReportAsync(Guid reportId, UpdateReportRequestDto dto, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
+            var currentUserId = _userContextService.GetCurrentUserId();
             var report = await _unitOfWork.ReportRepository.ActiveEntities
-                .FirstOrDefaultAsync(r => r.Id == reportId && r.UserId == userId, cancellationToken)
+                .FirstOrDefaultAsync(r => r.Id == reportId && r.UserId == Guid.Parse(currentUserId), cancellationToken)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Report not found or you are not authorized.");
 
             if (report.Status != ReportStatus.Pending)

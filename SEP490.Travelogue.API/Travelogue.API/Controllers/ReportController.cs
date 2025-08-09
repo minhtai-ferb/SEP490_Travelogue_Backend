@@ -43,8 +43,7 @@ public class ReportController : ControllerBase
     [HttpDelete("{reportId}")]
     public async Task<IActionResult> DeleteReport(Guid reportId, CancellationToken cancellationToken)
     {
-        var userId = Guid.Parse(User.Identity.Name); // Giả sử userId lấy từ claims
-        await _reportService.DeleteReportAsync(reportId, userId, cancellationToken);
+        await _reportService.DeleteReportAsync(reportId, cancellationToken);
         return Ok(ResponseModel<bool>.OkResponseModel(
             data: true,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "report")
@@ -92,8 +91,7 @@ public class ReportController : ControllerBase
     [HttpPut("{reportId}")]
     public async Task<IActionResult> UpdateReport(Guid reportId, [FromBody] UpdateReportRequestDto dto, CancellationToken cancellationToken)
     {
-        var userId = Guid.Parse(User.Identity.Name); // Giả sử userId lấy từ claims
-        var result = await _reportService.UpdateReportAsync(reportId, dto, userId, cancellationToken);
+        var result = await _reportService.UpdateReportAsync(reportId, dto, cancellationToken);
         return Ok(ResponseModel<ReportResponseDto>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "report")
@@ -101,7 +99,7 @@ public class ReportController : ControllerBase
     }
 
     /// <summary>
-    /// Lấy tất cả báo cáo (chỉ dành cho admin)
+    /// Lấy tất cả báo cáo - admin
     /// </summary>
     /// <param name="cancellationToken">Token hủy thao tác</param>
     /// <returns>Danh sách tất cả báo cáo</returns>
