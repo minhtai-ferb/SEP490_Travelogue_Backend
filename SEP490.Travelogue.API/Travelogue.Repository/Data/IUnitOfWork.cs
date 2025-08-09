@@ -43,6 +43,7 @@ public interface IUnitOfWork //: IDisposable
     IReviewRepository ReviewRepository { get; }
     IPromotionApplicableRepository PromotionApplicableRepository { get; }
     IAnnouncementRepository AnnouncementRepository { get; }
+    IReportRepository ReportRepository { get; }
 
     IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity;
     void Save();
