@@ -21,26 +21,11 @@ public interface INewsService
     Task<NewsDataModel> AddNewsAsync(NewsCreateModel newsCreateModel, CancellationToken cancellationToken);
     Task UpdateNewsAsync(Guid id, NewsUpdateModel newsUpdateModel, CancellationToken cancellationToken);
     Task DeleteNewsAsync(Guid id, CancellationToken cancellationToken);
-    // Task<PagedResult<NewsDataModel>> GetPagedNewsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<PagedResult<NewsDataModel>> GetPagedNewsWithSearchAsync(string? title, int pageNumber, int pageSize, CancellationToken cancellationToken);
-    // Task<NewsMediaResponse> AddNewsWithMediaAsync(NewsCreateWithMediaFileModel newsCreateModel, string? thumbnailSelected, CancellationToken cancellationToken);
-    // Task UpdateNewsAsync(Guid id, NewsUpdateWithMediaFileModel newsUpdateModel, string? thumbnailSelected, CancellationToken cancellationToken);
-    Task<bool> DeleteMediaAsync(Guid id, List<string> deletedImages, CancellationToken cancellationToken);
-    //Task<CraftVillageMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
-    // Task<NewsMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
-    Task<NewsMediaResponse> UploadMediaAsync(
-        Guid id,
-        List<IFormFile>? imageUploads,
-        string? thumbnailSelected,
-        CancellationToken cancellationToken);
-
-    Task<NewsDataModel?> AddNewsImagesAsync(Guid newsId, List<MediaDto> mediaList, CancellationToken cancellationToken);
-    Task<NewsDataModel?> RemoveNewsImagesAsync(Guid newsId, List<string> fileNames, CancellationToken cancellationToken);
-
     Task<List<NewsDataModel>> GetNewsByCategoryAsync(NewsCategory? category, CancellationToken cancellationToken);
-    Task<List<NewsDataModel>> GetPagedEventWithFilterAsync(string? title, int? month, int? year, int pageNumber, int pageSize, CancellationToken cancellationToken);
-    Task<List<NewsDataModel>> GetPagedNewsWithFilterAsync(string? title, int pageNumber, int pageSize, CancellationToken cancellationToken);
-    Task<List<NewsDataModel>> GetPagedExperienceWithFilterAsync(string? title, Guid? locationId, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<PagedResult<NewsDataModel>> GetPagedEventWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int? month, int? year, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<PagedResult<NewsDataModel>> GetPagedNewsWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<PagedResult<NewsDataModel>> GetPagedExperienceWithFilterAsync(string? title, Guid? locationId, TypeExperience? typeExperience, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken);
 }
 
 public class NewsService : INewsService
@@ -69,14 +54,27 @@ public class NewsService : INewsService
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
+            var isExperience = newsCreateModel.NewsCategory == NewsCategory.Experience;
+            if (newsCreateModel.TypeExperience.HasValue && !isExperience)
+                throw CustomExceptionFactory.CreateBadRequestError("TypeExperience chỉ được set khi NewsCategory = Experience.");
+            if (isExperience && !newsCreateModel.TypeExperience.HasValue)
+                throw CustomExceptionFactory.CreateBadRequestError("Experience bắt buộc phải có TypeExperience.");
+            if (newsCreateModel.NewsCategory == 0) 
+            {
+                throw CustomExceptionFactory.CreateBadRequestError(
+                    "Trường 'Loại tin tức' là bắt buộc."
+                );
+            }
+
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
+            Location? location = null;
 
             if (newsCreateModel.LocationId.HasValue)
             {
-                var location = await _unitOfWork.LocationRepository
-                    .ActiveEntities
-                    .FirstOrDefaultAsync(l => l.Id == newsCreateModel.LocationId.Value, cancellationToken);
+                location = await _unitOfWork.LocationRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(l => l.Id == newsCreateModel.LocationId.Value, cancellationToken);
 
                 if (location == null)
                 {
@@ -97,19 +95,71 @@ public class NewsService : INewsService
 
             await _unitOfWork.NewsRepository.AddAsync(newNews);
             await _unitOfWork.SaveAsync();
+
+            List<NewsMedia> newsMedias = new List<NewsMedia>();
+            if (newsCreateModel.MediaDtos != null && newsCreateModel.MediaDtos.Count > 0)
+            {
+                foreach (var mediaDto in newsCreateModel.MediaDtos)
+                {
+                    var newNewsMedia = new NewsMedia
+                    {
+                        Id = Guid.NewGuid(),
+                        NewsId = newNews.Id,
+                        MediaUrl = mediaDto.MediaUrl,
+                        IsThumbnail = mediaDto.IsThumbnail,
+                        CreatedBy = currentUserId,
+                        CreatedTime = currentTime,
+                        LastUpdatedTime = currentTime,
+                        LastUpdatedBy = currentUserId
+                    };
+
+                    newsMedias.Add(newNewsMedia);
+                }
+                await _unitOfWork.NewsMediaRepository.AddRangeAsync(newsMedias);
+                await _unitOfWork.SaveAsync();
+            }
+
             await transaction.CommitAsync(cancellationToken);
 
-            var result = _unitOfWork.NewsRepository.ActiveEntities
-                .FirstOrDefault(l => l.Id == newNews.Id);
 
-            return _mapper.Map<NewsDataModel>(result);
+            var response = new NewsDataModel
+            {
+                Id = newNews.Id,
+                Title = newNews.Title,
+                Description = newNews.Description,
+                Content = newNews.Content,
+                LocationId = location?.Id,
+                LocationName = location?.Name,
+                NewsCategory = newNews.NewsCategory.Value,
+                CategoryName = _enumService.GetEnumDisplayName<NewsCategory>(newNews.NewsCategory.Value),
+                StartDate = newNews.StartDate,
+                EndDate = newNews.EndDate,
+                IsHighlighted = newNews.IsHighlighted,
+                TypeExperience = newNews.TypeExperience,
+                TypeExperienceText = newNews.TypeExperience.HasValue
+                    ? _enumService.GetEnumDisplayName<TypeExperience>(newNews.TypeExperience.Value)
+                    : string.Empty,
+                CreatedTime = newNews.CreatedTime,
+                LastUpdatedTime = newNews.LastUpdatedTime,
+                Medias = newsMedias.Select(x => new MediaResponse
+                {
+                    MediaUrl = x.MediaUrl,
+                    FileName = x.FileName ?? string.Empty,
+                    IsThumbnail = x.IsThumbnail,
+                    CreatedTime = x.CreatedTime
+                }).ToList()
+            };
+
+            return response;
         }
         catch (CustomException)
         {
+            await transaction.RollbackAsync(cancellationToken);
             throw;
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync(cancellationToken);
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
@@ -120,39 +170,64 @@ public class NewsService : INewsService
 
     public async Task DeleteNewsAsync(Guid id, CancellationToken cancellationToken)
     {
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
 
+            // 1) Lấy bản ghi
             var existingNews = await _unitOfWork.NewsRepository.GetByIdAsync(id, cancellationToken);
-
             if (existingNews == null || existingNews.IsDeleted)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("news");
             }
 
-            existingNews.LastUpdatedBy = currentUserId;
+            // 2) Soft delete News
+            existingNews.IsDeleted = true;
             existingNews.DeletedBy = currentUserId;
             existingNews.DeletedTime = currentTime;
+            existingNews.LastUpdatedBy = currentUserId;
             existingNews.LastUpdatedTime = currentTime;
-            existingNews.IsDeleted = true;
 
-            _unitOfWork.BeginTransaction();
             _unitOfWork.NewsRepository.Update(existingNews);
-            _unitOfWork.CommitTransaction();
+            await _unitOfWork.SaveAsync();
+
+            // 3) Soft delete Media liên quan (nếu có)
+            var relatedMedias = await _unitOfWork.NewsMediaRepository
+                .ActiveEntities
+                .Where(m => m.NewsId == existingNews.Id)
+                .ToListAsync(cancellationToken);
+
+            if (relatedMedias.Count > 0)
+            {
+                foreach (var m in relatedMedias)
+                {
+                    m.IsDeleted = true;
+                    m.LastUpdatedBy = currentUserId;
+                    m.LastUpdatedTime = currentTime;
+                }
+
+                _unitOfWork.NewsMediaRepository.UpdateRange(relatedMedias);
+                await _unitOfWork.SaveAsync();
+            }
+
+            // 4) Commit
+            await transaction.CommitAsync(cancellationToken);
         }
         catch (CustomException)
         {
+            await transaction.RollbackAsync(cancellationToken);
             throw;
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync(cancellationToken);
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
-            //  _unitOfWork.Dispose();
+            //_unitOfWork.Dispose();
         }
     }
 
@@ -238,16 +313,16 @@ public class NewsService : INewsService
         }
     }
 
-    public async Task<List<NewsDataModel>> GetPagedEventWithFilterAsync(string? title, int? month, int? year, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<NewsDataModel>> GetPagedEventWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int? month, int? year, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
             var pagedResult = await _unitOfWork.NewsRepository.GetPageWithSearchAsync(
-                title, pageNumber, pageSize, cancellationToken);
+                title, locationId, isHighlighted, pageNumber, pageSize, cancellationToken);
 
-            pagedResult.Items = pagedResult.Items.Where(a =>
-                a.NewsCategory == NewsCategory.Event
-            ).ToList();
+            var eventItems = pagedResult.Items = pagedResult.Items
+            .Where(a => a.NewsCategory == NewsCategory.Event)
+            .ToList();
 
             var newsDataModels = _mapper.Map<List<NewsDataModel>>(pagedResult.Items);
 
@@ -277,7 +352,15 @@ public class NewsService : INewsService
                 ).ToList();
             }
 
-            return newsDataModels;
+            var result = new PagedResult<NewsDataModel>
+            {
+                Items = newsDataModels,
+                TotalCount = eventItems.Count,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
+            return result;
         }
         catch (CustomException)
         {
@@ -289,14 +372,14 @@ public class NewsService : INewsService
         }
     }
 
-    public async Task<List<NewsDataModel>> GetPagedNewsWithFilterAsync(string title, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<NewsDataModel>> GetPagedNewsWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
             var pagedResult = await _unitOfWork.NewsRepository.GetPageWithSearchAsync(
-                title, pageNumber, pageSize, cancellationToken);
+                title, locationId, isHighlighted, pageNumber, pageSize, cancellationToken);
 
-            pagedResult.Items = pagedResult.Items.Where(a =>
+            var newItems = pagedResult.Items = pagedResult.Items.Where(a =>
                 a.NewsCategory == NewsCategory.News
             ).ToList();
 
@@ -316,7 +399,15 @@ public class NewsService : INewsService
                 item.TypeExperienceText = _enumService.GetEnumDisplayName<TypeExperience>(item.TypeExperience);
             }
 
-            return newsDataModels;
+            var result = new PagedResult<NewsDataModel>
+            {
+                Items = newsDataModels,
+                TotalCount = newItems.Count,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
+            return result;
         }
         catch (CustomException)
         {
@@ -328,14 +419,14 @@ public class NewsService : INewsService
         }
     }
 
-    public async Task<List<NewsDataModel>> GetPagedExperienceWithFilterAsync(string? title, Guid? locationId, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<NewsDataModel>> GetPagedExperienceWithFilterAsync(string? title, Guid? locationId, TypeExperience? typeExperience, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
             var pagedResult = await _unitOfWork.NewsRepository.GetPageWithSearchAsync(
-                title, pageNumber, pageSize, cancellationToken);
+                title, locationId, isHighlighted, typeExperience, pageNumber, pageSize, cancellationToken);
 
-            pagedResult.Items = pagedResult.Items.Where(a =>
+            var experienceItems = pagedResult.Items = pagedResult.Items.Where(a =>
                 a.NewsCategory == NewsCategory.Experience
             ).ToList();
 
@@ -360,7 +451,15 @@ public class NewsService : INewsService
                 item.TypeExperienceText = _enumService.GetEnumDisplayName<TypeExperience>(item.TypeExperience);
             }
 
-            return newsDataModels;
+            var result = new PagedResult<NewsDataModel>
+            {
+                Items = newsDataModels,
+                TotalCount = experienceItems.Count,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
+            return result;
         }
         catch (CustomException)
         {
@@ -453,72 +552,144 @@ public class NewsService : INewsService
         }
     }
 
-    public async Task<NewsDataModel?> GetNewsByNameAsync(string name, CancellationToken cancellationToken)
+    public async Task UpdateNewsAsync(Guid id, NewsUpdateModel newsUpdateModel, CancellationToken cancellationToken)
     {
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
-            var existingNews = await _unitOfWork.NewsRepository.GetByNameAsync(name, cancellationToken);
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var existingNews = await _unitOfWork.NewsRepository.GetByIdAsync(id, cancellationToken);
             if (existingNews == null || existingNews.IsDeleted)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("news");
             }
 
-            return _mapper.Map<NewsDataModel>(existingNews);
-        }
-        catch (CustomException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-        finally
-        {
-            //  _unitOfWork.Dispose();
-        }
-    }
-
-    public async Task<PagedResult<NewsDataModel>> GetPagedNewsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var pagedResult = await _unitOfWork.NewsRepository.GetPageAsync(pageNumber, pageSize);
-
-            var newsDataModels = _mapper.Map<List<NewsDataModel>>(pagedResult.Items);
-
-            var result = new PagedResult<NewsDataModel>
+            Location? location = null;
+            if (newsUpdateModel.LocationId.HasValue)
             {
-                Items = newsDataModels,
-                TotalCount = pagedResult.TotalCount,
-                PageNumber = pageNumber,
-                PageSize = pageSize
-            };
-            foreach (var item in result.Items)
-            {
-                item.Medias = await GetMediaByIdAsync(item.Id, cancellationToken);
-                item.LocationName = await _unitOfWork.LocationRepository
+                location = await _unitOfWork.LocationRepository
                     .ActiveEntities
-                    .Where(x => x.Id == item.LocationId)
-                    .Select(x => x.Name)
-                    .FirstOrDefaultAsync(cancellationToken);
-                item.CategoryName = _enumService.GetEnumDisplayName<NewsCategory>(item.NewsCategory);
-                item.TypeExperienceText = _enumService.GetEnumDisplayName<TypeExperience>(item.TypeExperience);
+                    .FirstOrDefaultAsync(l => l.Id == newsUpdateModel.LocationId.Value, cancellationToken);
+
+                if (location == null)
+                {
+                    throw CustomExceptionFactory.CreateNotFoundError("location");
+                }
             }
 
-            return result;
+            var isExperience = newsUpdateModel.NewsCategory == NewsCategory.Experience;
+            if (newsUpdateModel.TypeExperience.HasValue && !isExperience)
+                throw CustomExceptionFactory.CreateBadRequestError("TypeExperience chỉ được set khi NewsCategory = Experience.");
+            if (isExperience && !newsUpdateModel.TypeExperience.HasValue)
+                throw CustomExceptionFactory.CreateBadRequestError("Experience bắt buộc phải có TypeExperience.");
+            if (newsUpdateModel.NewsCategory != existingNews.NewsCategory)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Không thể cập nhật NewsCategory. Vui lòng tạo mới nếu cần thay đổi loại tin tức.");
+            }
+            if (newsUpdateModel.NewsCategory == 0)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError(
+                    "Trường 'Loại tin tức' là bắt buộc."
+                );
+            }
+
+            var keepCreatedBy = existingNews.CreatedBy;
+            var keepCreatedTime = existingNews.CreatedTime;
+
+            _mapper.Map(newsUpdateModel, existingNews);
+
+            existingNews.CreatedBy = keepCreatedBy;
+            existingNews.CreatedTime = keepCreatedTime;
+            existingNews.LastUpdatedBy = currentUserId;
+            existingNews.LastUpdatedTime = _timeService.SystemTimeNow;
+
+            _unitOfWork.NewsRepository.Update(existingNews);
+            await _unitOfWork.SaveAsync();
+
+            if (newsUpdateModel.MediaDtos != null)
+            {
+                var existingMedias = await _unitOfWork.NewsMediaRepository
+                    .ActiveEntities
+                    .Where(m => m.NewsId == existingNews.Id)
+                    .ToListAsync(cancellationToken);
+
+                // Danh sách url mới từ client
+                var incomingUrls = newsUpdateModel.MediaDtos.Select(m => m.MediaUrl).ToHashSet();
+
+                // (1) Xóa mềm những media không còn trong incomingUrls
+                var toDelete = existingMedias
+                    .Where(em => !incomingUrls.Contains(em.MediaUrl))
+                    .ToList();
+
+                foreach (var m in toDelete)
+                {
+                    m.IsDeleted = true;
+                    m.LastUpdatedBy = currentUserId;
+                    m.LastUpdatedTime = _timeService.SystemTimeNow;
+                }
+                if (toDelete.Count > 0)
+                {
+                    _unitOfWork.NewsMediaRepository.UpdateRange(toDelete);
+                    await _unitOfWork.SaveAsync();
+                }
+
+                // (2) Cập nhật thumbnail cho media trùng url nhưng thay đổi IsThumbnail
+                var incomingByUrl = newsUpdateModel.MediaDtos.ToDictionary(m => m.MediaUrl, m => m);
+                var toUpdate = existingMedias
+                    .Where(em => incomingByUrl.ContainsKey(em.MediaUrl) &&
+                                 em.IsThumbnail != incomingByUrl[em.MediaUrl].IsThumbnail)
+                    .ToList();
+
+                foreach (var m in toUpdate)
+                {
+                    m.IsThumbnail = incomingByUrl[m.MediaUrl].IsThumbnail;
+                    m.LastUpdatedBy = currentUserId;
+                    m.LastUpdatedTime = _timeService.SystemTimeNow;
+                }
+                if (toUpdate.Count > 0)
+                {
+                    _unitOfWork.NewsMediaRepository.UpdateRange(toUpdate);
+                    await _unitOfWork.SaveAsync();
+                }
+
+                // (3) Thêm mới những media có url chưa tồn tại
+                var existingUrls = existingMedias.Select(em => em.MediaUrl).ToHashSet();
+                var toAdd = newsUpdateModel.MediaDtos
+                    .Where(m => !existingUrls.Contains(m.MediaUrl))
+                    .Select(m => new NewsMedia
+                    {
+                        Id = Guid.NewGuid(),
+                        NewsId = existingNews.Id,
+                        MediaUrl = m.MediaUrl,
+                        IsThumbnail = m.IsThumbnail,
+                        CreatedBy = currentUserId,
+                        CreatedTime = _timeService.SystemTimeNow,
+                        LastUpdatedBy = currentUserId,
+                        LastUpdatedTime = _timeService.SystemTimeNow
+                    })
+                    .ToList();
+
+                if (toAdd.Count > 0)
+                {
+                    await _unitOfWork.NewsMediaRepository.AddRangeAsync(toAdd);
+                    await _unitOfWork.SaveAsync();
+                }
+            }
+            await transaction.CommitAsync(cancellationToken);
         }
         catch (CustomException)
         {
+            await transaction.RollbackAsync(cancellationToken);
             throw;
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync(cancellationToken);
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
-            //  _unitOfWork.Dispose();
+            // _unitOfWork.Dispose();
         }
     }
 
@@ -565,752 +736,6 @@ public class NewsService : INewsService
         }
     }
 
-    public async Task UpdateNewsAsync(Guid id, NewsUpdateModel newsUpdateModel, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-
-            var existingNews = await _unitOfWork.NewsRepository.GetByIdAsync(id, cancellationToken);
-            if (existingNews == null || existingNews.IsDeleted)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("news");
-            }
-
-            if (newsUpdateModel.LocationId.HasValue)
-            {
-                var location = await _unitOfWork.LocationRepository
-                    .ActiveEntities
-                    .FirstOrDefaultAsync(l => l.Id == newsUpdateModel.LocationId.Value, cancellationToken);
-
-                if (location == null)
-                {
-                    throw CustomExceptionFactory.CreateNotFoundError("location");
-                }
-            }
-
-            if (newsUpdateModel.TypeExperience.HasValue && newsUpdateModel.NewsCategory != NewsCategory.Experience)
-            {
-                throw CustomExceptionFactory.CreateBadRequestError("Type Experience chỉ có thể dành cho news thuộc loại Experience.");
-            }
-
-            _mapper.Map(newsUpdateModel, existingNews);
-
-            existingNews.LastUpdatedBy = currentUserId;
-            existingNews.LastUpdatedTime = _timeService.SystemTimeNow;
-
-            _unitOfWork.BeginTransaction();
-            _unitOfWork.NewsRepository.Update(existingNews);
-            _unitOfWork.CommitTransaction();
-        }
-        catch (CustomException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-        finally
-        {
-            //  _unitOfWork.Dispose();
-        }
-    }
-
-    // có add kèm theo ảnh
-    public async Task<NewsMediaResponse> AddNewsWithMediaAsync(NewsCreateWithMediaFileModel newsCreateModel, string? thumbnailSelected, CancellationToken cancellationToken)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-            var currentTime = _timeService.SystemTimeNow;
-
-            var newNews = _mapper.Map<News>(newsCreateModel);
-            newNews.CreatedBy = currentUserId;
-            newNews.LastUpdatedBy = currentUserId;
-            newNews.CreatedTime = currentTime;
-            newNews.LastUpdatedTime = currentTime;
-
-            await _unitOfWork.NewsRepository.AddAsync(newNews);
-            await _unitOfWork.SaveAsync();
-
-            var mediaResponses = new List<MediaResponse>();
-
-            if (newsCreateModel.ImageUploads != null && newsCreateModel.ImageUploads.Count > 0)
-            {
-                var imageUrls = await _cloudinaryService.UploadImagesAsync(newsCreateModel.ImageUploads);
-
-                bool isAutoSelectThumbnail = string.IsNullOrEmpty(thumbnailSelected);
-                bool thumbnailSet = false;
-
-                for (int i = 0; i < newsCreateModel.ImageUploads.Count; i++)
-                {
-                    var imageFile = newsCreateModel.ImageUploads[i];
-                    var imageUrl = imageUrls[i];
-
-                    var newNewsMedia = new NewsMedia
-                    {
-                        FileName = imageFile.FileName,
-                        FileType = imageFile.ContentType,
-                        NewsId = newNews.Id,
-                        MediaUrl = imageUrl,
-                        SizeInBytes = imageFile.Length,
-                        CreatedBy = currentUserId,
-                        CreatedTime = _timeService.SystemTimeNow,
-                        LastUpdatedBy = currentUserId,
-                    };
-
-                    // Chọn ảnh làm thumbnail
-                    if ((isAutoSelectThumbnail && i == 0) || (!isAutoSelectThumbnail && imageFile.FileName == thumbnailSelected))
-                    {
-                        newNewsMedia.IsThumbnail = true;
-                        thumbnailSet = true;
-                    }
-
-                    await _unitOfWork.NewsMediaRepository.AddAsync(newNewsMedia);
-
-                    mediaResponses.Add(new MediaResponse
-                    {
-                        MediaUrl = imageUrl,
-                        FileName = imageFile.FileName,
-                        FileType = imageFile.ContentType,
-                        SizeInBytes = imageFile.Length
-                    });
-                }
-
-                // Trường hợp người dùng chọn ảnh thumbnail nhưng không tìm thấy ảnh khớp
-                if (!thumbnailSet && newsCreateModel.ImageUploads.Count > 0)
-                {
-                    var firstMedia = mediaResponses.First();
-                    var firstNewsMedia = await _unitOfWork.NewsMediaRepository
-                        .GetFirstByNewsIdAsync(newNews.Id);
-                    if (firstNewsMedia != null)
-                    {
-                        firstNewsMedia.IsThumbnail = true;
-                        _unitOfWork.NewsMediaRepository.Update(firstNewsMedia);
-                    }
-                }
-            }
-
-            await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync(cancellationToken);
-
-            return new NewsMediaResponse
-            {
-                NewsId = newNews.Id,
-                Title = newNews.Title,
-                Media = mediaResponses
-            };
-        }
-        catch (CustomException)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw;
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
-    // có update ảnh kèm theo
-    public async Task UpdateNewsAsync(
-        Guid id,
-        NewsUpdateWithMediaFileModel newsUpdateModel,
-        string? thumbnailSelected,
-        CancellationToken cancellationToken)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-
-            var existingNews = await _unitOfWork.NewsRepository.GetByIdAsync(id, cancellationToken);
-            if (existingNews == null || existingNews.IsDeleted)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("news");
-            }
-
-            _mapper.Map(newsUpdateModel, existingNews);
-
-            existingNews.LastUpdatedBy = currentUserId;
-            existingNews.LastUpdatedTime = _timeService.SystemTimeNow;
-
-            _unitOfWork.NewsRepository.Update(existingNews);
-
-            // xu ly anh
-            var imageUploads = newsUpdateModel.ImageUploads;
-            var allMedia = _unitOfWork.NewsMediaRepository.Entities
-                .Where(dm => dm.NewsId == existingNews.Id).ToList();
-
-            // Nếu không có ảnh mới & không có thumbnailSelected => Chỉ cập nhật thông tin news
-            if ((imageUploads == null || imageUploads.Count == 0) && string.IsNullOrEmpty(thumbnailSelected))
-            {
-                await _unitOfWork.SaveAsync();
-                await transaction.CommitAsync(cancellationToken);
-                return;
-            }
-
-            bool isThumbnailUpdated = false;
-
-            // Nếu có thumbnailSelected và nó là link (ảnh cũ) -> Cập nhật ảnh cũ làm thumbnail
-            if (!string.IsNullOrEmpty(thumbnailSelected) && Helper.IsValidUrl(thumbnailSelected))
-            {
-                foreach (var media in allMedia)
-                {
-                    media.IsThumbnail = media.MediaUrl == thumbnailSelected;
-                    _unitOfWork.NewsMediaRepository.Update(media);
-                }
-                isThumbnailUpdated = true; // Đánh dấu đã cập nhật thumbnail
-            }
-
-            // Nếu không có ảnh mới nhưng có thumbnailSelected là ảnh cũ -> Dừng ở đây
-            if (imageUploads == null || imageUploads.Count == 0)
-            {
-                await _unitOfWork.SaveAsync();
-                await transaction.CommitAsync(cancellationToken);
-                return;
-            }
-
-            // Có ảnh mới -> Upload lên Cloudinary
-            var imageUrls = await _cloudinaryService.UploadImagesAsync(imageUploads);
-            var mediaResponses = new List<MediaResponse>();
-
-            for (int i = 0; i < imageUploads.Count; i++)
-            {
-                var imageUpload = imageUploads[i];
-                bool isThumbnail = false;
-
-                // Nếu thumbnailSelected là tên file -> Đặt ảnh mới làm thumbnail
-                if (!string.IsNullOrEmpty(thumbnailSelected) && !Helper.IsValidUrl(thumbnailSelected))
-                {
-                    isThumbnail = imageUpload.FileName == thumbnailSelected;
-                }
-
-                var newNewsMedia = new NewsMedia
-                {
-                    FileName = imageUpload.FileName,
-                    FileType = imageUpload.ContentType,
-                    NewsId = existingNews.Id,
-                    MediaUrl = imageUrls[i],
-                    SizeInBytes = imageUpload.Length,
-                    IsThumbnail = isThumbnail,
-                    CreatedBy = currentUserId,
-                    CreatedTime = _timeService.SystemTimeNow,
-                    LastUpdatedBy = currentUserId,
-                };
-
-                await _unitOfWork.NewsMediaRepository.AddAsync(newNewsMedia);
-                mediaResponses.Add(new MediaResponse
-                {
-                    MediaUrl = imageUrls[i],
-                    FileName = imageUpload.FileName,
-                    FileType = imageUpload.ContentType,
-                    IsThumbnail = isThumbnail,
-                    SizeInBytes = imageUpload.Length
-                });
-
-                // Nếu ảnh mới được chọn làm thumbnail -> Cập nhật tất cả ảnh cũ về IsThumbnail = false
-                if (isThumbnail)
-                {
-                    foreach (var media in allMedia)
-                    {
-                        media.IsThumbnail = false;
-                        _unitOfWork.NewsMediaRepository.Update(media);
-                    }
-                    isThumbnailUpdated = true;
-                }
-            }
-
-            // Nếu chưa có ảnh nào được chọn làm thumbnail, đặt ảnh mới đầu tiên làm thumbnail
-            if (!isThumbnailUpdated && mediaResponses.Count > 0)
-            {
-                var firstMedia = mediaResponses.First();
-                var firstMediaEntity = await _unitOfWork.NewsMediaRepository.ActiveEntities
-                    .FirstOrDefaultAsync(m => m.MediaUrl == firstMedia.MediaUrl);
-
-                if (firstMediaEntity != null)
-                {
-                    firstMediaEntity.IsThumbnail = true;
-                    _unitOfWork.NewsMediaRepository.Update(firstMediaEntity);
-                }
-            }
-
-            await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync(cancellationToken);
-        }
-        catch (CustomException)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw;
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
-    public async Task<bool> DeleteMediaAsync(Guid id, List<string> deletedImages, CancellationToken cancellationToken)
-    {
-        _unitOfWork.BeginTransaction();
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-            var existingNews = await _unitOfWork.NewsRepository.GetByIdAsync(id, cancellationToken);
-            if (existingNews == null || existingNews.IsDeleted)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("news");
-            }
-
-            if (deletedImages == null || deletedImages.Count == 0)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("images");
-            }
-
-            var imageUrlsDeleted = await _cloudinaryService.DeleteImagesAsync(deletedImages);
-
-            if (!imageUrlsDeleted)
-            {
-                return false;
-            }
-
-            foreach (var imageUpload in deletedImages)
-            {
-                var newsMedia = await _unitOfWork.NewsMediaRepository
-                    .Entities
-                    .FirstOrDefaultAsync(m => m.NewsId == id && m.MediaUrl == imageUpload && !m.IsDeleted, cancellationToken);
-
-                if (newsMedia != null)
-                {
-                    //_unitOfWork.NewsMediaRepository.Remove(newsMedia);
-                    newsMedia.IsDeleted = true;
-                    newsMedia.DeletedTime = DateTime.UtcNow;
-                }
-            }
-
-            await _unitOfWork.SaveAsync();
-            _unitOfWork.CommitTransaction();
-
-            return true;
-        }
-        catch (CustomException)
-        {
-            await _unitOfWork.RollBackAsync();
-            throw;
-        }
-        catch (Exception ex)
-        {
-            await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
-    public async Task<NewsMediaResponse> UploadMediaAsync(
-        Guid id,
-        List<IFormFile>? imageUploads,
-        string? thumbnailSelected,
-        CancellationToken cancellationToken)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-            var existingNews = await _unitOfWork.NewsRepository.GetByIdAsync(id, cancellationToken);
-            if (existingNews == null || existingNews.IsDeleted)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("news");
-            }
-
-            if (imageUploads == null || imageUploads.Count == 0)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("images");
-            }
-
-            var allMedia = _unitOfWork.NewsMediaRepository.Entities
-                .Where(dm => dm.NewsId == existingNews.Id).ToList();
-
-            // Nếu không có ảnh mới & không có thumbnailSelected => Chỉ cập nhật thông tin news
-            if ((imageUploads == null || imageUploads.Count == 0) && string.IsNullOrEmpty(thumbnailSelected))
-            {
-                await _unitOfWork.SaveAsync();
-                await transaction.CommitAsync(cancellationToken);
-                return new NewsMediaResponse
-                {
-                    NewsId = existingNews.Id,
-                    Title = existingNews.Title,
-                    Media = new List<MediaResponse>()
-                };
-            }
-
-            bool isThumbnailUpdated = false;
-
-            // Nếu có thumbnailSelected và nó là link (ảnh cũ) -> Cập nhật ảnh cũ làm thumbnail
-            if (!string.IsNullOrEmpty(thumbnailSelected) && Helper.IsValidUrl(thumbnailSelected))
-            {
-                foreach (var media in allMedia)
-                {
-                    media.IsThumbnail = media.MediaUrl == thumbnailSelected;
-                    _unitOfWork.NewsMediaRepository.Update(media);
-                }
-                isThumbnailUpdated = true; // Đánh dấu đã cập nhật thumbnail
-            }
-
-            // Nếu không có ảnh mới nhưng có thumbnailSelected là ảnh cũ -> Dừng ở đây
-            if (imageUploads == null || imageUploads.Count == 0)
-            {
-                await _unitOfWork.SaveAsync();
-                await transaction.CommitAsync(cancellationToken);
-                return new NewsMediaResponse
-                {
-                    NewsId = existingNews.Id,
-                    Title = existingNews.Title,
-                    Media = new List<MediaResponse>()
-                };
-            }
-
-            // Có ảnh mới -> Upload lên Cloudinary
-            var imageUrls = await _cloudinaryService.UploadImagesAsync(imageUploads);
-            var mediaResponses = new List<MediaResponse>();
-
-            for (int i = 0; i < imageUploads.Count; i++)
-            {
-                var imageUpload = imageUploads[i];
-                bool isThumbnail = false;
-
-                // Nếu thumbnailSelected là tên file -> Đặt ảnh mới làm thumbnail
-                if (!string.IsNullOrEmpty(thumbnailSelected) && !Helper.IsValidUrl(thumbnailSelected))
-                {
-                    isThumbnail = imageUpload.FileName == thumbnailSelected;
-                }
-
-                var newNewsMedia = new NewsMedia
-                {
-                    FileName = imageUpload.FileName,
-                    FileType = imageUpload.ContentType,
-                    NewsId = existingNews.Id,
-                    MediaUrl = imageUrls[i],
-                    SizeInBytes = imageUpload.Length,
-                    IsThumbnail = isThumbnail,
-                    CreatedBy = currentUserId,
-                    CreatedTime = _timeService.SystemTimeNow,
-                    LastUpdatedBy = currentUserId,
-                };
-
-                await _unitOfWork.NewsMediaRepository.AddAsync(newNewsMedia);
-                mediaResponses.Add(new MediaResponse
-                {
-                    MediaUrl = imageUrls[i],
-                    FileName = imageUpload.FileName,
-                    FileType = imageUpload.ContentType,
-                    IsThumbnail = isThumbnail,
-                    SizeInBytes = imageUpload.Length
-                });
-
-                // Nếu ảnh mới được chọn làm thumbnail -> Cập nhật tất cả ảnh cũ về IsThumbnail = false
-                if (isThumbnail)
-                {
-                    foreach (var media in allMedia)
-                    {
-                        media.IsThumbnail = false;
-                        _unitOfWork.NewsMediaRepository.Update(media);
-                    }
-                    isThumbnailUpdated = true;
-                }
-            }
-
-            // Nếu chưa có ảnh nào được chọn làm thumbnail, đặt ảnh mới đầu tiên làm thumbnail
-            if (!isThumbnailUpdated && mediaResponses.Count > 0)
-            {
-                var firstMedia = mediaResponses.First();
-                var firstMediaEntity = await _unitOfWork.NewsMediaRepository.ActiveEntities
-                    .FirstOrDefaultAsync(m => m.MediaUrl == firstMedia.MediaUrl);
-
-                if (firstMediaEntity != null)
-                {
-                    firstMediaEntity.IsThumbnail = true;
-                    _unitOfWork.NewsMediaRepository.Update(firstMediaEntity);
-                }
-            }
-
-            await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync(cancellationToken);
-
-            return new NewsMediaResponse
-            {
-                NewsId = existingNews.Id,
-                Title = existingNews.Title,
-                Media = mediaResponses
-            };
-        }
-        catch (CustomException)
-        {
-            await _unitOfWork.RollBackAsync();
-            throw;
-        }
-        catch (Exception ex)
-        {
-            await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
-    public async Task<NewsMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken)
-    {
-        _unitOfWork.BeginTransaction();
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-            var existingNews = await _unitOfWork.NewsRepository.GetByIdAsync(id, cancellationToken);
-            if (existingNews == null || existingNews.IsDeleted)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("khách sạn");
-            }
-
-            if (imageUploads == null || !imageUploads.Any())
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("medias");
-            }
-
-            var imageUrls = await _cloudinaryService.UploadImagesAsync(imageUploads);
-            var mediaResponses = new List<MediaResponse>();
-
-            for (int i = 0; i < imageUploads.Count; i++)
-            {
-                var imageUpload = imageUploads[i];
-
-                var newNewsMedia = new NewsMedia
-                {
-                    FileName = imageUpload.FileName,
-                    FileType = imageUpload.ContentType,
-                    NewsId = existingNews.Id,
-                    MediaUrl = imageUrls[i],
-                    SizeInBytes = imageUpload.Length,
-                    CreatedBy = currentUserId,
-                    CreatedTime = _timeService.SystemTimeNow,
-                    LastUpdatedBy = currentUserId,
-                };
-
-                await _unitOfWork.NewsMediaRepository.AddAsync(newNewsMedia);
-
-                mediaResponses.Add(new MediaResponse
-                {
-                    MediaUrl = imageUrls[i],
-                    FileName = imageUpload.FileName,
-                    FileType = imageUpload.ContentType,
-                    SizeInBytes = imageUpload.Length
-                });
-            }
-
-            await _unitOfWork.SaveAsync();
-            _unitOfWork.CommitTransaction();
-
-            return new NewsMediaResponse
-            {
-                NewsId = existingNews.Id,
-                Title = existingNews.Title,
-                Media = mediaResponses
-            };
-        }
-        catch (CustomException)
-        {
-            await _unitOfWork.RollBackAsync();
-            throw;
-        }
-        catch (Exception ex)
-        {
-            await _unitOfWork.RollBackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
-    public async Task<NewsDataModel?> AddNewsImagesAsync(Guid newsId, List<MediaDto> mediaList, CancellationToken cancellationToken)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var existingNews = await _unitOfWork.NewsRepository.GetByIdAsync(newsId, cancellationToken);
-            if (existingNews == null || existingNews.IsDeleted)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("news");
-            }
-
-            var hasThumbnail = mediaList.Any(m => m.IsThumbnail);
-            if (hasThumbnail)
-            {
-                // Bỏ đánh dấu thumbnail cũ nếu có
-                var oldThumbnails = await _unitOfWork.NewsMediaRepository.ActiveEntities
-                    .Where(m => m.NewsId == newsId && m.IsThumbnail)
-                    .ToListAsync(cancellationToken);
-
-                foreach (var oldThumb in oldThumbnails)
-                {
-                    oldThumb.IsThumbnail = false;
-                    _unitOfWork.NewsMediaRepository.Update(oldThumb);
-                }
-            }
-
-            foreach (var mediaDto in mediaList)
-            {
-                string fileName = mediaDto.MediaUrl.Split('/').Last();
-                string fileType = Path.GetExtension(fileName).TrimStart('.');
-
-                var newMedia = new NewsMedia
-                {
-                    NewsId = newsId,
-                    MediaUrl = mediaDto.MediaUrl,
-                    FileName = fileName,
-                    FileType = fileType,
-                    SizeInBytes = 0,
-                    CreatedTime = DateTime.UtcNow,
-                    IsDeleted = false,
-                    IsThumbnail = mediaDto.IsThumbnail
-                };
-
-                await _unitOfWork.NewsMediaRepository.AddAsync(newMedia);
-            }
-
-            await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync(cancellationToken);
-
-            return _mapper.Map<NewsDataModel>(existingNews);
-        }
-        catch (CustomException)
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
-    public async Task<NewsDataModel?> RemoveNewsImagesAsync(Guid newsId, List<string> fileNames, CancellationToken cancellationToken)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var existingNews = await _unitOfWork.NewsRepository.GetByIdAsync(newsId, cancellationToken);
-            if (existingNews == null || existingNews.IsDeleted)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("news");
-            }
-
-            var medias = await _unitOfWork.NewsMediaRepository.ActiveEntities
-                .Where(m => m.NewsId == newsId && fileNames.Contains(m.FileName))
-                .ToListAsync(cancellationToken);
-
-            if (!medias.Any())
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("media");
-            }
-
-            var urlsToDelete = new List<string>();
-
-            foreach (var media in medias)
-            {
-                media.IsDeleted = true;
-                media.DeletedTime = DateTime.UtcNow;
-                urlsToDelete.Add(media.MediaUrl);
-                _unitOfWork.NewsMediaRepository.Update(media);
-            }
-
-            await _mediaService.DeleteImagesAsync(urlsToDelete);
-            await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync(cancellationToken);
-
-            return _mapper.Map<NewsDataModel>(existingNews);
-        }
-        catch (CustomException)
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
-    //public async Task<List<NewsDataModel>> GetAllNewsAdminAsync()
-    //{
-    //    try
-    //    {
-    //        var currentUserId = _userContextService.TryGetCurrentUserId();
-
-    //        if (string.IsNullOrEmpty(currentUserId))
-    //        {
-    //            var allNews = await _unitOfWork.NewsRepository.GetAllAsync();
-    //            var allNewsDataModels = _mapper.Map<List<NewsDataModel>>(allNews);
-    //            await EnrichNewsDataModelsAsync(allNewsDataModels, new CancellationToken());
-    //            return allNewsDataModels;
-    //        }
-
-    //        // 3. Nếu có userId → tìm user
-    //        var userId = Guid.Parse(currentUserId);
-    //        var user = await _unitOfWork.UserRepository.GetByIdAsync(userId, CancellationToken.None);
-
-    //        // 4. Nếu không tìm được user (trường hợp hiếm) → fallback: trả toàn bộ
-    //        if (user == null)
-    //        {
-    //            throw CustomExceptionFactory.CreateNotFoundError("user");
-    //        }
-
-    //        // 5. Lấy role
-    //        var roles = await _unitOfWork.UserRepository.GetRolesByUserIdAsync(userId);
-    //        var roleNames = roles.Select(r => r.Name).ToList();
-    //        var roleIds = roles.Select(r => r.Id).ToList();
-
-    //        List<News> newss;
-
-    //        // 6. Admin toàn quyền
-    //        if (roleNames.Equals(AppRole.ADMIN))
-    //        {
-    //            newss = (await _unitOfWork.NewsRepository.GetAllAsync()).ToList();
-    //        }
-    //        // 7. Admin huyện (dựa vào RoleDistrict)
-    //        else
-    //        {
-    //            // Lấy các DistrictId mà user được phân quyền quản lý
-    //            var allowedDistrictIds = await _unitOfWork.RoleDistrictRepository.ActiveEntities
-    //                .Where(rd => roleIds.Contains(rd.RoleId))
-    //                .Select(rd => rd.DistrictId)
-    //                .Distinct()
-    //                .ToListAsync();
-
-    //            if (allowedDistrictIds.Any())
-    //            {
-    //                // Là admin huyện → chỉ được lấy các News trong danh sách huyện đó
-    //                newss = await _unitOfWork.NewsRepository.ActiveEntities
-    //                    .Where(l => l.DistrictId.HasValue && allowedDistrictIds.Contains(l.DistrictId.Value))
-    //                    .ToListAsync();
-    //            }
-    //            else
-    //            {
-    //                // Không có quyền theo huyện nào → xem là người dùng thường
-    //                newss = (await _unitOfWork.NewsRepository.GetAllAsync()).ToList();
-    //            }
-    //        }
-
-    //        var newsDataModels = _mapper.Map<List<NewsDataModel>>(newss);
-    //        await EnrichNewsDataModelsAsync(newsDataModels, new CancellationToken());
-    //        return newsDataModels;
-    //    }
-    //    catch (CustomException)
-    //    {
-    //        throw;
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-    //    }
-    //}
-
     private async Task<List<MediaResponse>> GetMediaByIdAsync(Guid newsId, CancellationToken cancellationToken)
     {
         var newsMedias = await _unitOfWork.NewsMediaRepository
@@ -1329,42 +754,4 @@ public class NewsService : INewsService
         }).ToList();
     }
 
-    //private async Task EnrichNewsDataModelsAsync(List<NewsDataModel> newsDataModels, CancellationToken cancellationToken)
-    //{
-    //    var newsIds = newsDataModels.Select(x => x.Id).ToList();
-    //    var districtIds = newsDataModels.Where(x => x.DistrictId.HasValue).Select(x => x.DistrictId.Value).Distinct().ToList();
-    //    var typeNewsIds = newsDataModels.Where(x => x.TypeNewsId.HasValue).Select(x => x.TypeNewsId.Value).Distinct().ToList();
-
-    //    var allMedias = await _unitOfWork.NewsMediaRepository
-    //        .ActiveEntities
-    //        .Where(m => newsIds.Contains(m.NewsId) && !m.FileType.Contains("video"))
-    //        .ToListAsync(cancellationToken);
-
-    //    var districtNames = await _unitOfWork.DistrictRepository
-    //        .ActiveEntities
-    //        .Where(d => districtIds.Contains(d.Id))
-    //        .ToDictionaryAsync(d => d.Id, d => d.Name, cancellationToken);
-
-    //    var typeNewsNames = await _unitOfWork.TypeNewsRepository
-    //        .ActiveEntities
-    //        .Where(t => typeNewsIds.Contains(t.Id))
-    //        .ToDictionaryAsync(t => t.Id, t => t.Name, cancellationToken);
-
-    //    foreach (var news in newsDataModels)
-    //    {
-    //        news.Medias = _mapper.Map<List<MediaResponse>>(allMedias
-    //            .Where(m => m.NewsId == news.Id)
-    //            .ToList());
-
-    //        if (news.DistrictId.HasValue && districtNames.TryGetValue(news.DistrictId.Value, out var districtName))
-    //        {
-    //            news.DistrictName = districtName;
-    //        }
-
-    //        if (news.TypeNewsId.HasValue && typeNewsNames.TryGetValue(news.TypeNewsId.Value, out var typeNewsName))
-    //        {
-    //            news.TypeNewsName = typeNewsName;
-    //        }
-    //    }
-    //}
 }

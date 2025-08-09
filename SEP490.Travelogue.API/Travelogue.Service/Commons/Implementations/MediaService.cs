@@ -288,8 +288,7 @@ public class MediaService : IMediaService
 
     private string CreateMediaResponse_2(string fileName, IFormFile image)
     {
-        return
-            GenerateImageUrl(fileName);
+        return GenerateImageUrl(fileName);
     }
 
     private void ValidateImageFile(IFormFile file)
