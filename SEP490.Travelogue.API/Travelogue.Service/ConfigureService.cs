@@ -1,9 +1,11 @@
 ﻿using System.Reflection;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Net.payOS;
 using Travelogue.Service;
 using Travelogue.Service.Commons.Implementations;
+using Travelogue.Service.Commons.SignalR;
 
 namespace Travelogue.Service;
 
@@ -24,6 +26,8 @@ public static class ConfigureService
         //configuration["Environment:PAYOS_PARTNER_CODE"] ?? throw new Exception("Cannot find environment"));
 
         services.AddSingleton(payOS);
+        services.AddSignalR();
+        services.AddSingleton<IUserIdProvider, NameUserIdProvider>();
 
         return services;
     }

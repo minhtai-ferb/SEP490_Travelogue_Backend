@@ -105,15 +105,34 @@ namespace Travelogue.API.Controllers
              ));
         }
 
+        [HttpPut("{id}/cancel")]
+        public async Task<IActionResult> CancelBooking(Guid id)
+        {
+            var result = await _bookingService.CancelBookingAsync(id);
+            return Ok(ResponseModel<object>.OkResponseModel(
+                data: result,
+                message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+            ));
+        }
 
         [HttpGet("bookings")]
         public async Task<IActionResult> GetBookings([FromQuery] BookingFilterDto filter)
         {
             var result = await _bookingService.GetAllBookingsAsync(filter);
             return Ok(ResponseModel<object>.OkResponseModel(
-                 data: result,
-                 message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "booking")
-             ));
+                data: result,
+                message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "booking")
+            ));
+        }
+
+        [HttpGet("bookings/paged")]
+        public async Task<IActionResult> GetPagedBookings([FromQuery] BookingFilterDto filter, int pageNumber = 1, int pageSize = 10)
+        {
+            var result = await _bookingService.GetPagedBookingsAsync(filter, pageNumber, pageSize);
+            return Ok(ResponseModel<object>.OkResponseModel(
+                data: result,
+                message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "booking")
+            ));
         }
 
         [HttpGet("{bookingId}")]
@@ -121,9 +140,9 @@ namespace Travelogue.API.Controllers
         {
             var result = await _bookingService.GetBookingByIdAsync(bookingId);
             return Ok(ResponseModel<object>.OkResponseModel(
-                 data: result,
-                 message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "booking")
-             ));
+                data: result,
+                message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "booking")
+            ));
         }
 
         [HttpGet("payment-link-info/{orderId}")]

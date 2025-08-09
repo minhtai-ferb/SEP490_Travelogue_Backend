@@ -305,7 +305,7 @@ public class ReviewService : IReviewService
                 .FirstOrDefaultAsync(b => b.Id == dto.BookingId && b.UserId == currentUserId, cancellationToken)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Không tìm thấy booking hoặc bạn không có quyền truy cập.");
 
-            if (existingBooking.Status != BookingStatus.Completed)
+            if (existingBooking.Status != BookingStatus.Confirmed)
             {
                 throw CustomExceptionFactory.CreateBadRequestError("Chỉ có thể đánh giá các booking đã hoàn thành.");
             }
