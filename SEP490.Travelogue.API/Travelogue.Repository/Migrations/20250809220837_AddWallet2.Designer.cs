@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Travelogue.Repository.Data;
 
@@ -11,9 +12,11 @@ using Travelogue.Repository.Data;
 namespace Travelogue.Repository.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250809220837_AddWallet2")]
+    partial class AddWallet2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2182,8 +2185,10 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_deleted");
 
-                    b.Property<int>("Key")
-                        .HasColumnType("int")
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
                         .HasColumnName("key");
 
                     b.Property<string>("LastUpdatedBy")
@@ -2202,18 +2207,6 @@ namespace Travelogue.Repository.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("system_settings");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("0f91b49b-565a-49e1-af9f-53e6f6b958ca"),
-                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 10, 6, 57, 51, 93, DateTimeKind.Unspecified).AddTicks(292), new TimeSpan(0, 7, 0, 0, 0)),
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = 0,
-                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 10, 6, 57, 51, 93, DateTimeKind.Unspecified).AddTicks(1172), new TimeSpan(0, 7, 0, 0, 0)),
-                            Value = "10"
-                        });
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.Tour", b =>

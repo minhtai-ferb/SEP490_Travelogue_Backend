@@ -44,6 +44,9 @@ public interface IUnitOfWork //: IDisposable
     IPromotionApplicableRepository PromotionApplicableRepository { get; }
     IAnnouncementRepository AnnouncementRepository { get; }
     IReportRepository ReportRepository { get; }
+    IWalletRepository WalletRepository { get; }
+    IWithdrawalRequestRepository WithdrawalRequestRepository { get; }
+    IBankAccountRepository BankAccountRepository { get; }
 
     IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity;
     void Save();

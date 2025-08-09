@@ -316,6 +316,9 @@ public class BookingService : IBookingService
                     .ActiveEntities
                     .FirstOrDefaultAsync(t => t.Id == dto.TripPlanId.Value)
                     ?? throw CustomExceptionFactory.CreateNotFoundError("trip plan");
+
+                if (tripPlan.Status != TripPlanStatus.Sketch)
+                    throw CustomExceptionFactory.CreateBadRequestError("Trip plan đang không ở trạng thái phù hợp");
             }
 
             tourGuide = await _unitOfWork.TourGuideRepository

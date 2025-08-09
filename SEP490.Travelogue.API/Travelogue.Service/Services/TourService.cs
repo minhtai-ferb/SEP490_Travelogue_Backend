@@ -19,7 +19,7 @@ public interface ITourService
     Task<List<TourResponseDto>> GetAllToursAsync(TourFilterModel filter);
     Task<TourResponseDto> CreateTourAsync(CreateTourDto dto);
     Task<TourResponseDto> UpdateTourAsync(Guid tourId, UpdateTourDto dto);
-    Task DeleteTourAsync(Guid id, CancellationToken cancellationToken);
+    Task<bool> DeleteTourAsync(Guid id, CancellationToken cancellationToken);
     Task<TourResponseDto> ConfirmTourAsync(Guid tourId, ConfirmTourDto dto);
     Task<TourDetailsResponseDto> GetTourDetailsAsync(Guid tourId);
     Task<TourDetailsResponseDto> GetTourDetailsAsync(Guid tourId, Guid? scheduleId = null);
@@ -90,6 +90,25 @@ public class TourService : ITourService
 
             await _unitOfWork.TourRepository.AddAsync(tour);
             await _unitOfWork.SaveAsync();
+
+            List<TourMedia> tourMedias = new();
+            if (dto.MediaDtos.Any())
+            {
+                tourMedias = dto.MediaDtos.Select(media => new TourMedia
+                {
+                    Id = Guid.NewGuid(),
+                    TourId = tour.Id,
+                    MediaUrl = media.MediaUrl,
+                    IsThumbnail = media.IsThumbnail,
+                    CreatedBy = currentUserId,
+                    LastUpdatedBy = currentUserId,
+                    CreatedTime = currentTime,
+                    LastUpdatedTime = currentTime
+                }).ToList();
+
+                await _unitOfWork.TourMediaRepository.AddRangeAsync(tourMedias);
+                await _unitOfWork.SaveAsync();
+            }
 
             var activeSchedules = tour.TourSchedules.Where(s => !s.IsDeleted).ToList();
             var adultPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.AdultPrice) : 0m;
@@ -845,7 +864,7 @@ public class TourService : ITourService
         }
     }
 
-    public async Task DeleteTourAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<bool> DeleteTourAsync(Guid id, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
@@ -886,6 +905,8 @@ public class TourService : ITourService
             tour.IsDeleted = true;
             _unitOfWork.TourRepository.Update(tour);
             await _unitOfWork.SaveAsync();
+
+            return true;
         }
         catch (CustomException)
         {

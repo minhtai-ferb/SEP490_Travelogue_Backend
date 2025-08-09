@@ -15,4 +15,6 @@ public class TripPlanCreateModel
 
     [DataType(DataType.Date)]
     public DateTime EndDate { get; set; }
+
+    public string? ImageUrl { get; set; }
 }

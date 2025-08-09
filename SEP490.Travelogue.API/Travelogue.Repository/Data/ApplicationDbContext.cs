@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Entities;
+using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Repository.Data;
 
@@ -70,6 +71,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<WithdrawalRequest> WithdrawalRequests { get; set; }
     public DbSet<BookingWithdrawal> BookingWithdrawals { get; set; }
     public DbSet<RefundRequest> RefundRequests { get; set; }
+    public DbSet<BankAccount> BankAccounts { get; set; }
 
     // Feedback and Reporting
     public DbSet<Review> Reviews { get; set; }
@@ -89,6 +91,10 @@ public class ApplicationDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<SystemSetting>().HasData(
+            new SystemSetting { Id = Guid.NewGuid(), Key = SystemSettingKey.BookingCommissionPercent, Value = "10" }
+        );
 
         modelBuilder.Entity<Message>()
             .HasOne(m => m.Sender)

@@ -48,6 +48,9 @@ public class UnitOfWork : IUnitOfWork
     public IPromotionApplicableRepository PromotionApplicableRepository { get; }
     public IAnnouncementRepository AnnouncementRepository { get; }
     public IReportRepository ReportRepository { get; }
+    public IWalletRepository WalletRepository { get; }
+    public IWithdrawalRequestRepository WithdrawalRequestRepository { get; }
+    public IBankAccountRepository BankAccountRepository { get; }
 
     public UnitOfWork(ApplicationDbContext dbContext)
     {
@@ -89,6 +92,9 @@ public class UnitOfWork : IUnitOfWork
         PromotionApplicableRepository = new PromotionApplicableRepository(_dbContext);
         AnnouncementRepository = new AnnouncementRepository(_dbContext);
         ReportRepository = new ReportRepository(_dbContext);
+        WalletRepository = new WalletRepository(_dbContext);
+        WithdrawalRequestRepository = new WithdrawalRequestRepository(_dbContext);
+        BankAccountRepository = new BankAccountRepository(_dbContext);
     }
 
     public IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity
