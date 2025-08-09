@@ -380,6 +380,7 @@ public class WorkshopService : IWorkshopService
     public async Task<WorkshopDetailsResponseDto> GetWorkshopDetailsAsync(Guid workshopId, Guid? scheduleId = null)
     {
         var workshop = await _unitOfWork.WorkshopRepository.ActiveEntities
+            .Include(ws => ws.WorkshopActivities)
             .Where(w => w.Id == workshopId)
             .Select(w => new
             {

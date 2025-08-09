@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using FirebaseAdmin;
 using FirebaseAdmin.Auth;
 using Google.Apis.Auth.OAuth2;
@@ -9,6 +10,7 @@ using Travelogue.API.Middlewares;
 using Travelogue.Repository;
 using Travelogue.Repository.Data;
 using Travelogue.Service;
+using Travelogue.Service.Commons.SignalR;
 using Travelogue.Service.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -83,6 +85,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 //app.UseHttpsRedirection();
 app.UseHttpsRedirection();
+app.MapHub<NotificationHub>("/notificationHub");
 
 var uploadImagesPath = Path.Combine(Directory.GetCurrentDirectory(), "images");
 var uploadDocumentsPath = Path.Combine(Directory.GetCurrentDirectory(), "documents");
@@ -110,6 +113,7 @@ app.UseStaticFiles(new StaticFileOptions
         Path.Combine(Directory.GetCurrentDirectory(), "documents")),
     RequestPath = "/documents"
 });
+
 
 app.UseAuthentication();
 app.UseAuthorization();

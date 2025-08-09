@@ -139,6 +139,34 @@ public class TourController : ControllerBase
     }
 
     /// <summary>
+    /// Xóa tour
+    /// </summary>
+    /// <param name="tourId">ID của tour</param>
+    /// <param name="model">Thông tin tour cần cập nhật</param>
+    /// <param name="cancellationToken">Token để hủy thao tác</param>
+    /// <returns>Thông tin tour đã cập nhật</returns>
+    [HttpPatch("{tourId}")]
+    public async Task<IActionResult> DeleteTour(Guid tourId, [FromBody] UpdateTourDto model, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _tourService.UpdateTourAsync(tourId, model);
+            return Ok(ResponseModel<TourResponseDto>.OkResponseModel(
+                data: result,
+                message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "tour")
+            ));
+        }
+        catch (CustomException ex)
+        {
+            return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+        }
+    }
+
+    /// <summary>
     /// Lấy chi tiết tour
     /// </summary>
     /// <param name="tourId">ID của tour</param>

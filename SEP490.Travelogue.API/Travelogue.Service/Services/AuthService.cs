@@ -4,6 +4,7 @@ using System.Text;
 using AutoMapper;
 using FirebaseAdmin.Auth;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Travelogue.Repository.Bases.Exceptions;
@@ -99,11 +100,27 @@ public class AuthService : IAuthService
     {
         try
         {
-            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
 
             //Guid? currentUserIdLong = string.IsNullOrEmpty(currentUserId) ? null : Convert.ToInt64(currentUserId);
-            var currentUser = await _unitOfWork.UserRepository.GetByIdAsync(Guid.Parse(currentUserId!), new CancellationToken());
-            return _mapper.Map<GetCurrentUserResponse>(currentUser);
+            var currentUser = await _unitOfWork.UserRepository
+                .ActiveEntities
+                .Include(u => u.Wallet)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId)
+                ?? throw CustomExceptionFactory.CreateForbiddenError();
+            var result = _mapper.Map<GetCurrentUserResponse>(currentUser);
+
+            var hasWalletRole = _userContextService.HasAnyRole(AppRole.CRAFT_VILLAGE_OWNER, AppRole.TOUR_GUIDE);
+            if (hasWalletRole)
+            {
+                result.UserWalletAmount = currentUser.Wallet?.Balance ?? 0.00m;
+            }
+            else
+            {
+                result.UserWalletAmount = 0;
+            }
+
+            return result;
         }
         catch (CustomException)
         {
