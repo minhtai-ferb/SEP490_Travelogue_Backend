@@ -164,43 +164,46 @@ public class TripPlanService : ITripPlanService
                 .FirstOrDefaultAsync(t => t.Id == tripPlanId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("TripPlan");
 
+            if (tripPlan.Bookings.Any() || tripPlan.Status == TripPlanStatus.Booked)
+                throw CustomExceptionFactory.CreateBadRequestError("Không thể cập nhật Trip plan đã được book");
+
             // Validate date range
             if (dto.StartDate > dto.EndDate)
                 throw CustomExceptionFactory.CreateBadRequestError("StartDate must be before EndDate.");
 
-            // Check if dates are being updated
+            // Check date constraints if changed
             bool datesChanged = tripPlan.StartDate != dto.StartDate || tripPlan.EndDate != dto.EndDate;
             if (datesChanged)
             {
                 var tripPlanStartDate = dto.StartDate.Date;
-                var tripPlanEndDate = dto.EndDate.Date.AddDays(1).AddTicks(-1); // Include the entire end date
+                var tripPlanEndDate = dto.EndDate.Date.AddDays(1).AddTicks(-1);
+
                 foreach (var location in tripPlan.TripPlanLocations.Where(l => !l.IsDeleted))
                 {
                     if (location.StartTime < tripPlanStartDate || location.StartTime > tripPlanEndDate)
-                        throw CustomExceptionFactory.CreateBadRequestError($"Start time {location.StartTime} for location {location.LocationId} is outside the new TripPlan date range ({tripPlanStartDate} to {tripPlanEndDate}).");
+                        throw CustomExceptionFactory.CreateBadRequestError(
+                            $"Start time {location.StartTime} for location {location.LocationId} is outside the new TripPlan date range."
+                        );
                     if (location.EndTime < tripPlanStartDate || location.EndTime > tripPlanEndDate)
-                        throw CustomExceptionFactory.CreateBadRequestError($"End time {location.EndTime} for location {location.LocationId} is outside the new TripPlan date range ({tripPlanStartDate} to {tripPlanEndDate}).");
+                        throw CustomExceptionFactory.CreateBadRequestError(
+                            $"End time {location.EndTime} for location {location.LocationId} is outside the new TripPlan date range."
+                        );
                 }
             }
 
-            var changes = new List<string>();
-            using (var transaction = await _unitOfWork.BeginTransactionAsync())
-            {
-                try
-                {
-                    tripPlan.LastUpdatedTime = DateTimeOffset.UtcNow;
+            // Map new values from dto
+            tripPlan.Name = dto.Name;
+            tripPlan.Description = dto.Description;
+            tripPlan.StartDate = dto.StartDate;
+            tripPlan.EndDate = dto.EndDate;
+            tripPlan.ImageUrl = dto.ImageUrl;
+            tripPlan.LastUpdatedTime = DateTimeOffset.UtcNow;
 
-                    await _unitOfWork.SaveAsync();
+            await _unitOfWork.SaveAsync();
 
-                    await transaction.CommitAsync();
-                }
-                catch
-                {
-                    await transaction.RollbackAsync();
-                    throw;
-                }
-            }
-            var ownerName = await _unitOfWork.UserRepository.GetUserNameByIdAsync(tripPlan.UserId) ?? string.Empty;
+            var ownerName = await _unitOfWork.UserRepository
+                .GetUserNameByIdAsync(tripPlan.UserId) ?? string.Empty;
+
             return new TripPlanResponseDto
             {
                 Id = tripPlan.Id,
@@ -226,6 +229,7 @@ public class TripPlanService : ITripPlanService
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
+
 
     public async Task<TripPlanDetailResponse?> GetTripPlanByIdAsync(Guid id, CancellationToken cancellationToken)
     {
@@ -643,6 +647,8 @@ public class TripPlanService : ITripPlanService
                         location.LastUpdatedTime = DateTimeOffset.UtcNow;
                         changes.Add($"Updated location: {dto.LocationId}");
                     }
+
+                    tripPlan.Status = TripPlanStatus.Sketch;
 
                     await _unitOfWork.SaveAsync();
 

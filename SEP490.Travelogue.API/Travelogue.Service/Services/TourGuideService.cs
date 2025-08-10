@@ -30,7 +30,7 @@ public interface ITourGuideService
     Task<BookingPriceRequestResponseDto> RejectBookingPriceRequestAsync(Guid requestId, RejectBookingPriceRequestDto dto);
     Task<List<TourGuideScheduleResponseDto>> GetSchedulesAsync(TourGuideScheduleFilterDto filter);
     Task<RejectionRequestResponseDto> CreateRejectionRequestAsync(RejectionRequestCreateDto dto);
-    Task<RejectionRequestResponseDto> ApproveRejectionRequestAsync(Guid requestId);
+    Task<RejectionRequestResponseDto> ApproveRejectionRequestAsync(Guid requestId, Guid newTourGuideId);
     Task<RejectionRequestResponseDto> RejectRejectionRequestAsync(Guid requestId, RejectRejectionRequestDto dto);
 }
 
@@ -530,7 +530,6 @@ public class TourGuideService : ITourGuideService
                 throw CustomExceptionFactory.CreateForbiddenError();
             }
 
-            // Tìm yêu cầu giá
             var request = await _unitOfWork.BookingPriceRequestRepository
                 .ActiveEntities
                 .Include(r => r.TourGuide)
@@ -616,13 +615,11 @@ public class TourGuideService : ITourGuideService
                 throw CustomExceptionFactory.CreateBadRequestError("Lý do từ chối không được để trống.");
             }
 
-            // Cập nhật trạng thái yêu cầu
             request.Status = BookingPriceRequestStatus.Rejected;
             request.ReviewedBy = currentUserId;
             request.ReviewedAt = currentTime;
             request.RejectionReason = dto.Reason;
 
-            // Lưu thay đổi
             await _unitOfWork.SaveAsync();
 
             // Gửi email thông báo cho Tour Guide
@@ -632,7 +629,6 @@ public class TourGuideService : ITourGuideService
                 $"Giá {request.Price} đã bị từ chối. Lý do: {request.RejectionReason}. Vui lòng chỉnh sửa và gửi lại."
             );
 
-            // Trả về response
             var response = new BookingPriceRequestResponseDto
             {
                 TourGuideId = request.TourGuideId,
@@ -680,15 +676,15 @@ public class TourGuideService : ITourGuideService
             var existingPendingRequest = await _unitOfWork.RejectionRequestRepository
                 .ActiveEntities
                 .AnyAsync(r => r.TourGuideId == tourGuide.Id &&
-                              r.Status == RejectionRequestStatus.Pending &&
-                              ((dto.RequestType == RejectionRequestType.TourSchedule && r.TourScheduleId == dto.TourScheduleId) ||
-                               (dto.RequestType == RejectionRequestType.Booking && r.BookingId == dto.BookingId)));
+                    r.Status == RejectionRequestStatus.Pending &&
+                    ((dto.RequestType == RejectionRequestType.TourSchedule && r.TourScheduleId == dto.TourScheduleId) ||
+                    (dto.RequestType == RejectionRequestType.Booking && r.BookingId == dto.BookingId)));
             if (existingPendingRequest)
             {
                 throw CustomExceptionFactory.CreateBadRequestError("Bạn đã có một yêu cầu từ chối đang chờ duyệt cho mục này.");
             }
 
-            // Kiểm tra dữ liệu đầu vào
+            // Kiểm tra input
             if (string.IsNullOrWhiteSpace(dto.Reason))
             {
                 throw CustomExceptionFactory.CreateBadRequestError("Lý do từ chối không được để trống.");
@@ -769,7 +765,7 @@ public class TourGuideService : ITourGuideService
         }
     }
 
-    public async Task<RejectionRequestResponseDto> ApproveRejectionRequestAsync(Guid requestId)
+    public async Task<RejectionRequestResponseDto> ApproveRejectionRequestAsync(Guid requestId, Guid newTourGuideId)
     {
         try
         {
@@ -815,6 +811,30 @@ public class TourGuideService : ITourGuideService
                     guideSchedule.DeletedTime = currentTime;
                     _unitOfWork.TourGuideScheduleRepository.Update(guideSchedule);
                 }
+
+                var newTourGuide = await _unitOfWork.TourGuideRepository
+                    .ActiveEntities
+                    .FirstOrDefaultAsync(tg => tg.Id == newTourGuideId)
+                    ?? throw CustomExceptionFactory.CreateNotFoundError("Tour Guide mới");
+
+                if (newTourGuide.Id == request.TourGuideId)
+                    throw CustomExceptionFactory.CreateBadRequestError("Tour Guide mới không được trùng với người từ chối.");
+
+                bool alreadyAssigned = await _unitOfWork.TourGuideScheduleRepository
+                    .ActiveEntities
+                    .AnyAsync(s => s.TourScheduleId == request.TourSchedule.Id && s.TourGuideId == newTourGuideId);
+                if (alreadyAssigned)
+                    throw CustomExceptionFactory.CreateBadRequestError("Tour Guide mới đã có lịch này.");
+
+                var newSchedule = new TourGuideSchedule
+                {
+                    Id = Guid.NewGuid(),
+                    TourScheduleId = request.TourSchedule.Id,
+                    TourGuideId = newTourGuideId,
+                    CreatedBy = currentUserId.ToString(),
+                    CreatedTime = currentTime
+                };
+                await _unitOfWork.TourGuideScheduleRepository.AddAsync(newSchedule);
             }
             else if (request.RequestType == RejectionRequestType.Booking && request.Booking != null)
             {

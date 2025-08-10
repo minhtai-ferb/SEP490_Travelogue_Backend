@@ -136,5 +136,6 @@ public sealed class User : BaseEntity
     public ICollection<Message> SentMessages { get; set; } = new List<Message>();
     public ICollection<Message> ReceivedMessages { get; set; } = new List<Message>();
     public ICollection<UserAnnouncement> UserAnnouncements { get; set; } = new List<UserAnnouncement>();
+    public ICollection<BankAccount> BankAccounts { get; set; } = new List<BankAccount>();
     // public ICollection<TourGroupMember> TourGroupMembers { get; set; } = new List<TourGroupMember>();
 }

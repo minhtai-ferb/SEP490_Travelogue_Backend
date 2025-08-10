@@ -146,14 +146,14 @@ public class TourController : ControllerBase
     /// <param name="cancellationToken">Token để hủy thao tác</param>
     /// <returns>Thông tin tour đã cập nhật</returns>
     [HttpPatch("{tourId}")]
-    public async Task<IActionResult> DeleteTour(Guid tourId, [FromBody] UpdateTourDto model, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteTour(Guid tourId, CancellationToken cancellationToken)
     {
         try
         {
-            var result = await _tourService.UpdateTourAsync(tourId, model);
-            return Ok(ResponseModel<TourResponseDto>.OkResponseModel(
+            var result = await _tourService.DeleteTourAsync(tourId, cancellationToken);
+            return Ok(ResponseModel<bool>.OkResponseModel(
                 data: result,
-                message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "tour")
+                message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "tour")
             ));
         }
         catch (CustomException ex)
@@ -491,29 +491,29 @@ public class TourController : ControllerBase
     /// <param name="tourId">ID của tour</param>
     /// <param name="createDtos">Danh sách media cần thêm</param>
     /// <returns>Danh sách media đã được thêm</returns>
-    [HttpPost("tour-media")]
-    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> AddTourMedias(Guid tourId, [FromBody] List<TourMediaCreateDto> createDtos)
-    {
-        try
-        {
-            var result = await _tourService.AddTourMediasAsync(tourId, createDtos);
-            return Ok(ResponseModel<object>.OkResponseModel(
-                data: result,
-                message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "tour media")
-            ));
-        }
-        catch (CustomException ex)
-        {
-            return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
-        }
-        catch (Exception)
-        {
-            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
-        }
-    }
+    // [HttpPost("tour-media")]
+    // [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status200OK)]
+    // [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
+    // [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
+    // public async Task<IActionResult> AddTourMedias(Guid tourId, [FromBody] List<TourMediaCreateDto> createDtos)
+    // {
+    //     try
+    //     {
+    //         var result = await _tourService.AddTourMediasAsync(tourId, createDtos);
+    //         return Ok(ResponseModel<object>.OkResponseModel(
+    //             data: result,
+    //             message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "tour media")
+    //         ));
+    //     }
+    //     catch (CustomException ex)
+    //     {
+    //         return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
+    //     }
+    //     catch (Exception)
+    //     {
+    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+    //     }
+    // }
 
     /// <summary>
     /// Xóa một media của tour
@@ -521,30 +521,30 @@ public class TourController : ControllerBase
     /// <param name="tourId">ID của tour</param>
     /// <param name="mediaId">ID của media cần xóa</param>
     /// <returns>Thông báo xóa thành công</returns>
-    [HttpDelete("tour-media/{mediaId:guid}")]
-    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> DeleteTourMedia(Guid tourId, Guid mediaId)
-    {
-        try
-        {
-            var success = await _tourService.DeleteTourMediaAsync(mediaId);
-            if (!success)
-                throw CustomExceptionFactory.CreateBadRequestError("Không thể xóa media.");
+    // [HttpDelete("tour-media/{mediaId:guid}")]
+    // [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status200OK)]
+    // [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
+    // [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
+    // public async Task<IActionResult> DeleteTourMedia(Guid tourId, Guid mediaId)
+    // {
+    //     try
+    //     {
+    //         var success = await _tourService.DeleteTourMediaAsync(mediaId);
+    //         if (!success)
+    //             throw CustomExceptionFactory.CreateBadRequestError("Không thể xóa media.");
 
-            return Ok(ResponseModel<object>.OkResponseModel(
-                data: null,
-                message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "tour media")
-            ));
-        }
-        catch (CustomException ex)
-        {
-            return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
-        }
-        catch (Exception)
-        {
-            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
-        }
-    }
+    //         return Ok(ResponseModel<object>.OkResponseModel(
+    //             data: null,
+    //             message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "tour media")
+    //         ));
+    //     }
+    //     catch (CustomException ex)
+    //     {
+    //         return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
+    //     }
+    //     catch (Exception)
+    //     {
+    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+    //     }
+    // }
 }

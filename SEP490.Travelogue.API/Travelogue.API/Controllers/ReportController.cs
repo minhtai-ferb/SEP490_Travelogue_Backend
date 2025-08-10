@@ -114,7 +114,7 @@ public class ReportController : ControllerBase
     }
 
     /// <summary>
-    /// Lấy danh sách báo cáo theo trạng thái (chỉ dành cho admin)
+    /// Lấy danh sách báo cáo theo trạng thái - admin
     /// </summary>
     /// <param name="status">Trạng thái báo cáo (Pending, Approved, Rejected)</param>
     /// <param name="cancellationToken">Token hủy thao tác</param>
@@ -130,7 +130,7 @@ public class ReportController : ControllerBase
     }
 
     /// <summary>
-    /// Xử lý báo cáo (chỉ dành cho admin)
+    /// Xử lý báo cáo - admin
     /// </summary>
     /// <param name="reportId">ID của báo cáo</param>
     /// <param name="dto">Thông tin xử lý báo cáo</param>
