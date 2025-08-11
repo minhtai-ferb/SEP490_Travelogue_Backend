@@ -814,6 +814,12 @@ public class BookingService : IBookingService
                 query = query.Where(b => b.Status == filter.Status.Value);
             }
 
+            // bookng type
+            if (filter.BookingType.HasValue)
+            {
+                query = query.Where(b => b.BookingType == filter.BookingType.Value);
+            }
+
             // ngày tháng
             if (filter.StartDate.HasValue && filter.EndDate.HasValue)
             {
@@ -1077,28 +1083,62 @@ public class BookingService : IBookingService
                 .Take(pageSize)
                 .ToListAsync();
 
-            var result = bookings.Select(b => new BookingDataModel
+            var result = new List<BookingDataModel>();
+
+            foreach (var b in bookings)
             {
-                Id = b.Id,
-                UserId = b.UserId,
-                TourId = b.TourId,
-                TourScheduleId = b.TourScheduleId,
-                TourGuideId = b.TourGuideId,
-                TripPlanId = b.TripPlanId,
-                WorkshopId = b.WorkshopId,
-                WorkshopScheduleId = b.WorkshopScheduleId,
-                PaymentLinkId = b.PaymentLinkId,
-                Status = b.Status,
-                StatusText = _enumService.GetEnumDisplayName<BookingStatus>(b.Status),
-                BookingType = b.BookingType,
-                BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(b.BookingType),
-                BookingDate = b.BookingDate,
-                CancelledAt = b.CancelledAt,
-                PromotionId = b.PromotionId,
-                OriginalPrice = b.OriginalPrice,
-                DiscountAmount = b.DiscountAmount,
-                FinalPrice = b.FinalPrice
-            }).ToList();
+                var userName = _unitOfWork.UserRepository
+                    .ActiveEntities
+                    .Where(u => u.Id == b.UserId)
+                    .Select(u => u.FullName)
+                    .FirstOrDefault();
+
+                var tourName = _unitOfWork.TourRepository
+                    .ActiveEntities
+                    .Where(u => u.Id == b.TourId)
+                    .Select(u => u.Name)
+                    .FirstOrDefault();
+
+                string? tourGuideName = null;
+                if (b.TourGuideId.HasValue)
+                {
+                    var tourGuide = _unitOfWork.TourGuideRepository
+                        .ActiveEntities
+                        // .Include(tg => tg.User)
+                        .Where(u => u.Id == b.TourGuideId)
+                        .Select(u => u.User.FullName)
+                        .FirstOrDefault();
+                    tourGuideName = tourGuide;
+                }
+
+                var bookingModel = new BookingDataModel
+                {
+                    Id = b.Id,
+                    UserId = b.UserId,
+                    UserName = userName,
+                    TourId = b.TourId,
+                    TourName = tourName,
+                    TourScheduleId = b.TourScheduleId,
+                    TourGuideId = b.TourGuideId,
+                    TourGuideName = tourGuideName,
+                    TripPlanId = b.TripPlanId,
+                    WorkshopId = b.WorkshopId,
+                    WorkshopScheduleId = b.WorkshopScheduleId,
+                    PaymentLinkId = b.PaymentLinkId,
+                    Status = b.Status,
+                    StatusText = _enumService.GetEnumDisplayName<BookingStatus>(b.Status),
+                    BookingType = b.BookingType,
+                    BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(b.BookingType),
+                    BookingDate = b.BookingDate,
+                    CancelledAt = b.CancelledAt,
+                    PromotionId = b.PromotionId,
+                    OriginalPrice = b.OriginalPrice,
+                    DiscountAmount = b.DiscountAmount,
+                    FinalPrice = b.FinalPrice
+                };
+
+                result.Add(bookingModel);
+            }
 
             return new PagedResult<BookingDataModel>
             {
