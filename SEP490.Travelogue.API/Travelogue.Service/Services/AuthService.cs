@@ -398,8 +398,7 @@ public class AuthService : IAuthService
             // Verify nguoi dung
             var actionCodeSettings = new ActionCodeSettings()
             {
-                //Url = "http://143.198.206.133:8888/api/auth/verify-email",
-                Url = "https://goyoungtayninh.netlify.app/",
+                Url = "https://travelogue.onl/",
                 HandleCodeInApp = false
             };
 
@@ -590,6 +589,7 @@ public class AuthService : IAuthService
                 VerificationToken = accessToken,
                 RefreshTokens = refreshToken,
                 UserId = user.Id,
+                AvatarUrl = user.AvatarUrl,
                 FullName = user.FullName,
                 Email = user.Email!,
                 IsEmailVerified = user.IsEmailVerified ?? false,
@@ -678,6 +678,7 @@ public class AuthService : IAuthService
                 VerificationToken = accessToken,
                 RefreshTokens = refreshToken,
                 UserId = user.Id,
+                AvatarUrl = user.AvatarUrl,
                 FullName = user.FullName,
                 Email = user.Email!,
                 IsEmailVerified = user.IsEmailVerified ?? false,
@@ -747,6 +748,7 @@ public class AuthService : IAuthService
                 RefreshTokens = newRefreshToken,
                 UserId = user.Id,
                 FullName = user.FullName,
+                AvatarUrl = user.AvatarUrl,
                 Email = user.Email!,
                 IsEmailVerified = user.IsEmailVerified ?? false,
                 Roles = roleNames
@@ -893,6 +895,7 @@ public class AuthService : IAuthService
                 RefreshTokens = refreshToken,
                 UserId = user.Id,
                 FullName = user.FullName,
+                AvatarUrl = user.AvatarUrl,
                 Email = user.Email!,
                 IsEmailVerified = user.IsEmailVerified ?? false,
                 Roles = roleNames
@@ -1049,7 +1052,8 @@ public class AuthService : IAuthService
                 FullName = user.FullName,
                 Email = user.Email!,
                 IsEmailVerified = user.IsEmailVerified ?? false,
-                Roles = roleNames
+                Roles = roleNames,
+                AvatarUrl = user.AvatarUrl
             };
         }
         catch (CustomException)

@@ -24,22 +24,6 @@ public class AuthController : ControllerBase
         _googleAuthService = googleAuthService;
     }
 
-    [HttpGet("check-deploy")]
-    public async Task<IActionResult> CheckDeploy(string email)
-    {
-        try
-        {
-
-            //await _userService.UpdateEmailVerifiedStatusAsync(userRecord.Uid, true);
-            return Ok(new { message = "17:05 30/7" });
-
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { error = ex.Message });
-        }
-    }
-
 
     /// <summary>
     /// Kiểm tra trạng thái xác minh email của người dùng.
