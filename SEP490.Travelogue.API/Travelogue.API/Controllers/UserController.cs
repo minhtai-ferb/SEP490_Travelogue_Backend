@@ -97,29 +97,29 @@ public class UserController : ControllerBase
         ));
     }
 
-    /// <summary>
-    /// Upload ảnh lên Cloudinary --> link ảnh cho api sau
-    /// </summary>
-    /// <param name="file"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    [HttpPost("upload-avatar")]
-    [Authorize]
-    [Consumes("multipart/form-data")]
-    public async Task<IActionResult> UploadAvatar([FromForm] UploadAvatarDto request, CancellationToken cancellationToken)
-    {
-        var file = request.File;
+    ///// <summary>
+    ///// Upload ảnh lên Cloudinary --> link ảnh cho api sau
+    ///// </summary>
+    ///// <param name="file"></param>
+    ///// <param name="cancellationToken"></param>
+    ///// <returns></returns>
+    //[HttpPost("upload-avatar")]
+    //[Authorize]
+    //[Consumes("multipart/form-data")]
+    //public async Task<IActionResult> UploadAvatar([FromForm] UploadAvatarDto request, CancellationToken cancellationToken)
+    //{
+    //    var file = request.File;
 
-        if (file == null || file.Length == 0)
-            return BadRequest("Không có file hợp lệ");
+    //    if (file == null || file.Length == 0)
+    //        return BadRequest("Không có file hợp lệ");
 
-        var imageUrl = await _cloudinaryService.UploadImageAsync(file, cancellationToken);
+    //    var imageUrl = await _cloudinaryService.UploadImageAsync(file, cancellationToken);
 
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: imageUrl,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUBMIT_SUCCESS, "feedback")
-        ));
-    }
+    //    return Ok(ResponseModel<object>.OkResponseModel(
+    //        data: imageUrl,
+    //        message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUBMIT_SUCCESS, "feedback")
+    //    ));
+    //}
 
     /// <summary>
     /// Lấy link ảnh sau khi upload lên Cloudinary để cập nhật lại cho user
@@ -132,8 +132,8 @@ public class UserController : ControllerBase
     public async Task<IActionResult> UpdateAvatar(UploadMediaDto mediaDto, CancellationToken cancellationToken)
     {
         var result = await _userService.UploadAvatarAsync(mediaDto, cancellationToken);
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: true,
+        return Ok(ResponseModel<MediaResponse>.OkResponseModel(
+            data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUBMIT_SUCCESS, "feedback")
         ));
     }
