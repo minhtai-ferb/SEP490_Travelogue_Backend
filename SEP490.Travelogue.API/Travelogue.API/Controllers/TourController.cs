@@ -47,12 +47,6 @@ public class TourController : ControllerBase
     }
 
     /// <summary>
-    /// Lấy tất cả thông tin tour schedual
-    /// </summary>
-    /// <returns>Thông tin tour schedual</returns>
-    [HttpGet("")]
-
-    /// <summary>
     /// Tạo mới tour
     /// </summary>
     /// <param name="model">Thông tin tour cần tạo</param>
