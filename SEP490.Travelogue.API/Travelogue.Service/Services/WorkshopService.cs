@@ -21,6 +21,7 @@ public interface IWorkshopService
     Task<WorkshopResponseDto> UpdateWorkshopAsync(Guid workshopId, UpdateWorkshopDto dto);
     Task<WorkshopResponseDto> SubmitWorkshopForReviewAsync(Guid workshopId, CancellationToken cancellationToken);
     Task<WorkshopResponseDto> ConfirmWorkshopAsync(Guid workshopId, ConfirmWorkshopDto dto);
+    Task DeleteWorkshopAsync(Guid workshopId);
     Task<WorkshopDetailsResponseDto> GetWorkshopDetailsAsync(Guid workshopId);
     Task<WorkshopDetailsResponseDto> GetWorkshopDetailsAsync(Guid workshopId, Guid? scheduleId = null);
     Task<List<ActivityResponseDto>> CreateActivitiesAsync(Guid workshopId, List<CreateActivityDto> dtos);
@@ -619,6 +620,56 @@ public class WorkshopService : IWorkshopService
         {
             await _unitOfWork.RollBackAsync();
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task DeleteWorkshopAsync(Guid workshopId)
+    {
+        var workshop = await _unitOfWork.WorkshopRepository
+            .ActiveEntities
+            .Include(w => w.WorkshopActivities)
+            .Include(w => w.WorkshopSchedules)
+            .Include(w => w.Bookings)
+            .ThenInclude(b => b.User)
+            .FirstOrDefaultAsync(w => w.Id == workshopId)
+            ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
+
+        if (workshop.WorkshopSchedules.Any(s => s.CurrentBooked > 0))
+            throw new InvalidOperationException("Không thể xóa lịch trình đã có người đặt.");
+        if (workshop.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
+            throw new InvalidOperationException("Không thể xóa lịch trình đã có người đặt.");
+        // var remainingSchedules = workshop.WorkshopSchedules.Where(s => s.Id != scheduleId).Select(s => s.StartTime.Date).Distinct().ToList();
+        // var maxDayOrder = workshop.WorkshopActivities.Any() ? workshop.WorkshopActivities.Max(a => a.DayOrder) : 0;
+        // if (remainingSchedules.Count < maxDayOrder)
+        //     throw CustomExceptionFactory.CreateBadRequestError($"Không thể xóa schedule: Not enough remaining schedules ({remainingSchedules.Count}) to cover DayOrder ({maxDayOrder}).");
+
+        using (var transaction = await _unitOfWork.BeginTransactionAsync())
+        {
+            try
+            {
+                workshop.IsDeleted = true;
+                _unitOfWork.WorkshopRepository.Update(workshop);
+                await _unitOfWork.SaveAsync();
+
+                // if (workshop.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
+                // {
+                //     foreach (var booking in workshop.Bookings)
+                //     {
+                //         await _emailService.SendEmailAsync(
+                //             new[] { booking.User!.Email },
+                //             $"Cập nhật Workshop {workshop.Name}",
+                //             $"Lịch trình ngày {schedule.StartTime:dd/MM/yyyy} của workshop {workshop.Name} đã bị xóa. Vui lòng kiểm tra chi tiết."
+                //         );
+                //     }
+                // }
+
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
     }
 
@@ -1277,10 +1328,10 @@ public class WorkshopService : IWorkshopService
         if (schedule.CurrentBooked > 0)
             throw new InvalidOperationException("Không thể xóa lịch trình đã có người đặt.");
 
-        var remainingSchedules = workshop.WorkshopSchedules.Where(s => s.Id != scheduleId).Select(s => s.StartTime.Date).Distinct().ToList();
-        var maxDayOrder = workshop.WorkshopActivities.Any() ? workshop.WorkshopActivities.Max(a => a.DayOrder) : 0;
-        if (remainingSchedules.Count < maxDayOrder)
-            throw CustomExceptionFactory.CreateBadRequestError($"Không thể xóa schedule: Not enough remaining schedules ({remainingSchedules.Count}) to cover DayOrder ({maxDayOrder}).");
+        // var remainingSchedules = workshop.WorkshopSchedules.Where(s => s.Id != scheduleId).Select(s => s.StartTime.Date).Distinct().ToList();
+        // var maxDayOrder = workshop.WorkshopActivities.Any() ? workshop.WorkshopActivities.Max(a => a.DayOrder) : 0;
+        // if (remainingSchedules.Count < maxDayOrder)
+        //     throw CustomExceptionFactory.CreateBadRequestError($"Không thể xóa schedule: Not enough remaining schedules ({remainingSchedules.Count}) to cover DayOrder ({maxDayOrder}).");
 
         using (var transaction = await _unitOfWork.BeginTransactionAsync())
         {

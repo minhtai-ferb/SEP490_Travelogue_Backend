@@ -20,19 +20,7 @@ public class TourDetailsResponseDto
     public decimal FinalPrice { get; set; }
     public bool IsDiscount { get; set; }
     public TourStatus Status { get; set; }
-    public string StatusText
-    {
-        get
-        {
-            return Status switch
-            {
-                TourStatus.Draft => "Draft",
-                TourStatus.Confirmed => "Confirmed",
-                TourStatus.Cancelled => "Cancelled",
-                _ => "Unknown"
-            };
-        }
-    }
+    public string? StatusText { get; set; }
     // public List<TourPlanLocationResponseDto> Locations { get; set; }
     public List<TourScheduleResponseDto>? Schedules { get; set; }
     public List<TourGuideDataModel>? TourGuide { get; set; }

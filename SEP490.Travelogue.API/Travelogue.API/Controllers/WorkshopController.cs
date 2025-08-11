@@ -160,6 +160,30 @@ public class WorkshopController : ControllerBase
         }
     }
 
+    [HttpPatch("{workshopId}")]
+    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteSchedule(Guid workshopId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _workshopService.DeleteWorkshopAsync(workshopId);
+            return Ok(ResponseModel<object>.OkResponseModel(
+                data: null,
+                message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "workshop")
+            ));
+        }
+        catch (CustomException ex)
+        {
+            return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+        }
+    }
+
     /// <summary>
     /// Cập nhật hàng loạt hoạt động của workshop
     /// </summary>
