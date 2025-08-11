@@ -16,10 +16,10 @@ public sealed class Tour : BaseEntity
     public int TotalDays { get; set; }
 
     public TourStatus Status { get; set; } = TourStatus.Draft;
+    public TourType? TourType { get; set; }
 
     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     public ICollection<TourPlanLocation> TourPlanLocations { get; set; } = new List<TourPlanLocation>();
-    public TourType? TourType { get; set; }
     // public ICollection<Review> Reviews { get; set; } = new List<Review>();
     public ICollection<TourSchedule> TourSchedules { get; set; } = new List<TourSchedule>();
     public ICollection<PromotionApplicable> PromotionApplicables { get; set; } = new List<PromotionApplicable>();
