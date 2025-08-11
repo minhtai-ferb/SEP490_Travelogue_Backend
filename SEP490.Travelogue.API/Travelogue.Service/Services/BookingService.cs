@@ -1111,6 +1111,14 @@ public class BookingService : IBookingService
                     tourGuideName = tourGuide;
                 }
 
+                //Kiểm ra TourSchedule có giá trị k
+                if (b.TourSchedule == null)
+                {
+                    b.TourSchedule = await _unitOfWork.TourScheduleRepository
+                        .ActiveEntities
+                        .FirstOrDefaultAsync(ts => ts.Id == b.TourScheduleId);
+                }
+
                 var bookingModel = new BookingDataModel
                 {
                     Id = b.Id,
@@ -1119,6 +1127,7 @@ public class BookingService : IBookingService
                     TourId = b.TourId,
                     TourName = tourName,
                     TourScheduleId = b.TourScheduleId,
+                    DepartureDate = b.TourSchedule.DepartureDate,
                     TourGuideId = b.TourGuideId,
                     TourGuideName = tourGuideName,
                     TripPlanId = b.TripPlanId,

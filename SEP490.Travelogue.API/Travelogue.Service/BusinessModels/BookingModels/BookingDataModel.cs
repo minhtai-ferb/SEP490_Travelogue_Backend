@@ -13,6 +13,7 @@ public class BookingDataModel
     public string? TourName { get; set; }
 
     public Guid? TourScheduleId { get; set; }
+    public DateTime DepartureDate { get; set; }
 
     public Guid? TourGuideId { get; set; }
     public string? TourGuideName { get; set; }
