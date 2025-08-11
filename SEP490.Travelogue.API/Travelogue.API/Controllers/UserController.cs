@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Travelogue.Repository.Bases.Responses;
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.CraftVillageModels;
 using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.BusinessModels.TourGuideModels;
 using Travelogue.Service.BusinessModels.UserModels;
@@ -246,6 +247,36 @@ public class UserController : ControllerBase
         ));
     }
 
+    [HttpGet("tour-guide-request/{id}")]
+    public async Task<IActionResult> GetTourGuideRequestById(Guid id, CancellationToken cancellationToken = default)
+    {
+        var result = await _userService.GetTourGuideRequestByIdAsync(id, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "tour guide request")
+        ));
+    }
+
+    [HttpPut("tour-guide-request/{id}")]
+    public async Task<IActionResult> UpdateTourGuideRequest(Guid id, [FromBody] UpdateTourGuideRequestDto model, CancellationToken cancellationToken = default)
+    {
+        var result = await _userService.UpdateTourGuideRequestAsync(id, model, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "tour guide request")
+        ));
+    }
+
+    [HttpPatch("tour-guide-request/{id}")]
+    public async Task<IActionResult> DeleteTourGuideRequest(Guid id, CancellationToken cancellationToken = default)
+    {
+        var success = await _userService.DeleteTourGuideRequestAsync(id, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: success,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "tour guide request")
+        ));
+    }
+
     [HttpPut("{requestId}/review")]
     public async Task<IActionResult> ReviewTourGuideRequest(Guid requestId, [FromBody] ReviewTourGuideRequestDto model, CancellationToken cancellationToken = default)
     {
@@ -253,6 +284,56 @@ public class UserController : ControllerBase
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "user")
+        ));
+    }
+
+    [HttpPost("craft-village-request")]
+    public async Task<IActionResult> CreateCraftVillageRequest([FromBody] CreateCraftVillageRequestDto model, CancellationToken cancellationToken = default)
+    {
+        var result = await _userService.CreateCraftVillageRequestAsync(model, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "craft village request")
+        ));
+    }
+
+    [HttpGet("craft-village-request")]
+    public async Task<IActionResult> GetCraftVillageRequests([FromQuery] CraftVillageRequestStatus? status, CancellationToken cancellationToken = default)
+    {
+        var result = await _userService.GetCraftVillageRequestsAsync(status, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "craft village request")
+        ));
+    }
+
+    [HttpPut("craft-village-request/{requestId}/review")]
+    public async Task<IActionResult> ReviewCraftVillageRequest(Guid requestId, [FromBody] ReviewCraftVillageRequestDto model, CancellationToken cancellationToken = default)
+    {
+        var result = await _userService.ReviewCraftVillageRequestAsync(requestId, model, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "craft village request")
+        ));
+    }
+
+    [HttpGet("craft-village-request/{id}")]
+    public async Task<IActionResult> GetCraftVillageRequest(Guid id, CancellationToken cancellationToken = default)
+    {
+        var result = await _userService.GetCraftVillageRequestAsync(id, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "craft village request")
+        ));
+    }
+
+    [HttpPatch("craft-village-request/{id}")]
+    public async Task<IActionResult> DeleteCraftVillageRequest(Guid id, CancellationToken cancellationToken = default)
+    {
+        var success = await _userService.DeleteCraftVillageRequestAsync(id, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: success,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "craft village request")
         ));
     }
 
