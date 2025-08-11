@@ -638,6 +638,11 @@ public class UserService : IUserService
                 throw CustomExceptionFactory.CreateNotFoundError("image");
             }
 
+            if (existingUser.AvatarUrl != null && existingUser.AvatarUrl != string.Empty)
+            {
+                await _cloudinaryService.DeleteImageAsync(existingUser.AvatarUrl);
+            }
+
             var imageUrl = await _cloudinaryService.UploadImageAsync(uploadMediaDto.File);
             var mediaResponses = new MediaResponse()
             {
