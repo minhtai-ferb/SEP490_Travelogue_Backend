@@ -43,7 +43,15 @@ public interface IUserService
     Task<TourGuideRequestResponseDto> CreateTourGuideRequestAsync(CreateTourGuideRequestDto model, CancellationToken cancellationToken = default);
     Task<List<TourGuideRequestResponseDto>> GetTourGuideRequestsAsync(TourGuideRequestStatus? status, CancellationToken cancellationToken = default);
     Task<TourGuideRequestResponseDto> ReviewTourGuideRequestAsync(Guid requestId, ReviewTourGuideRequestDto model, CancellationToken cancellationToken = default);
+    Task<TourGuideRequestResponseDto> GetTourGuideRequestByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<TourGuideRequestResponseDto> UpdateTourGuideRequestAsync(Guid id, UpdateTourGuideRequestDto model, CancellationToken cancellationToken = default);
+    Task<bool> DeleteTourGuideRequestAsync(Guid id, CancellationToken cancellationToken = default);
     //Task GetPagedUsersWithSearchAsync(int pageNumber, int pageSize, string email, string phoneNumber, string fullName, CancellationToken cancellationToken);
+    Task<CraftVillageRequestResponseDto> CreateCraftVillageRequestAsync(CreateCraftVillageRequestDto model, CancellationToken cancellationToken = default);
+    Task<List<CraftVillageRequestResponseDto>> GetCraftVillageRequestsAsync(CraftVillageRequestStatus? status, CancellationToken cancellationToken = default);
+    Task<CraftVillageRequestResponseDto> ReviewCraftVillageRequestAsync(Guid requestId, ReviewCraftVillageRequestDto model, CancellationToken cancellationToken = default);
+    Task<CraftVillageRequestResponseDto> GetCraftVillageRequestAsync(Guid requestId, CancellationToken cancellationToken = default);
+    Task<bool> DeleteCraftVillageRequestAsync(Guid id, CancellationToken cancellationToken = default);
 }
 
 public class UserService : IUserService
@@ -54,9 +62,10 @@ public class UserService : IUserService
     private readonly IUserContextService _userContextService;
     private readonly IEmailService _emailService;
     private readonly ICloudinaryService _cloudinaryService;
+    private readonly IEnumService _enumService;
     private readonly int YEARS_TO_BLOCK = 30;
 
-    public UserService(IUnitOfWork unitOfWork, ITimeService timeService, IMapper mapper, IUserContextService userContextService, IEmailService emailService, ICloudinaryService cloudinaryService)
+    public UserService(IUnitOfWork unitOfWork, ITimeService timeService, IMapper mapper, IUserContextService userContextService, IEmailService emailService, ICloudinaryService cloudinaryService, IEnumService enumService)
     {
         _unitOfWork = unitOfWork;
         _timeService = timeService;
@@ -64,6 +73,7 @@ public class UserService : IUserService
         _userContextService = userContextService;
         _emailService = emailService;
         _cloudinaryService = cloudinaryService;
+        _enumService = enumService;
     }
     public async Task<UserResponseModel> CreateUserAsync(CreateUserDto model, CancellationToken cancellationToken = default)
     {
@@ -72,7 +82,7 @@ public class UserService : IUserService
             var existingUser = await _unitOfWork.UserRepository.GetUserByEmailAsync(model.Email);
             if (existingUser != null)
             {
-                throw new CustomException(StatusCodes.Status400BadRequest, ResponseCodeConstants.BAD_REQUEST, "Email already exists");
+                throw CustomExceptionFactory.CreateBadRequestError("Email already exists");
             }
 
             var temporaryPassword = GenerateRandomPassword();
@@ -98,10 +108,7 @@ public class UserService : IUserService
                 var role = await _unitOfWork.RoleRepository.GetByIdAsync(model.RoleId, cancellationToken);
                 if (role == null)
                 {
-                    throw new CustomException(
-                        StatusCodes.Status400BadRequest,
-                        ResponseCodeConstants.BAD_REQUEST,
-                        "Invalid role");
+                    throw CustomExceptionFactory.CreateBadRequestError("Invalid role");
                 }
 
                 var userRole = new UserRole
@@ -141,10 +148,10 @@ public class UserService : IUserService
         try
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId, cancellationToken)
-                ?? throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "User not found");
+                ?? throw CustomExceptionFactory.CreateBadRequestError("User");
 
             var role = await _unitOfWork.RoleRepository.GetByIdAsync(model.RoleId, cancellationToken)
-                ?? throw new CustomException(StatusCodes.Status400BadRequest, ResponseCodeConstants.BAD_REQUEST, "Invalid role");
+                ?? throw CustomExceptionFactory.CreateBadRequestError("Invalid role");
 
             var newUserRole = new UserRole
             {
@@ -755,13 +762,13 @@ public class UserService : IUserService
             var user = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId, cancellationToken);
             if (user == null)
             {
-                throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "User");
+                throw CustomExceptionFactory.CreateBadRequestError("User");
             }
 
             var existingTourGuide = await _unitOfWork.TourGuideRepository.GetByUserIdAsync(currentUserId);
             if (existingTourGuide != null)
             {
-                throw new CustomException(StatusCodes.Status400BadRequest, ResponseCodeConstants.BAD_REQUEST, "User is already a TourGuide");
+                throw CustomExceptionFactory.CreateBadRequestError("Bạn đã là 1 tour guide");
             }
 
             var tourGuideRequest = new TourGuideRequest
@@ -813,6 +820,7 @@ public class UserService : IUserService
                 Introduction = tourGuideRequest.Introduction,
                 Price = tourGuideRequest.Price,
                 Status = tourGuideRequest.Status,
+                StatusText = _enumService.GetEnumDisplayName<TourGuideRequestStatus>(tourGuideRequest.Status),
                 RejectionReason = tourGuideRequest.RejectionReason,
                 Certifications = tourGuideRequest.Certifications
                 .Select(c => new CertificationDto
@@ -829,6 +837,124 @@ public class UserService : IUserService
 
             return response;
 
+        }
+        catch (CustomException)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<TourGuideRequestResponseDto> UpdateTourGuideRequestAsync(Guid id, UpdateTourGuideRequestDto model, CancellationToken cancellationToken = default)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+            var currentUserIdString = currentUserId.ToString();
+            var currentTime = _timeService.SystemTimeNow;
+
+            var request = await _unitOfWork.TourGuideRequestRepository
+                .ActiveEntities
+                .Include(x => x.Certifications)
+                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("TourGuideRequest");
+
+            if (request.UserId != currentUserId)
+                throw CustomExceptionFactory.CreateForbiddenError();
+
+            if (request.Status != TourGuideRequestStatus.Pending)
+                throw CustomExceptionFactory.CreateBadRequestError("Không thể sửa request đã xử lý");
+
+            request.Introduction = model.Introduction;
+            request.Price = model.Price;
+            request.LastUpdatedTime = currentTime;
+            request.LastUpdatedBy = currentUserIdString;
+
+            request.Certifications.Clear();
+            foreach (var cert in model.Certifications)
+            {
+                request.Certifications.Add(new TourGuideRequestCertification
+                {
+                    Name = cert.Name,
+                    CertificateUrl = cert.CertificateUrl,
+                    CreatedTime = currentTime,
+                    LastUpdatedTime = currentTime,
+                    CreatedBy = currentUserIdString,
+                    LastUpdatedBy = currentUserIdString
+                });
+            }
+
+            _unitOfWork.TourGuideRequestRepository.Update(request);
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(request.UserId, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("User");
+
+            return new TourGuideRequestResponseDto
+            {
+                Id = request.Id,
+                UserId = request.UserId,
+                Email = user.Email ?? string.Empty,
+                FullName = user.FullName ?? string.Empty,
+                Introduction = request.Introduction,
+                Price = request.Price,
+                Status = request.Status,
+                StatusText = _enumService.GetEnumDisplayName<TourGuideRequestStatus>(request.Status),
+                RejectionReason = request.RejectionReason,
+                Certifications = request.Certifications
+                    .Select(c => new CertificationDto
+                    {
+                        Name = c.Name,
+                        CertificateUrl = c.CertificateUrl
+                    })
+                    .ToList()
+            };
+        }
+        catch (CustomException)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<bool> DeleteTourGuideRequestAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+            var currentUserIdString = currentUserId.ToString();
+            var currentTime = _timeService.SystemTimeNow;
+
+            var request = await _unitOfWork.TourGuideRequestRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("TourGuideRequest");
+
+            if (request.UserId != currentUserId)
+                throw CustomExceptionFactory.CreateForbiddenError();
+
+            request.IsDeleted = true;
+            request.LastUpdatedTime = currentTime;
+            request.LastUpdatedBy = currentUserIdString;
+
+            _unitOfWork.TourGuideRequestRepository.Update(request);
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+
+            return true;
         }
         catch (CustomException)
         {
@@ -861,7 +987,7 @@ public class UserService : IUserService
             foreach (var request in requests)
             {
                 var user = await _unitOfWork.UserRepository.GetByIdAsync(request.UserId, cancellationToken)
-                    ?? throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "User");
+                    ?? throw CustomExceptionFactory.CreateNotFoundError("User");
                 var requestDto = new TourGuideRequestResponseDto
                 {
                     Id = request.Id,
@@ -871,6 +997,7 @@ public class UserService : IUserService
                     Introduction = request.Introduction,
                     Price = request.Price,
                     Status = request.Status,
+                    StatusText = _enumService.GetEnumDisplayName<TourGuideRequestStatus>(request.Status),
                     RejectionReason = request.RejectionReason,
                     Certifications = request.Certifications
                     .Select(c => new CertificationDto
@@ -894,6 +1021,50 @@ public class UserService : IUserService
         }
     }
 
+    public async Task<TourGuideRequestResponseDto> GetTourGuideRequestByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var request = await _unitOfWork.TourGuideRequestRepository
+                .ActiveEntities
+                .Include(x => x.Certifications)
+                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("TourGuideRequest");
+
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(request.UserId, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("User");
+
+            return new TourGuideRequestResponseDto
+            {
+                Id = request.Id,
+                UserId = request.UserId,
+                Email = user.Email ?? string.Empty,
+                FullName = user.FullName ?? string.Empty,
+                Introduction = request.Introduction,
+                Price = request.Price,
+                Status = request.Status,
+                StatusText = _enumService.GetEnumDisplayName<TourGuideRequestStatus>(request.Status),
+                RejectionReason = request.RejectionReason,
+                Certifications = request.Certifications
+                    .Select(c => new CertificationDto
+                    {
+                        Name = c.Name,
+                        CertificateUrl = c.CertificateUrl
+                    })
+                    .ToList()
+            };
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+
     public async Task<TourGuideRequestResponseDto> ReviewTourGuideRequestAsync(Guid requestId, ReviewTourGuideRequestDto model, CancellationToken cancellationToken = default)
     {
         try
@@ -904,13 +1075,13 @@ public class UserService : IUserService
             var request = await _unitOfWork.TourGuideRequestRepository.GetByIdAsync(requestId, cancellationToken);
             if (request == null)
             {
-                throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "TourGuide request not found");
+                throw CustomExceptionFactory.CreateNotFoundError("TourGuide request");
             }
 
             var user = await _unitOfWork.UserRepository.GetByIdAsync(request.UserId, cancellationToken);
             if (user == null)
             {
-                throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "User not found");
+                throw CustomExceptionFactory.CreateNotFoundError("User");
             }
 
             request.Status = model.Status;
@@ -955,7 +1126,7 @@ public class UserService : IUserService
                 var role = await _unitOfWork.RoleRepository.GetByNameAsync(AppRole.TOUR_GUIDE);
                 if (role == null)
                 {
-                    throw new CustomException(StatusCodes.Status400BadRequest, ResponseCodeConstants.BAD_REQUEST, "TourGuide role not found");
+                    throw CustomExceptionFactory.CreateBadRequestError("TourGuide role");
                 }
 
                 var userRole = new UserRole
@@ -994,13 +1165,18 @@ public class UserService : IUserService
 
     public async Task<CraftVillageRequestResponseDto> CreateCraftVillageRequestAsync(CreateCraftVillageRequestDto model, CancellationToken cancellationToken = default)
     {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
             var currentUserId = _userContextService.GetCurrentUserId();
+            var hasPermission = _userContextService.HasAnyRole(AppRole.USER);
+            if (!hasPermission)
+                throw CustomExceptionFactory.CreateForbiddenError();
+
             var user = await _unitOfWork.UserRepository.GetByIdAsync(Guid.Parse(currentUserId), cancellationToken);
             if (user == null)
             {
-                throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "User not found");
+                throw CustomExceptionFactory.CreateNotFoundError("User");
             }
 
             var existingCraftVillage = await _unitOfWork.CraftVillageRepository
@@ -1008,7 +1184,7 @@ public class UserService : IUserService
                 .FirstOrDefaultAsync(cv => cv.OwnerId == user.Id);
             if (existingCraftVillage != null)
             {
-                throw new CustomException(StatusCodes.Status400BadRequest, ResponseCodeConstants.BAD_REQUEST, "User is already associated with a CraftVillage");
+                throw CustomExceptionFactory.CreateBadRequestError("Bạn đã là chủ 1 làng nghề");
             }
 
             var craftVillageRequest = new CraftVillageRequest
@@ -1025,7 +1201,6 @@ public class UserService : IUserService
                 PhoneNumber = model.PhoneNumber,
                 Email = model.Email,
                 Website = model.Website,
-                OwnerId = user.Id,
                 WorkshopsAvailable = model.WorkshopsAvailable,
                 SignatureProduct = model.SignatureProduct,
                 YearsOfHistory = model.YearsOfHistory,
@@ -1056,15 +1231,84 @@ public class UserService : IUserService
         }
         catch (CustomException)
         {
+            await transaction.RollbackAsync(cancellationToken);
             throw;
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync(cancellationToken);
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
-    public async Task<List<CraftVillageRequestResponseDto>> GetCraftVillageRequestsAsync(Guid? id, CraftVillageRequestStatus? status, CancellationToken cancellationToken = default)
+    public async Task<CraftVillageRequestResponseDto> UpdateCraftVillageRequestAsync(
+        Guid id,
+        UpdateCraftVillageRequestDto model,
+        CancellationToken cancellationToken = default)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var hasPermission = _userContextService.HasAnyRole(AppRole.USER);
+            if (!hasPermission)
+                throw CustomExceptionFactory.CreateForbiddenError();
+
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(Guid.Parse(currentUserId), cancellationToken);
+            if (user == null)
+                throw CustomExceptionFactory.CreateNotFoundError("User");
+
+            var craftVillageRequest = await _unitOfWork.CraftVillageRequestRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+            if (craftVillageRequest == null)
+                throw CustomExceptionFactory.CreateNotFoundError("CraftVillageRequest");
+
+            if (craftVillageRequest.OwnerId != user.Id)
+                throw CustomExceptionFactory.CreateForbiddenError();
+
+            // Cập nhật dữ liệu
+            craftVillageRequest.Name = model.Name;
+            craftVillageRequest.Description = model.Description;
+            craftVillageRequest.Content = model.Content;
+            craftVillageRequest.Address = model.Address;
+            craftVillageRequest.Latitude = model.Latitude;
+            craftVillageRequest.Longitude = model.Longitude;
+            craftVillageRequest.OpenTime = model.OpenTime;
+            craftVillageRequest.CloseTime = model.CloseTime;
+            craftVillageRequest.DistrictId = model.DistrictId;
+            craftVillageRequest.PhoneNumber = model.PhoneNumber;
+            craftVillageRequest.Email = model.Email;
+            craftVillageRequest.Website = model.Website;
+            craftVillageRequest.WorkshopsAvailable = model.WorkshopsAvailable;
+            craftVillageRequest.SignatureProduct = model.SignatureProduct;
+            craftVillageRequest.YearsOfHistory = model.YearsOfHistory;
+            craftVillageRequest.IsRecognizedByUnesco = model.IsRecognizedByUnesco;
+
+            craftVillageRequest.LastUpdatedTime = DateTimeOffset.UtcNow;
+            craftVillageRequest.LastUpdatedBy = currentUserId;
+
+            _unitOfWork.CraftVillageRequestRepository.Update(craftVillageRequest);
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+
+            var response = MapToCraftVillageRequestResponseDto(craftVillageRequest, user);
+            return response;
+        }
+        catch (CustomException)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<CraftVillageRequestResponseDto>> GetCraftVillageRequestsAsync(CraftVillageRequestStatus? status, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -1072,11 +1316,7 @@ public class UserService : IUserService
                 .ActiveEntities
                 .AsQueryable();
 
-            if (id.HasValue)
-            {
-                query = query.Where(x => x.Id == id);
-            }
-            else if (status.HasValue)
+            if (status.HasValue)
             {
                 query = query.Where(x => x.Status == status);
             }
@@ -1095,14 +1335,19 @@ public class UserService : IUserService
 
             return response;
         }
+        catch (CustomException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
-    public async Task<CraftVillageRequestResponseDto> ReviewCraftVillageRequestAsync(Guid requestId, ReviewCraftVillageRequestDto model, string moderatorId, CancellationToken cancellationToken = default)
+    public async Task<CraftVillageRequestResponseDto> ReviewCraftVillageRequestAsync(Guid requestId, ReviewCraftVillageRequestDto model, CancellationToken cancellationToken = default)
     {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
             var currentUserId = _userContextService.GetCurrentUserId();
@@ -1110,13 +1355,13 @@ public class UserService : IUserService
             var request = await _unitOfWork.CraftVillageRequestRepository.GetByIdAsync(requestId, cancellationToken);
             if (request == null)
             {
-                throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "CraftVillage request not found");
+                throw CustomExceptionFactory.CreateBadRequestError("CraftVillage request");
             }
 
             var user = await _unitOfWork.UserRepository.GetByIdAsync(request.OwnerId, cancellationToken);
             if (user == null)
             {
-                throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "User not found");
+                throw CustomExceptionFactory.CreateBadRequestError("User");
             }
 
             request.Status = model.Status;
@@ -1155,8 +1400,8 @@ public class UserService : IUserService
                     IsRecognizedByUnesco = request.IsRecognizedByUnesco,
                     CreatedTime = DateTimeOffset.UtcNow,
                     LastUpdatedTime = DateTimeOffset.UtcNow,
-                    CreatedBy = moderatorId,
-                    LastUpdatedBy = moderatorId
+                    CreatedBy = currentUserId,
+                    LastUpdatedBy = currentUserId
                 };
 
                 await _unitOfWork.CraftVillageRepository.AddAsync(craftVillage);
@@ -1164,7 +1409,7 @@ public class UserService : IUserService
                 var role = await _unitOfWork.RoleRepository.GetByNameAsync("CraftVillage");
                 if (role == null)
                 {
-                    throw new CustomException(StatusCodes.Status400BadRequest, ResponseCodeConstants.BAD_REQUEST, "CraftVillage role not found");
+                    throw CustomExceptionFactory.CreateBadRequestError("CraftVillage role");
                 }
 
                 var userRole = new UserRole
@@ -1192,22 +1437,24 @@ public class UserService : IUserService
         }
         catch (CustomException)
         {
+            await transaction.RollbackAsync(cancellationToken);
             throw;
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync(cancellationToken);
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
-    public async Task<CraftVillageRequestResponseDto> GetCraftVillageRequestAsync(string requestId, CancellationToken cancellationToken = default)
+    public async Task<CraftVillageRequestResponseDto> GetCraftVillageRequestAsync(Guid requestId, CancellationToken cancellationToken = default)
     {
         try
         {
             var request = await _unitOfWork.CraftVillageRequestRepository.GetByIdAsync(requestId, cancellationToken);
             if (request == null)
             {
-                throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "CraftVillage request not found");
+                throw CustomExceptionFactory.CreateBadRequestError("CraftVillage request");
             }
 
             var user = await _unitOfWork.UserRepository.GetByIdAsync(request.OwnerId, cancellationToken);
@@ -1220,6 +1467,40 @@ public class UserService : IUserService
         catch (CustomException)
         {
             throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<bool> DeleteCraftVillageRequestAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+            var currentUserIdString = currentUserId.ToString();
+            var currentTime = _timeService.SystemTimeNow;
+
+            var request = await _unitOfWork.CraftVillageRequestRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("CraftVillageRequest");
+
+            if (request.OwnerId != currentUserId)
+                throw CustomExceptionFactory.CreateForbiddenError();
+
+            request.IsDeleted = true;
+            request.LastUpdatedTime = currentTime;
+            request.LastUpdatedBy = currentUserIdString;
+
+            _unitOfWork.CraftVillageRequestRepository.Update(request);
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+
+            return true;
         }
         catch (Exception ex)
         {
@@ -1247,7 +1528,7 @@ public class UserService : IUserService
         };
     }
 
-    public CraftVillageRequestResponseDto MapToCraftVillageRequestResponseDto(CraftVillageRequest request, User user)
+    private CraftVillageRequestResponseDto MapToCraftVillageRequestResponseDto(CraftVillageRequest request, User user)
     {
         return new CraftVillageRequestResponseDto
         {
