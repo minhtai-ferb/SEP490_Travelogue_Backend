@@ -19,3 +19,4 @@ public class BookingStatisticsDto
     public List<TopItemDto> TopTours { get; set; }
     public List<TopItemDto> TopGuides { get; set; }
 }
+

@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Travelogue.Repository.Entities.Enums;
 
-public enum WithdrawalRequestStatus
+public enum RefundRequestStatus
 {
     [Display(Name = "Chờ xử lý")]
     Pending = 1,
