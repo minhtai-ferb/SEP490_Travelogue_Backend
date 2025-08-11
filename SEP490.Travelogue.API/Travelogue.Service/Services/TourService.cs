@@ -1000,9 +1000,11 @@ public class TourService : ITourService
                 }).ToList();
             var toUpdate = dtos.Where(d => d.TourPlanLocationId.HasValue).ToList();
 
+            var updateIds = toUpdate.Select(u => u.TourPlanLocationId.Value).ToHashSet();
+
             // Validate time overlaps
             var allLocations = existingLocations
-                .Where(l => !toDelete.Contains(l))
+                .Where(l => !toDelete.Contains(l) && !updateIds.Contains(l.Id))
                 .Select(l => new { l.Id, l.StartTime, l.EndTime, l.DayOrder })
                 .Concat(toAdd.Select(l => new { Id = Guid.Empty, l.StartTime, l.EndTime, l.DayOrder }))
                 .Concat(toUpdate.Select(u => new { Id = u.TourPlanLocationId.Value, u.StartTime, u.EndTime, u.DayOrder }))
@@ -1048,7 +1050,8 @@ public class TourService : ITourService
                         changes.Add($"Đã xóa địa điểm: {location.LocationId}");
                     }
 
-                    await _unitOfWork.TourPlanLocationRepository.AddRangeAsync(toAdd);
+                    if (toAdd?.Any() == true)
+                        await _unitOfWork.TourPlanLocationRepository.AddRangeAsync(toAdd);
                     foreach (var location in toAdd)
                         changes.Add($"Đã thêm địa điểm: {location.LocationId}");
 
@@ -1411,7 +1414,16 @@ public class TourService : ITourService
                     $"TourGuide {tourGuide.User.FullName} không sẵn sàng trong khoảng {tourStart:yyyy-MM-dd} đến {tourEnd.AddDays(-1):yyyy-MM-dd}."
                 );
 
-            // Kiểm tra đã gán chưa
+            // tour guide
+            var hasAnyTourGuide = await _unitOfWork.TourGuideScheduleRepository
+                .ActiveEntities
+                .AnyAsync(s => s.TourScheduleId == schedule.Id && !s.IsDeleted);
+
+            if (hasAnyTourGuide)
+                throw CustomExceptionFactory.CreateBadRequestError(
+                    $"Lịch trình {schedule.DepartureDate:dd/MM/yyyy} đã có hướng dẫn viên được gán."
+                );
+
             var isAlreadyAssigned = await _unitOfWork.TourGuideScheduleRepository
                 .ActiveEntities
                 .AnyAsync(s => s.TourScheduleId == schedule.Id && !s.IsDeleted && s.TourGuideId == dto.TourGuideId);
