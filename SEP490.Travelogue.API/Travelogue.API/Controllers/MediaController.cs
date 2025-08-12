@@ -56,6 +56,25 @@ public class MediaController : ControllerBase
         ));
     }
 
+    [HttpDelete("certification/{fileName}")]
+    public async Task<IActionResult> DeleteCertification(string fileName)
+    {
+        var response = await _mediaService.DeleteDocumentAsync(fileName);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
+        ));
+    }
+
+    [HttpDelete("certification/delete-multiple")]
+    public async Task<IActionResult> DeleteMultipleCertification([FromBody] List<string> fileNames)
+    {
+        var response = await _mediaService.DeleteDocumentsAsync(fileNames);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
+        ));
+    }
 
     [HttpDelete("delete/{fileName}")]
     public async Task<IActionResult> DeleteImage(string fileName)
@@ -67,7 +86,7 @@ public class MediaController : ControllerBase
         ));
     }
 
-    [HttpPost("delete-multiple")]
+    [HttpDelete("delete-multiple")]
     public async Task<IActionResult> DeleteMultiple([FromBody] List<string> fileNames)
     {
         var response = await _mediaService.DeleteImagesAsync(fileNames);
