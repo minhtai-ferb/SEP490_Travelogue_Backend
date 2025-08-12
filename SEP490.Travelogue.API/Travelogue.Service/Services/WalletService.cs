@@ -108,6 +108,7 @@ public class WalletService : IWalletService
         try
         {
             var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+            var currentTime = _timeService.SystemTimeNow;
 
             var hasPendingRequest = await _unitOfWork.WithdrawalRequestRepository
                 .ActiveEntities
@@ -130,8 +131,11 @@ public class WalletService : IWalletService
             await _unitOfWork.WithdrawalRequestRepository.AddAsync(new WithdrawalRequest
             {
                 WalletId = wallet.Id,
+                UserId = currentUserId,
                 Amount = request.Amount,
                 BankAccountId = request.BankAccountId,
+                Note = request.Note,
+                RequestTime = currentTime.DateTime,
                 Status = WithdrawalRequestStatus.Pending,
             });
 
@@ -188,6 +192,7 @@ public class WalletService : IWalletService
                 BankAccount = wr.BankAccount == null ? null : new BankAccountDto
                 {
                     Id = wr.BankAccount.Id,
+                    UserId = wr.BankAccount.UserId,
                     BankName = wr.BankAccount.BankName,
                     BankAccountNumber = wr.BankAccount.BankAccountNumber,
                     BankOwnerName = wr.BankAccount.BankOwnerName

@@ -51,9 +51,9 @@ public class WalletController : ControllerBase
         ));
     }
 
-    [HttpPost("withdrawal-requests/filter")]
+    [HttpGet("withdrawal-requests/filter")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ResponseModel<List<WithdrawalRequestDto>>))]
-    public async Task<IActionResult> GetWithdrawalRequests([FromBody] WithdrawalRequestFilterDto filterDto, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetWithdrawalRequests([FromQuery] WithdrawalRequestFilterDto filterDto, CancellationToken cancellationToken)
     {
         var result = await _walletService.GetWithdrawalRequestAsync(filterDto);
         return Ok(ResponseModel<List<WithdrawalRequestDto>>.OkResponseModel(
@@ -62,7 +62,7 @@ public class WalletController : ControllerBase
         ));
     }
 
-    [HttpPost("withdrawal-requests/{requestId:guid}/approve")]
+    [HttpPatch("withdrawal-requests/{requestId:guid}/approve")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ResponseModel<string>))]
     public async Task<IActionResult> Approve(Guid requestId, [FromQuery] string proofImageUrl, [FromQuery] string adminNote, CancellationToken cancellationToken)
     {
@@ -73,7 +73,7 @@ public class WalletController : ControllerBase
         ));
     }
 
-    [HttpPost("withdrawal-requests/{requestId:guid}/reject")]
+    [HttpPatch("withdrawal-requests/{requestId:guid}/reject")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ResponseModel<string>))]
     public async Task<IActionResult> Reject(Guid requestId, [FromQuery] string reason, CancellationToken cancellationToken)
     {
