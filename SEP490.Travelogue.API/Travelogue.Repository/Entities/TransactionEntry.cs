@@ -12,6 +12,8 @@ public sealed class TransactionEntry : BaseEntity
     public Guid? WalletId { get; set; }
     public Guid? UserId { get; set; }
 
+    public string? Description { get; set; }
+
     public string? AccountNumber { get; set; }
     [Column(TypeName = "decimal(10,2)")]
     public decimal? PaidAmount { get; set; }
