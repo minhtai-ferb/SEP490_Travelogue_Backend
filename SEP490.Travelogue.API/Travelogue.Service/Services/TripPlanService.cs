@@ -280,7 +280,7 @@ public class TripPlanService : ITripPlanService
 
         var tripPlan = await _unitOfWork.TripPlanRepository
             .ActiveEntities
-            .Include(x => x.TripPlanLocations)
+            .Include(x => x.TripPlanLocations.Where(tpl => !tpl.IsDeleted))
             .FirstOrDefaultAsync(x => x.Id == tripPlanId);
 
         if (tripPlan == null)
@@ -295,6 +295,7 @@ public class TripPlanService : ITripPlanService
             var imageUrl = await GetLocationImageUrl(tpl.LocationId);
             activities.Add(new TripActivity
             {
+                TripPlanLocationId = tpl.Id,
                 LocationId = tpl.LocationId,
                 Type = _enumService.GetEnumDisplayName<LocationType>(location.LocationType),
                 Name = location.Name,
@@ -586,9 +587,11 @@ public class TripPlanService : ITripPlanService
                 }).ToList();
             var toUpdate = dtos.Where(d => d.TripPlanLocationId.HasValue).ToList();
 
+            var updateIds = toUpdate.Select(u => u.TripPlanLocationId.Value).ToHashSet();
+
             // Validate time overlaps
             var allLocations = existingLocations
-                .Where(l => !toDelete.Contains(l))
+                 .Where(l => !toDelete.Contains(l) && !updateIds.Contains(l.Id))
                 .Select(l => new { l.Id, l.StartTime, l.EndTime, l.Order })
                 .Concat(toAdd.Select(l => new { Id = Guid.Empty, l.StartTime, l.EndTime, l.Order }))
                 .Concat(toUpdate.Select(u => new { Id = u.TripPlanLocationId.Value, u.StartTime, u.EndTime, u.Order }))
@@ -627,8 +630,8 @@ public class TripPlanService : ITripPlanService
                         location.LastUpdatedTime = DateTimeOffset.UtcNow;
                         changes.Add($"Deleted location: {location.LocationId}");
                     }
-
-                    await _unitOfWork.TripPlanLocationRepository.AddRangeAsync(toAdd);
+                    if (toAdd?.Any() == true)
+                        await _unitOfWork.TripPlanLocationRepository.AddRangeAsync(toAdd);
                     foreach (var location in toAdd)
                         changes.Add($"Added location: {location.LocationId}");
 
@@ -648,7 +651,18 @@ public class TripPlanService : ITripPlanService
                         changes.Add($"Updated location: {dto.LocationId}");
                     }
 
-                    tripPlan.Status = TripPlanStatus.Sketch;
+                    var remainingLocationsCount = tripPlan.TripPlanLocations.Count(l => !l.IsDeleted)
+                           + (toAdd?.Count ?? 0)
+                           - toDelete.Count;
+
+                    if (remainingLocationsCount <= 0)
+                    {
+                        tripPlan.Status = TripPlanStatus.Draft;
+                    }
+                    else
+                    {
+                        tripPlan.Status = TripPlanStatus.Sketch;
+                    }
 
                     await _unitOfWork.SaveAsync();
 
