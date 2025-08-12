@@ -9,7 +9,7 @@ public class MediaService : IMediaService
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ITimeService _timeService;
-    private readonly string _uploadPath;
+    private readonly string _imageUploadPath;
     private readonly string _documentUploadPath;
 
     private readonly long _maxFileSize = 10 * 1024 * 1024; // 10MB 
@@ -21,13 +21,13 @@ public class MediaService : IMediaService
     {
         _httpContextAccessor = httpContextAccessor;
         _timeService = timeService;
-        _uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "images");
+        _imageUploadPath = Path.Combine(Directory.GetCurrentDirectory(), "images");
         _documentUploadPath = Path.Combine(Directory.GetCurrentDirectory(), "documents");
 
         // Ensure upload directory exists
-        if (!Directory.Exists(_uploadPath))
+        if (!Directory.Exists(_imageUploadPath))
         {
-            Directory.CreateDirectory(_uploadPath);
+            Directory.CreateDirectory(_imageUploadPath);
         }
 
         if (!Directory.Exists(_documentUploadPath))
@@ -43,7 +43,7 @@ public class MediaService : IMediaService
             ValidateFile(image);
 
             var fileName = GenerateUniqueFileName(image.FileName);
-            var filePath = Path.Combine(_uploadPath, fileName);
+            var filePath = Path.Combine(_imageUploadPath, fileName);
 
             await SaveFileAsync(image, filePath);
 
@@ -143,7 +143,7 @@ public class MediaService : IMediaService
             if (string.IsNullOrEmpty(fileName))
                 throw CustomExceptionFactory.CreateNotFoundError("fileName");
 
-            var filePath = Path.Combine(_uploadPath, fileName);
+            var filePath = Path.Combine(_imageUploadPath, fileName);
 
             if (!File.Exists(filePath))
                 throw CustomExceptionFactory.CreateNotFoundError("image");
@@ -176,7 +176,75 @@ public class MediaService : IMediaService
                 if (string.IsNullOrEmpty(fileName))
                     continue;
 
-                var filePath = Path.Combine(_uploadPath, fileName);
+                var filePath = Path.Combine(_imageUploadPath, fileName);
+
+                if (!File.Exists(filePath))
+                {
+                    failedFiles.Add(fileName);
+                    continue;
+                }
+
+                deletionTasks.Add(Task.Run(() => File.Delete(filePath)));
+            }
+
+            await Task.WhenAll(deletionTasks);
+
+            if (failedFiles.Any())
+                throw CustomExceptionFactory.CreateNotFoundError($"Some images not found: {string.Join(", ", failedFiles)}");
+
+            return true;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<bool> DeleteDocumentAsync(string fileName)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(fileName))
+                throw CustomExceptionFactory.CreateNotFoundError("fileName");
+
+            var filePath = Path.Combine(_imageUploadPath, fileName);
+
+            if (!File.Exists(filePath))
+                throw CustomExceptionFactory.CreateNotFoundError("image");
+
+            await Task.Run(() => File.Delete(filePath));
+            return true;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<bool> DeleteDocumentsAsync(List<string> fileNames)
+    {
+        try
+        {
+            if (fileNames == null || !fileNames.Any())
+                throw CustomExceptionFactory.CreateNotFoundError("fileNames list");
+
+            var deletionTasks = new List<Task>();
+            var failedFiles = new List<string>();
+
+            foreach (var fileName in fileNames)
+            {
+                if (string.IsNullOrEmpty(fileName))
+                    continue;
+
+                var filePath = Path.Combine(_documentUploadPath, fileName);
 
                 if (!File.Exists(filePath))
                 {
@@ -208,7 +276,7 @@ public class MediaService : IMediaService
     {
         try
         {
-            var files = Directory.GetFiles(_uploadPath);
+            var files = Directory.GetFiles(_imageUploadPath);
             var responses = new List<MediaResponse>();
 
             foreach (var file in files)
@@ -337,6 +405,4 @@ public static class MimeTypeMap
             ? mimeType
             : "application/octet-stream";
     }
-
-
 }
