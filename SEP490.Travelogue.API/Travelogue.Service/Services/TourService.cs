@@ -1057,18 +1057,18 @@ public class TourService : ITourService
 
                     foreach (var dto in toUpdate)
                     {
-                        var location = existingLocations.First(l => l.Id == dto.TourPlanLocationId.Value);
-                        location.LocationId = dto.LocationId;
-                        location.DayOrder = dto.DayOrder;
-                        location.StartTime = dto.StartTime;
-                        location.EndTime = dto.EndTime;
-                        location.Notes = dto.Notes;
-                        location.Notes = dto.Notes;
-                        location.TravelTimeFromPrev = dto.TravelTimeFromPrev;
-                        location.DistanceFromPrev = dto.DistanceFromPrev;
-                        location.EstimatedStartTime = dto.EstimatedStartTime;
-                        location.EstimatedEndTime = dto.EstimatedEndTime;
-                        location.LastUpdatedTime = DateTimeOffset.UtcNow;
+                        var tourPlanLocation = existingLocations.First(l => l.Id == dto.TourPlanLocationId.Value);
+                        tourPlanLocation.LocationId = dto.LocationId;
+                        tourPlanLocation.DayOrder = dto.DayOrder;
+                        tourPlanLocation.StartTime = dto.StartTime;
+                        tourPlanLocation.EndTime = dto.EndTime;
+                        tourPlanLocation.Notes = dto.Notes;
+                        tourPlanLocation.Notes = dto.Notes;
+                        tourPlanLocation.TravelTimeFromPrev = dto.TravelTimeFromPrev;
+                        tourPlanLocation.DistanceFromPrev = dto.DistanceFromPrev;
+                        tourPlanLocation.EstimatedStartTime = dto.EstimatedStartTime;
+                        tourPlanLocation.EstimatedEndTime = dto.EstimatedEndTime;
+                        tourPlanLocation.LastUpdatedTime = DateTimeOffset.UtcNow;
                         changes.Add($"Đã cập nhật địa điểm: {dto.LocationId}");
                     }
 
