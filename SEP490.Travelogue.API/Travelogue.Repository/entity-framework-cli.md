@@ -30,7 +30,7 @@ dotnet ef migrations add <MigrationName> --startup-project <StartupProjectPath>
 
 ```bash
 dotnet ef migrations add InitDb --startup-project ../Travelogue.API
-dotnet ef migrations add BookingPagedFilter --startup-project ../Travelogue.API
+dotnet ef migrations add TransactionProps --startup-project ../Travelogue.API
 ```
 
 ---
