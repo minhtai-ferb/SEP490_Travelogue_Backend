@@ -38,6 +38,7 @@ public class BankAccountService : IBankAccountService
             return accounts.Select(a => new BankAccountDto
             {
                 Id = a.Id,
+                UserId = a.UserId,
                 BankName = a.BankName,
                 BankAccountNumber = a.BankAccountNumber,
                 BankOwnerName = a.BankOwnerName,
@@ -75,6 +76,7 @@ public class BankAccountService : IBankAccountService
             return new BankAccountDto
             {
                 Id = entity.Id,
+                UserId = entity.UserId,
                 BankName = entity.BankName,
                 BankAccountNumber = entity.BankAccountNumber,
                 BankOwnerName = entity.BankOwnerName,
@@ -127,6 +129,7 @@ public class BankAccountService : IBankAccountService
             return new BankAccountDto
             {
                 Id = account.Id,
+                UserId = account.UserId,
                 BankName = account.BankName,
                 BankAccountNumber = account.BankAccountNumber,
                 BankOwnerName = account.BankOwnerName,

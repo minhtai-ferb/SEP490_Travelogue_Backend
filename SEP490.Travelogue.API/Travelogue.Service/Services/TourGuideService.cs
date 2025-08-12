@@ -202,7 +202,6 @@ public class TourGuideService : ITourGuideService
         }
     }
 
-
     public async Task<List<TourGuideDataModel>> GetTourGuidesByFilterAsync(TourGuideFilterRequest request, CancellationToken cancellationToken)
     {
         try
