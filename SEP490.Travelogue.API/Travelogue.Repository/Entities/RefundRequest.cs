@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Travelogue.Repository.Bases.BaseEntities;
+using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Repository.Entities;
 
@@ -11,13 +12,10 @@ public sealed class RefundRequest : BaseEntity
 
     [Required]
     public Guid BookingId { get; set; }
-
-    public DateTime RequestDate { get; set; }
-
     public string? Reason { get; set; }
 
     [Required]
-    public string Status { get; set; } = null!;
+    public RefundRequestStatus Status { get; set; } = RefundRequestStatus.Pending;
     public string? RejectionReason { get; set; }
 
     [Column(TypeName = "decimal(18,2)")]

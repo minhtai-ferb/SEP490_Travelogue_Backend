@@ -974,6 +974,12 @@ public class BookingService : IBookingService
                 query = query.Where(b => b.Status == filter.Status.Value);
             }
 
+            // bookng type
+            if (filter.BookingType.HasValue)
+            {
+                query = query.Where(b => b.BookingType == filter.BookingType.Value);
+            }
+
             // ngày tháng
             if (filter.StartDate.HasValue && filter.EndDate.HasValue)
             {
@@ -1057,6 +1063,12 @@ public class BookingService : IBookingService
             if (filter.Status.HasValue)
             {
                 query = query.Where(b => b.Status == filter.Status.Value);
+            }
+
+            // bookng type
+            if (filter.BookingType.HasValue)
+            {
+                query = query.Where(b => b.BookingType == filter.BookingType.Value);
             }
 
             // Lọc theo ngày
