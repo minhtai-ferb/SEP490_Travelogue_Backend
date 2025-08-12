@@ -47,6 +47,7 @@ public interface IUnitOfWork //: IDisposable
     IWalletRepository WalletRepository { get; }
     IWithdrawalRequestRepository WithdrawalRequestRepository { get; }
     IBankAccountRepository BankAccountRepository { get; }
+    ISystemSettingRepository SystemSettingRepository { get; }
 
     IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity;
     void Save();

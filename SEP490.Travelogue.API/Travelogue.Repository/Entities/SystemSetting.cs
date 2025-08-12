@@ -11,4 +11,7 @@ public sealed class SystemSetting : BaseEntity
 
     [MaxLength(1000)]
     public string? Value { get; set; }
+
+    [MaxLength(100)]
+    public string? Unit { get; set; }
 }
