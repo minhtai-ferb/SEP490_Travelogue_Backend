@@ -1532,8 +1532,17 @@ public class TourService : ITourService
             {
                 try
                 {
-                    _unitOfWork.TourScheduleRepository.Remove(schedule);
+                    schedule.IsDeleted = true;
+                    _unitOfWork.TourScheduleRepository.Update(schedule);
                     await _unitOfWork.SaveAsync();
+
+                    bool hasActiveSchedules = tour.TourSchedules.Any(s => !s.IsDeleted && s.Id != scheduleId);
+                    if (!hasActiveSchedules)
+                    {
+                        tour.Status = TourStatus.Draft;
+                        _unitOfWork.TourRepository.Update(tour);
+                        await _unitOfWork.SaveAsync();
+                    }
 
                     if (tour.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
                     {
