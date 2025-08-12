@@ -1116,7 +1116,7 @@ public class BookingService : IBookingService
                 }
 
                 //Kiểm ra TourSchedule có giá trị k
-                if (b.TourSchedule == null)
+                if (b.TourSchedule == null && b.BookingType == BookingType.Tour)
                 {
                     b.TourSchedule = await _unitOfWork.TourScheduleRepository
                         .ActiveEntities
@@ -1131,7 +1131,7 @@ public class BookingService : IBookingService
                     TourId = b.TourId,
                     TourName = tourName,
                     TourScheduleId = b.TourScheduleId,
-                    DepartureDate = b.TourSchedule.DepartureDate,
+                    DepartureDate = b.TourSchedule?.DepartureDate,
                     TourGuideId = b.TourGuideId,
                     TourGuideName = tourGuideName,
                     TripPlanId = b.TripPlanId,
