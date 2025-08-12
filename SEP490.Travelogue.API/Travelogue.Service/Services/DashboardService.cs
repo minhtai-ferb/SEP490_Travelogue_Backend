@@ -250,6 +250,10 @@ public class DashboardService : IDashboardService
                     {
                         b.Id,
                         ScheduleId = s.Id,
+                        DepartureDate = b.TourSchedule.DepartureDate,
+                        UserId = b.UserId,
+                        b.TourId,
+                        TourName = s.Tour.Name,
                         UserName = b.User.FullName,
                         b.Status,
                         b.BookingType,
@@ -270,7 +274,11 @@ public class DashboardService : IDashboardService
             {
                 BookingId = b.Id,
                 ScheduleId = b.ScheduleId,
+                UserId = b.UserId,
+                DepartureDate = b.DepartureDate,
                 UserName = b.UserName,
+                TourId = b.TourId ?? Guid.Empty,
+                TourName = b.TourName,
                 Status = b.Status,
                 StatusText = _enumService.GetEnumDisplayName<BookingStatus>(b.Status) ?? string.Empty,
                 BookingType = b.BookingType,
@@ -298,10 +306,10 @@ public class DashboardService : IDashboardService
     }
 
     public async Task<PagedResult<TourBookingItem>> GetTourScheduleBookingsAsync(
-    Guid tourScheduleId,
-    BookingStatus? status,
-    int pageNumber,
-    int pageSize)
+        Guid tourScheduleId,
+        BookingStatus? status,
+        int pageNumber,
+        int pageSize)
     {
         try
         {
@@ -335,6 +343,11 @@ public class DashboardService : IDashboardService
                 .Select(b => new
                 {
                     b.Id,
+                    b.TourScheduleId,
+                    DepartureDate = b.TourSchedule.DepartureDate,
+                    UserId = b.UserId,
+                    b.TourId,
+                    TourName = b.Tour.Name,
                     b.User.FullName,
                     b.Status,
                     b.BookingType,
@@ -352,6 +365,11 @@ public class DashboardService : IDashboardService
             var bookings = bookingsData.Select(b => new TourBookingItem
             {
                 BookingId = b.Id,
+                ScheduleId = b.TourScheduleId ?? Guid.Empty,
+                DepartureDate = b.DepartureDate,
+                UserId = b.UserId,
+                TourId = b.TourId ?? Guid.Empty,
+                TourName = b.TourName,
                 UserName = b.FullName,
                 Status = b.Status,
                 StatusText = _enumService.GetEnumDisplayName<BookingStatus>(b.Status) ?? string.Empty,

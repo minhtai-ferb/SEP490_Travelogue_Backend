@@ -22,7 +22,13 @@ public class TourBookingItem
 {
     public Guid BookingId { get; set; }
     public Guid ScheduleId { get; set; }
+
+    public DateTime DepartureDate { get; set; }
+
+    public Guid UserId { get; set; }
     public string? UserName { get; set; }
+    public Guid TourId { get; set; }
+    public string? TourName { get; set; }
     public BookingStatus Status { get; set; }
     public string? StatusText { get; set; }
 

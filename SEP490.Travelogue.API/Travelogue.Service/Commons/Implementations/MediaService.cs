@@ -211,7 +211,7 @@ public class MediaService : IMediaService
             if (string.IsNullOrEmpty(fileName))
                 throw CustomExceptionFactory.CreateNotFoundError("fileName");
 
-            var filePath = Path.Combine(_imageUploadPath, fileName);
+            var filePath = Path.Combine(_documentUploadPath, fileName);
 
             if (!File.Exists(filePath))
                 throw CustomExceptionFactory.CreateNotFoundError("image");

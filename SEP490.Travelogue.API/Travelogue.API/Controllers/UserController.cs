@@ -257,6 +257,31 @@ public class UserController : ControllerBase
         ));
     }
 
+    [HttpGet("my-tour-guide-requests")]
+    public async Task<IActionResult> GetMyTourGuideRequests(
+        [FromQuery] TourGuideRequestStatus? status,
+        int pageNumber = 1, int pageSize = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _userService.GetMyTourGuideRequestsAsync(status, pageNumber, pageSize, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "my tour guide requests")
+        ));
+    }
+
+    [HttpGet("latest-tour-guide-request")]
+    public async Task<IActionResult> GetLatestTourGuideRequest(
+        [FromQuery] Guid? userId,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _userService.GetLatestTourGuideRequestsAsync(userId, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "latest tour guide request")
+        ));
+    }
+
     [HttpPut("tour-guide-request/{id}")]
     public async Task<IActionResult> UpdateTourGuideRequest(Guid id, [FromBody] UpdateTourGuideRequestDto model, CancellationToken cancellationToken = default)
     {
@@ -293,7 +318,7 @@ public class UserController : ControllerBase
         var result = await _userService.CreateCraftVillageRequestAsync(model, cancellationToken);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "craft village request")
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS)
         ));
     }
 
@@ -303,7 +328,32 @@ public class UserController : ControllerBase
         var result = await _userService.GetCraftVillageRequestsAsync(status, cancellationToken);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "craft village request")
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+        ));
+    }
+
+    [HttpGet("my-craft-village-requests")]
+    public async Task<IActionResult> GetMyCraftVillageRequests(
+        [FromQuery] CraftVillageRequestStatus? status,
+        int pageNumber = 1, int pageSize = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _userService.GetMyCraftVillageRequestsAsync(status, pageNumber, pageSize, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "my craft village requests")
+        ));
+    }
+
+    [HttpGet("latest-craft-village-request/{userId:guid}")]
+    public async Task<IActionResult> GetLatestCraftVillageRequest(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _userService.GetLatestTourGuideRequestsAsync(userId, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "latest craft village request")
         ));
     }
 

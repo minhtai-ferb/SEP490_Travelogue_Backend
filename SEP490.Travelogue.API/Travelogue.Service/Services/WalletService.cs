@@ -187,6 +187,8 @@ public class WalletService : IWalletService
                 Id = wr.Id,
                 WalletId = wr.WalletId,
                 Amount = wr.Amount,
+                Status = wr.Status,
+                StatusText = _enumService.GetEnumDisplayName<WithdrawalRequestStatus>(wr.Status),
                 BankAccountId = wr.BankAccountId,
                 RequestTime = wr.RequestTime,
                 BankAccount = wr.BankAccount == null ? null : new BankAccountDto
