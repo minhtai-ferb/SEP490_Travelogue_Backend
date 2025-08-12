@@ -62,7 +62,7 @@ public class MediaController : ControllerBase
         var response = await _mediaService.DeleteDocumentAsync(fileName);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: response,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
         ));
     }
 
@@ -72,7 +72,7 @@ public class MediaController : ControllerBase
         var response = await _mediaService.DeleteDocumentsAsync(fileNames);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: response,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
         ));
     }
 

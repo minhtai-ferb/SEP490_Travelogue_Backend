@@ -131,13 +131,41 @@ public class BookingService : IBookingService
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync();
 
+            var userName = _unitOfWork.UserRepository
+                    .ActiveEntities
+                    .Where(u => u.Id == booking.UserId)
+                    .Select(u => u.FullName)
+                    .FirstOrDefault();
+
+            var tourName = _unitOfWork.TourRepository
+                .ActiveEntities
+                .Where(u => u.Id == booking.TourId)
+                .Select(u => u.Name)
+                .FirstOrDefault();
+
+            string? tourGuideName = null;
+            if (booking.TourGuideId.HasValue)
+            {
+                var tourGuide = _unitOfWork.TourGuideRepository
+                    .ActiveEntities
+                    // .Include(tg => tg.User)
+                    .Where(u => u.Id == booking.TourGuideId)
+                    .Select(u => u.User.FullName)
+                    .FirstOrDefault();
+                tourGuideName = tourGuide;
+            }
+
             var response = new BookingDataModel
             {
                 Id = booking.Id,
                 UserId = booking.UserId,
+                UserName = userName,
                 TourId = booking.TourId,
+                TourName = tourName,
                 TourScheduleId = booking.TourScheduleId,
+                DepartureDate = booking.TourSchedule?.DepartureDate,
                 TourGuideId = booking.TourGuideId,
+                TourGuideName = tourGuideName,
                 WorkshopId = booking.WorkshopId,
                 PaymentLinkId = booking.PaymentLinkId,
                 Status = booking.Status,
@@ -247,14 +275,43 @@ public class BookingService : IBookingService
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync();
 
+            var userName = _unitOfWork.UserRepository
+                    .ActiveEntities
+                    .Where(u => u.Id == booking.UserId)
+                    .Select(u => u.FullName)
+                    .FirstOrDefault();
+
+            var tourName = _unitOfWork.TourRepository
+                .ActiveEntities
+                .Where(u => u.Id == booking.TourId)
+                .Select(u => u.Name)
+                .FirstOrDefault();
+
+            string? tourGuideName = null;
+            if (booking.TourGuideId.HasValue)
+            {
+                var tourGuide = _unitOfWork.TourGuideRepository
+                    .ActiveEntities
+                    // .Include(tg => tg.User)
+                    .Where(u => u.Id == booking.TourGuideId)
+                    .Select(u => u.User.FullName)
+                    .FirstOrDefault();
+                tourGuideName = tourGuide;
+            }
+
             var response = new BookingDataModel
             {
                 Id = booking.Id,
                 UserId = booking.UserId,
+                UserName = userName,
                 TourId = booking.TourId,
+                TourName = tourName,
                 TourScheduleId = booking.TourScheduleId,
+                DepartureDate = booking.TourSchedule?.DepartureDate,
                 TourGuideId = booking.TourGuideId,
+                TourGuideName = tourGuideName,
                 WorkshopId = booking.WorkshopId,
+                WorkshopName = workshopSchedule?.Workshop?.Name ?? string.Empty,
                 WorkshopScheduleId = booking.WorkshopScheduleId,
                 PaymentLinkId = booking.PaymentLinkId,
                 Status = booking.Status,
@@ -389,12 +446,27 @@ public class BookingService : IBookingService
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync();
 
+            var userName = _unitOfWork.UserRepository
+                    .ActiveEntities
+                    .Where(u => u.Id == booking.UserId)
+                    .Select(u => u.FullName)
+                    .FirstOrDefault();
+
+            var tourGuideName = await _unitOfWork.UserRepository
+                .ActiveEntities
+                .Where(u => u.Id == tourGuide.UserId)
+                .Select(u => u.FullName)
+                .FirstOrDefaultAsync(cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("người dùng");
+
             return new BookingDataModel
             {
                 Id = booking.Id,
                 UserId = booking.UserId,
+                UserName = userName,
                 TripPlanId = booking.TourId,
                 TourGuideId = booking.TourGuideId,
+                TourGuideName = tourGuideName,
                 Status = booking.Status,
                 StatusText = _enumService.GetEnumDisplayName<BookingStatus>(booking.Status),
                 BookingType = booking.BookingType,
@@ -804,7 +876,7 @@ public class BookingService : IBookingService
                 .ActiveEntities
                 .Where(b => b.UserId == currentUserId)
                 .Include(b => b.TourGuide)
-                    .ThenInclude(tg => tg != null ? tg.User : null)
+                    .ThenInclude(tg => tg.User)
                 .Include(b => b.Tour)
                 .Include(b => b.TourSchedule)
                 .Include(b => b.TripPlan)
@@ -850,11 +922,17 @@ public class BookingService : IBookingService
             {
                 Id = b.Id,
                 UserId = b.UserId,
+                UserName = b.User?.FullName ?? string.Empty,
                 TourId = b.TourId,
+                TourName = b.Tour?.Name ?? string.Empty,
                 TourScheduleId = b.TourScheduleId,
+                DepartureDate = b.TourSchedule?.DepartureDate,
                 TourGuideId = b.TourGuideId,
+                TourGuideName = b.TourGuide?.User?.FullName ?? string.Empty,
                 TripPlanId = b.TripPlanId,
+                TripPlanName = b.TripPlan?.Name ?? string.Empty,
                 WorkshopId = b.WorkshopId,
+                WorkshopName = b.Workshop?.Name ?? string.Empty,
                 WorkshopScheduleId = b.WorkshopScheduleId,
                 PaymentLinkId = b.PaymentLinkId,
                 Status = b.Status,
@@ -960,7 +1038,7 @@ public class BookingService : IBookingService
             IQueryable<Booking> query = _unitOfWork.BookingRepository
                 .ActiveEntities
                 .Include(b => b.TourGuide)
-                    .ThenInclude(tg => tg != null ? tg.User : null)
+                    .ThenInclude(tg => tg.User)
                 .Include(b => b.Tour)
                 .Include(b => b.TourSchedule)
                 .Include(b => b.TripPlan)
@@ -1006,11 +1084,16 @@ public class BookingService : IBookingService
             {
                 Id = b.Id,
                 UserId = b.UserId,
+                UserName = b.User?.FullName ?? string.Empty,
                 TourId = b.TourId,
+                TourName = b.Tour?.Name ?? string.Empty,
                 TourScheduleId = b.TourScheduleId,
+                DepartureDate = b.TourSchedule?.DepartureDate,
                 TourGuideId = b.TourGuideId,
-                TripPlanId = b.TripPlanId,
+                TourGuideName = b.TourGuide?.User?.FullName ?? string.Empty,
+                TripPlanName = b.TripPlan?.Name ?? string.Empty,
                 WorkshopId = b.WorkshopId,
+                WorkshopName = b.Workshop?.Name ?? string.Empty,
                 WorkshopScheduleId = b.WorkshopScheduleId,
                 PaymentLinkId = b.PaymentLinkId,
                 Status = b.Status,
@@ -1146,8 +1229,9 @@ public class BookingService : IBookingService
                     DepartureDate = b.TourSchedule?.DepartureDate,
                     TourGuideId = b.TourGuideId,
                     TourGuideName = tourGuideName,
-                    TripPlanId = b.TripPlanId,
+                    TripPlanName = b.TripPlan?.Name ?? string.Empty,
                     WorkshopId = b.WorkshopId,
+                    WorkshopName = b.Workshop?.Name ?? string.Empty,
                     WorkshopScheduleId = b.WorkshopScheduleId,
                     PaymentLinkId = b.PaymentLinkId,
                     Status = b.Status,
@@ -1227,11 +1311,16 @@ public class BookingService : IBookingService
             {
                 Id = booking.Id,
                 UserId = booking.UserId,
+                UserName = booking.User?.FullName ?? string.Empty,
                 TourId = booking.TourId,
+                TourName = booking.Tour?.Name ?? string.Empty,
                 TourScheduleId = booking.TourScheduleId,
+                DepartureDate = booking.TourSchedule?.DepartureDate,
                 TourGuideId = booking.TourGuideId,
-                TripPlanId = booking.TripPlanId,
+                TourGuideName = booking.TourGuide?.User?.FullName ?? string.Empty,
+                TripPlanName = booking.TripPlan?.Name ?? string.Empty,
                 WorkshopId = booking.WorkshopId,
+                WorkshopName = booking.Workshop?.Name ?? string.Empty,
                 WorkshopScheduleId = booking.WorkshopScheduleId,
                 PaymentLinkId = booking.PaymentLinkId,
                 Status = booking.Status,

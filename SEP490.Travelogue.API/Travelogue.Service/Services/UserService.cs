@@ -52,6 +52,11 @@ public interface IUserService
     Task<CraftVillageRequestResponseDto> ReviewCraftVillageRequestAsync(Guid requestId, ReviewCraftVillageRequestDto model, CancellationToken cancellationToken = default);
     Task<CraftVillageRequestResponseDto> GetCraftVillageRequestAsync(Guid requestId, CancellationToken cancellationToken = default);
     Task<bool> DeleteCraftVillageRequestAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<PagedResult<TourGuideRequestResponseDto>> GetMyTourGuideRequestsAsync(TourGuideRequestStatus? status, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+    Task<TourGuideRequestResponseDto> GetLatestTourGuideRequestsAsync(Guid? userId, CancellationToken cancellationToken = default);
+    Task<PagedResult<CraftVillageRequestResponseDto>> GetMyCraftVillageRequestsAsync(CraftVillageRequestStatus? status, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+    Task<CraftVillageRequestResponseDto> GetLatestTourGuideRequestsAsync(Guid userId, CancellationToken cancellationToken = default);
 }
 
 public class UserService : IUserService
@@ -1026,6 +1031,118 @@ public class UserService : IUserService
         }
     }
 
+    public async Task<PagedResult<TourGuideRequestResponseDto>> GetMyTourGuideRequestsAsync(TourGuideRequestStatus? status, int pageNumber, int pageSize, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            IQueryable<TourGuideRequest> query = _unitOfWork.TourGuideRequestRepository
+                .ActiveEntities
+                .Where(r => r.UserId == currentUserId)
+                .Include(x => x.Certifications)
+                .OrderByDescending(r => r.CreatedTime)
+                .Include(x => x.Certifications);
+
+            if (status != null)
+            {
+                query = query.Where(x => x.Status == status);
+            }
+
+            var requests = await query.ToListAsync();
+            var response = new List<TourGuideRequestResponseDto>();
+
+            foreach (var request in requests)
+            {
+                var user = await _unitOfWork.UserRepository.GetByIdAsync(request.UserId, cancellationToken)
+                    ?? throw CustomExceptionFactory.CreateNotFoundError("User");
+                var requestDto = new TourGuideRequestResponseDto
+                {
+                    Id = request.Id,
+                    UserId = request.UserId,
+                    Email = user.Email,
+                    FullName = user.FullName,
+                    Introduction = request.Introduction,
+                    Price = request.Price,
+                    Status = request.Status,
+                    StatusText = _enumService.GetEnumDisplayName<TourGuideRequestStatus>(request.Status),
+                    RejectionReason = request.RejectionReason,
+                    Certifications = request.Certifications
+                    .Select(c => new CertificationDto
+                    {
+                        Name = c.Name,
+                        CertificateUrl = c.CertificateUrl
+                    })
+                    .ToList()
+                };
+                requestDto.Email = user?.Email ?? string.Empty;
+                requestDto.FullName = user?.FullName ?? string.Empty;
+                // requestDto.Certifications = _mapper.Map<List<CertificationDto>>(request.Certifications);
+                response.Add(requestDto);
+            }
+
+            // return response;
+
+            return new PagedResult<TourGuideRequestResponseDto>
+            {
+                Items = response,
+                TotalCount = query.Count(),
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<TourGuideRequestResponseDto> GetLatestTourGuideRequestsAsync(Guid? userId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (userId == null)
+                throw CustomExceptionFactory.CreateBadRequestError("UserId is required");
+
+            var latestRequest = await _unitOfWork.TourGuideRequestRepository
+                .ActiveEntities
+                .Where(r => r.UserId == userId)
+                .Include(x => x.Certifications)
+                .OrderByDescending(r => r.CreatedTime)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (latestRequest == null)
+                return null;
+
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(latestRequest.UserId, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("User");
+
+            return new TourGuideRequestResponseDto
+            {
+                Id = latestRequest.Id,
+                UserId = latestRequest.UserId,
+                Email = user.Email,
+                FullName = user.FullName,
+                Introduction = latestRequest.Introduction,
+                Price = latestRequest.Price,
+                Status = latestRequest.Status,
+                StatusText = _enumService.GetEnumDisplayName<TourGuideRequestStatus>(latestRequest.Status),
+                RejectionReason = latestRequest.RejectionReason,
+                Certifications = latestRequest.Certifications
+                    .Select(c => new CertificationDto
+                    {
+                        Name = c.Name,
+                        CertificateUrl = c.CertificateUrl
+                    })
+                    .ToList()
+            };
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
     public async Task<TourGuideRequestResponseDto> GetTourGuideRequestByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         try
@@ -1472,6 +1589,79 @@ public class UserService : IUserService
         catch (CustomException)
         {
             throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<PagedResult<CraftVillageRequestResponseDto>> GetMyCraftVillageRequestsAsync(CraftVillageRequestStatus? status, int pageNumber, int pageSize, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            var query = _unitOfWork.CraftVillageRequestRepository
+                 .ActiveEntities
+                 .Where(r => r.OwnerId == currentUserId)
+                 .OrderByDescending(r => r.CreatedTime)
+                 .AsQueryable();
+
+            if (status.HasValue)
+            {
+                query = query.Where(x => x.Status == status);
+            }
+
+            var requests = await query.ToListAsync(cancellationToken);
+            var response = new List<CraftVillageRequestResponseDto>();
+
+            foreach (var request in requests)
+            {
+                var user = await _unitOfWork.UserRepository.GetByIdAsync(request.OwnerId, cancellationToken);
+                var requestDto = MapToCraftVillageRequestResponseDto(request, user);
+                // requestDto.OwnerEmail = user.Email ?? string.Empty;
+                // requestDto.OwnerFullName = user.FullName ?? string.Empty;
+                response.Add(requestDto);
+            }
+
+            // return response;
+
+            return new PagedResult<CraftVillageRequestResponseDto>
+            {
+                Items = response,
+                TotalCount = query.Count(),
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<CraftVillageRequestResponseDto> GetLatestTourGuideRequestsAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var query = _unitOfWork.CraftVillageRequestRepository
+            .ActiveEntities
+            .AsQueryable();
+
+            var latestRequest = await query
+                .OrderByDescending(x => x.CreatedTime)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (latestRequest == null)
+                return null;
+
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(latestRequest.OwnerId, cancellationToken);
+            var response = MapToCraftVillageRequestResponseDto(latestRequest, user);
+            response.OwnerEmail = user?.Email ?? string.Empty;
+            response.OwnerFullName = user?.FullName ?? string.Empty;
+
+            return response;
         }
         catch (Exception ex)
         {
