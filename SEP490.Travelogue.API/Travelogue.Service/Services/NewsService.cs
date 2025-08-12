@@ -59,7 +59,7 @@ public class NewsService : INewsService
                 throw CustomExceptionFactory.CreateBadRequestError("TypeExperience chỉ được set khi NewsCategory = Experience.");
             if (isExperience && !newsCreateModel.TypeExperience.HasValue)
                 throw CustomExceptionFactory.CreateBadRequestError("Experience bắt buộc phải có TypeExperience.");
-            if (newsCreateModel.NewsCategory == 0) 
+            if (newsCreateModel.NewsCategory == 0)
             {
                 throw CustomExceptionFactory.CreateBadRequestError(
                     "Trường 'Loại tin tức' là bắt buộc."

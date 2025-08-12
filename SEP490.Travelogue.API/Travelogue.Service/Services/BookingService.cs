@@ -617,6 +617,8 @@ public class BookingService : IBookingService
                 throw CustomExceptionFactory.CreateBadRequestError("Khong có người tham gia nào trong booking.");
             }
 
+            var commissionPercent = await GetBookingCommissionPercentAsync();
+
             switch (existingBooking.BookingType)
             {
                 case BookingType.Tour:
@@ -660,7 +662,8 @@ public class BookingService : IBookingService
                     if (owner.Wallet == null)
                         throw CustomExceptionFactory.CreateBadRequestError("Owner chưa có ví.");
 
-                    owner.Wallet.Balance += existingBooking.FinalPrice;
+                    var amountToWalletWorkshop = existingBooking.FinalPrice * (1 - commissionPercent / 100m);
+                    owner.Wallet.Balance += amountToWalletWorkshop;
                     _unitOfWork.UserRepository.Update(owner);
 
                     workshopSchedule.CurrentBooked += totalParticipants;
@@ -682,7 +685,8 @@ public class BookingService : IBookingService
                         .FirstOrDefaultAsync(u => u.Id == tourGuide.UserId)
                         ?? throw CustomExceptionFactory.CreateNotFoundError("user");
 
-                    guideUser.Wallet.Balance += existingBooking.FinalPrice;
+                    var amountToWalletGuide = existingBooking.FinalPrice * (1 - commissionPercent / 100m);
+                    guideUser.Wallet.Balance += amountToWalletGuide;
                     _unitOfWork.UserRepository.Update(guideUser);
 
                     var dateRange = existingBooking.StartDate.Date <= existingBooking.EndDate.Date
@@ -1278,6 +1282,30 @@ public class BookingService : IBookingService
             };
 
             return (discountAmount, promotion);
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    private async Task<decimal> GetBookingCommissionPercentAsync()
+    {
+        try
+        {
+            var commissionSetting = await _unitOfWork.SystemSettingRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(s => s.Key == SystemSettingKey.BookingCommissionPercent)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("system setting BookingCommissionPercent");
+
+            if (!decimal.TryParse(commissionSetting.Value, out var commissionPercent))
+                throw CustomExceptionFactory.CreateBadRequestError("Giá trị hoa hồng không hợp lệ.");
+
+            return commissionPercent;
+        }
+        catch (CustomException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
