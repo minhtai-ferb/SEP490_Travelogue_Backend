@@ -186,7 +186,7 @@ public class DashboardService : IDashboardService
                     Day = g.Key,
                     ScheduleCount = g.Count(b => b.TourScheduleId.HasValue && b.BookingType == BookingType.Tour),
                     TourGuideCount = g.Count(b => b.TourGuideId.HasValue && b.BookingType == BookingType.TourGuide),
-                    TripPlanCount = g.Count(b => b.TripPlanId.HasValue && b.BookingType == BookingType.TourGuide)
+                    WorkshopCount = g.Count(b => b.WorkshopScheduleId.HasValue && b.BookingType == BookingType.Workshop)
                 })
                 .OrderBy(r => r.Day)
                 .ToListAsync();
@@ -204,7 +204,7 @@ public class DashboardService : IDashboardService
                         Day = date,
                         BookingSchedule = data.FirstOrDefault()?.ScheduleCount ?? 0,
                         BookingTourGuide = data.FirstOrDefault()?.TourGuideCount ?? 0,
-                        BookingTripPlan = data.FirstOrDefault()?.TripPlanCount ?? 0
+                        BookingWorkshop = data.FirstOrDefault()?.WorkshopCount ?? 0
                     })
                 .OrderBy(r => r.Day)
                 .ToList();
