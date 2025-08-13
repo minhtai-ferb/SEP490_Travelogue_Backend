@@ -199,6 +199,8 @@ public class TripPlanService : ITripPlanService
             tripPlan.ImageUrl = dto.ImageUrl;
             tripPlan.LastUpdatedTime = DateTimeOffset.UtcNow;
 
+            tripPlan.Status = TripPlanStatus.Sketch;
+
             await _unitOfWork.SaveAsync();
 
             var ownerName = await _unitOfWork.UserRepository

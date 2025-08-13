@@ -278,7 +278,6 @@ public class AuthService : IAuthService
 
     public async Task<bool> ResendEmailVerificationAsync(string email, CancellationToken cancellationToken)
     {
-
         try
         {
             var user = await _unitOfWork.UserRepository.GetUserByEmailAsync(email) ??
@@ -288,7 +287,8 @@ public class AuthService : IAuthService
             var actionCodeSettings = new ActionCodeSettings()
             {
                 //Url = $"{domainBackend}/api/auth/verify-email?email={model.Email}",
-                Url = $"{domainFrontend}/auth/verify/{user.VerificationToken}",
+                Url = $"http://localhost:5070/api/auth/verify-email?token={user.VerificationToken}",
+                // Url = $"{domainFrontend}/auth/verify/{user.VerificationToken}",
                 HandleCodeInApp = false
             };
 
@@ -301,11 +301,17 @@ public class AuthService : IAuthService
             };
 
             // Gửi email xác thực
-            await _emailService.SendEmailWithTemplateAsync(
-                selectedEmail,
-                "Xác minh đăng ký Goyoung Tây Ninh",
-                MailTemplateLinks.VerifyAccountMailTemplate,
-                mailModel);
+            // await _emailService.SendEmailWithTemplateAsync(
+            //     selectedEmail,
+            //     "Xác minh đăng ký Travelogue",
+            //     MailTemplateLinks.VerifyAccountMailTemplate,
+            //     mailModel);
+
+            await _emailService.SendEmailAsync(
+                    new[] { user.Email },
+                   "Xác minh đăng ký Travelogue",
+                    $"{verificationLink}"
+                );
             return true;
         }
         catch (CustomException)

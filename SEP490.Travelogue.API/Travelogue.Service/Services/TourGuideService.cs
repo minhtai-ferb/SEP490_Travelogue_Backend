@@ -252,8 +252,7 @@ public class TourGuideService : ITourGuideService
                     AvatarUrl = tg.User.AvatarUrl,
                     TotalReviews = reviewsForGuide.Count,
                     AverageRating = reviewsForGuide.Any() ? Math.Round(reviewsForGuide.Average(r => r.Rating), 2) : 0.0
-                }
-            ;
+                };
 
                 result.Add(guideModel);
             }
@@ -413,8 +412,8 @@ public class TourGuideService : ITourGuideService
                 ?? throw CustomExceptionFactory.CreateForbiddenError();
 
             tourGuide.Introduction = tourGuideUpdateModel.Introduction;
-            tourGuide.Languages = tourGuideUpdateModel.Languages;
-            tourGuide.Tags = tourGuideUpdateModel.Tags;
+            // tourGuide.Languages = tourGuideUpdateModel.Languages;
+            // tourGuide.Tags = tourGuideUpdateModel.Tags;
 
             await _unitOfWork.UserRepository.UpdateAsync(user);
             _unitOfWork.TourGuideRepository.Update(tourGuide);

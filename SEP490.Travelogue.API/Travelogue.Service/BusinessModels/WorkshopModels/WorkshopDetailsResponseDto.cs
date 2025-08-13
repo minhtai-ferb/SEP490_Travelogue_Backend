@@ -14,19 +14,7 @@ public class WorkshopDetailsResponseDto
     public Guid CraftVillageId { get; set; }
     public string? CraftVillageName { get; set; }
     public WorkshopStatus Status { get; set; }
-    public string StatusText
-    {
-        get
-        {
-            return Status switch
-            {
-                WorkshopStatus.Draft => "Draft",
-                WorkshopStatus.Approved => "Confirmed",
-                WorkshopStatus.Rejected => "Cancelled",
-                _ => "Unknown"
-            };
-        }
-    }
+    public string StatusText { get; set; }
     public List<ActivityResponseDto>? Activities { get; set; }
     public List<PromotionDto>? Promotions { get; set; } = new List<PromotionDto>();
     public List<ScheduleResponseDto>? Schedules { get; set; }

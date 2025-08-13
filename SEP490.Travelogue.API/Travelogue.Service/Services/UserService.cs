@@ -17,6 +17,7 @@ using Travelogue.Service.BusinessModels.UserModels;
 using Travelogue.Service.BusinessModels.UserModels.Requests;
 using Travelogue.Service.BusinessModels.UserModels.Responses;
 using Travelogue.Service.Commons.Const;
+using Travelogue.Service.Commons.Helpers;
 using Travelogue.Service.Commons.Implementations;
 using Travelogue.Service.Commons.Interfaces;
 
@@ -1189,12 +1190,16 @@ public class UserService : IUserService
 
     public async Task<TourGuideRequestResponseDto> ReviewTourGuideRequestAsync(Guid requestId, ReviewTourGuideRequestDto model, CancellationToken cancellationToken = default)
     {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
 
-            var request = await _unitOfWork.TourGuideRequestRepository.GetByIdAsync(requestId, cancellationToken);
+            var request = await _unitOfWork.TourGuideRequestRepository
+                .ActiveEntities
+                .Include(r => r.Certifications)
+                .FirstOrDefaultAsync(r => r.Id == requestId, cancellationToken);
             if (request == null)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("TourGuide request");
@@ -1227,7 +1232,8 @@ public class UserService : IUserService
                     CreatedTime = currentTime,
                     LastUpdatedTime = currentTime,
                     CreatedBy = currentUserId,
-                    LastUpdatedBy = currentUserId
+                    LastUpdatedBy = currentUserId,
+                    Certifications = new List<Certification>()
                 };
 
                 foreach (var cert in request.Certifications)
@@ -1236,6 +1242,7 @@ public class UserService : IUserService
                     {
                         Name = cert.Name,
                         CertificateUrl = cert.CertificateUrl,
+                        TourGuideId = tourGuide.Id,
                         CreatedTime = currentTime,
                         LastUpdatedBy = currentUserId,
                         CreatedBy = currentUserId,
@@ -1261,6 +1268,7 @@ public class UserService : IUserService
 
             _unitOfWork.TourGuideRequestRepository.Update(request);
             await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
 
             await _emailService.SendEmailAsync(
                 new[] { user.Email },
@@ -1271,16 +1279,19 @@ public class UserService : IUserService
             var response = MapToTourGuideRequestResponseDto(request, user);
             response.Email = user.Email;
             response.FullName = user.FullName;
+            response.StatusText = _enumService.GetEnumDisplayName<TourGuideRequestStatus>(request.Status);
             // response.Certifications = _mapper.Map<List<CertificationDto>>(request.Certifications);
 
             return response;
         }
         catch (CustomException)
         {
+            await transaction.RollbackAsync(cancellationToken);
             throw;
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync(cancellationToken);
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
@@ -1290,12 +1301,12 @@ public class UserService : IUserService
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
-            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
             var hasPermission = _userContextService.HasAnyRole(AppRole.USER);
             if (!hasPermission)
                 throw CustomExceptionFactory.CreateForbiddenError();
 
-            var user = await _unitOfWork.UserRepository.GetByIdAsync(Guid.Parse(currentUserId), cancellationToken);
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId, cancellationToken);
             if (user == null)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("User");
@@ -1309,6 +1320,8 @@ public class UserService : IUserService
                 throw CustomExceptionFactory.CreateBadRequestError("Bạn đã là chủ 1 làng nghề");
             }
 
+            List<MediaRequest> medias = model.MediaDtos.ToMediaRequest();
+
             var craftVillageRequest = new CraftVillageRequest
             {
                 Name = model.Name,
@@ -1320,6 +1333,7 @@ public class UserService : IUserService
                 OpenTime = model.OpenTime,
                 CloseTime = model.CloseTime,
                 DistrictId = model.DistrictId,
+                OwnerId = currentUserId,
                 PhoneNumber = model.PhoneNumber,
                 Email = model.Email,
                 Website = model.Website,
@@ -1330,12 +1344,14 @@ public class UserService : IUserService
                 Status = CraftVillageRequestStatus.Pending,
                 CreatedTime = DateTimeOffset.UtcNow,
                 LastUpdatedTime = DateTimeOffset.UtcNow,
-                CreatedBy = currentUserId,
-                LastUpdatedBy = currentUserId
+                CreatedBy = currentUserId.ToString(),
+                LastUpdatedBy = currentUserId.ToString(),
+                Medias = medias
             };
 
             await _unitOfWork.CraftVillageRequestRepository.AddAsync(craftVillageRequest);
             await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync();
 
             var moderators = await _unitOfWork.UserRepository.GetUsersByRoleAsync(AppRole.MODERATOR);
             foreach (var moderator in moderators)
@@ -1452,6 +1468,8 @@ public class UserService : IUserService
                 var requestDto = MapToCraftVillageRequestResponseDto(request, user);
                 // requestDto.OwnerEmail = user.Email ?? string.Empty;
                 // requestDto.OwnerFullName = user.FullName ?? string.Empty;
+
+                requestDto.Medias = request.Medias.ToMediaDto();
                 response.Add(requestDto);
             }
 
@@ -1528,7 +1546,29 @@ public class UserService : IUserService
 
                 await _unitOfWork.CraftVillageRepository.AddAsync(craftVillage);
 
-                var role = await _unitOfWork.RoleRepository.GetByNameAsync("CraftVillage");
+                if (request.Medias != null && request.Medias.Any())
+                {
+                    foreach (var media in request.Medias)
+                    {
+                        var locationMedia = new LocationMedia
+                        {
+                            LocationId = location.Id,
+                            MediaUrl = media.MediaUrl,
+                            FileName = Path.GetFileName(media.MediaUrl),
+                            FileType = Path.GetExtension(media.MediaUrl),
+                            SizeInBytes = 0,
+                            IsThumbnail = media.IsThumbnail,
+                            CreatedTime = DateTimeOffset.UtcNow,
+                            LastUpdatedTime = DateTimeOffset.UtcNow,
+                            CreatedBy = currentUserId,
+                            LastUpdatedBy = currentUserId
+                        };
+
+                        await _unitOfWork.LocationMediaRepository.AddAsync(locationMedia);
+                    }
+                }
+
+                var role = await _unitOfWork.RoleRepository.GetByNameAsync(AppRole.CRAFT_VILLAGE_OWNER);
                 if (role == null)
                 {
                     throw CustomExceptionFactory.CreateBadRequestError("CraftVillage role");
@@ -1544,6 +1584,7 @@ public class UserService : IUserService
 
             _unitOfWork.CraftVillageRequestRepository.Update(request);
             await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync();
 
             await _emailService.SendEmailAsync(
                     new[] { user.Email },
@@ -1725,12 +1766,13 @@ public class UserService : IUserService
 
     private CraftVillageRequestResponseDto MapToCraftVillageRequestResponseDto(CraftVillageRequest request, User user)
     {
+        var statusText = _enumService.GetEnumDisplayName<CraftVillageRequestStatus>(request.Status) ?? string.Empty;
         return new CraftVillageRequestResponseDto
         {
             Id = request.Id,
             OwnerId = request.OwnerId,
-            OwnerEmail = user.Email,
-            OwnerFullName = user.FullName,
+            OwnerEmail = user?.Email ?? string.Empty,
+            OwnerFullName = user?.FullName ?? string.Empty,
             Name = request.Name,
             Description = request.Description,
             Content = request.Content,
@@ -1748,9 +1790,11 @@ public class UserService : IUserService
             YearsOfHistory = request.YearsOfHistory,
             IsRecognizedByUnesco = request.IsRecognizedByUnesco,
             Status = request.Status,
+            StatusText = statusText,
             RejectionReason = request.RejectionReason,
             ReviewedAt = request.ReviewedAt,
-            ReviewedBy = request.ReviewedBy
+            ReviewedBy = request.ReviewedBy,
+            Medias = request.Medias.ToMediaDto()
         };
     }
 

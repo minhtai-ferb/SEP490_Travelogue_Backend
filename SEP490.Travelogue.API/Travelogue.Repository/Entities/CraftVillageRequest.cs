@@ -41,4 +41,12 @@ public sealed class CraftVillageRequest : BaseEntity
 
     public DateTimeOffset? ReviewedAt { get; set; }
     public string? ReviewedBy { get; set; }
+    public List<MediaRequest> Medias { get; set; } = new();
+    // public ICollection<CraftVillageRequestMedia> CraftVillageRequestMedias { get; set; } = new List<CraftVillageRequestMedia>();
+}
+
+public class MediaRequest
+{
+    public string MediaUrl { get; set; } = string.Empty;
+    public bool IsThumbnail { get; set; }
 }

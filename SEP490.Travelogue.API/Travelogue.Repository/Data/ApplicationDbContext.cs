@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
@@ -111,6 +112,13 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Promotion>()
             .HasIndex(p => p.PromotionCode)
             .IsUnique();
+
+        modelBuilder.Entity<CraftVillageRequest>()
+            .Property(e => e.Medias)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<MediaRequest>>(v, (JsonSerializerOptions?)null) ?? new List<MediaRequest>()
+            );
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes())
         {
