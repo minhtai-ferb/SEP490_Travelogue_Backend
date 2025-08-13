@@ -62,6 +62,17 @@ public class WalletController : ControllerBase
         ));
     }
 
+    [HttpGet("my-withdrawal-requests/filter")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ResponseModel<List<WithdrawalRequestDto>>))]
+    public async Task<IActionResult> GetMyWithdrawalRequests([FromQuery] MyWithdrawalRequestFilterDto filterDto, CancellationToken cancellationToken)
+    {
+        var result = await _walletService.GetMyWithdrawalRequestAsync(filterDto);
+        return Ok(ResponseModel<List<WithdrawalRequestDto>>.OkResponseModel(
+            data: result,
+            message: ResponseMessages.SUCCESS
+        ));
+    }
+
     [HttpPatch("withdrawal-requests/{requestId:guid}/approve")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ResponseModel<string>))]
     public async Task<IActionResult> Approve(Guid requestId, [FromQuery] string proofImageUrl, [FromQuery] string adminNote, CancellationToken cancellationToken)
