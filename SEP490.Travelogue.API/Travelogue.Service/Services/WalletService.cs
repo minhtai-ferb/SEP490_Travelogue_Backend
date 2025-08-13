@@ -17,6 +17,7 @@ public interface IWalletService
     Task<List<TransactionDto>> GetTransactionsAsync();
     Task RequestWithdrawalAsync(WithdrawalRequestCreateDto request);
     Task<List<WithdrawalRequestDto>> GetWithdrawalRequestAsync(WithdrawalRequestFilterDto filterDto);
+    Task<List<WithdrawalRequestDto>> GetMyWithdrawalRequestAsync(MyWithdrawalRequestFilterDto filterDto);
     Task ApproveAsync(Guid requestId, string proofImageUrl, string adminNote);
     Task RejectAsync(Guid requestId, string reason);
 }
@@ -163,6 +164,66 @@ public class WalletService : IWalletService
             {
                 query = query.Where(wr => wr.UserId == filterDto.UserId.Value);
             }
+
+            if (filterDto.Status.HasValue)
+            {
+                query = query.Where(wr => wr.Status == filterDto.Status.Value);
+            }
+
+            if (filterDto.FromDate.HasValue)
+            {
+                query = query.Where(wr => wr.CreatedTime >= filterDto.FromDate.Value);
+            }
+            if (filterDto.ToDate.HasValue)
+            {
+                query = query.Where(wr => wr.CreatedTime <= filterDto.ToDate.Value);
+            }
+
+            var entities = await query
+                .OrderByDescending(wr => wr.CreatedTime)
+                .ToListAsync();
+
+            var result = entities.Select(wr => new WithdrawalRequestDto
+            {
+                Id = wr.Id,
+                WalletId = wr.WalletId,
+                Amount = wr.Amount,
+                Status = wr.Status,
+                StatusText = _enumService.GetEnumDisplayName<WithdrawalRequestStatus>(wr.Status),
+                BankAccountId = wr.BankAccountId,
+                RequestTime = wr.RequestTime,
+                BankAccount = wr.BankAccount == null ? null : new BankAccountDto
+                {
+                    Id = wr.BankAccount.Id,
+                    UserId = wr.BankAccount.UserId,
+                    BankName = wr.BankAccount.BankName,
+                    BankAccountNumber = wr.BankAccount.BankAccountNumber,
+                    BankOwnerName = wr.BankAccount.BankOwnerName
+                }
+            }).ToList();
+
+            return result;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<WithdrawalRequestDto>> GetMyWithdrawalRequestAsync(MyWithdrawalRequestFilterDto filterDto)
+    {
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            var query = _unitOfWork.WithdrawalRequestRepository.ActiveEntities
+                .Where(w => w.UserId == currentUserId)
+                .Include(wr => wr.BankAccount)
+                .AsQueryable();
 
             if (filterDto.Status.HasValue)
             {

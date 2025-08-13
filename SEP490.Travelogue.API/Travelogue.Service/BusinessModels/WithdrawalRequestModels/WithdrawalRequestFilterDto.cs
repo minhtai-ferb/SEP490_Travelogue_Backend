@@ -9,3 +9,10 @@ public class WithdrawalRequestFilterDto
     public DateTime? FromDate { get; set; }
     public DateTime? ToDate { get; set; }
 }
+
+public class MyWithdrawalRequestFilterDto
+{
+    public WithdrawalRequestStatus? Status { get; set; }
+    public DateTime? FromDate { get; set; }
+    public DateTime? ToDate { get; set; }
+}
