@@ -621,6 +621,7 @@ public class BookingService : IBookingService
 
     public async Task<bool> ProcessPaymentResponseAsync(PaymentResponse paymentResponse)
     {
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
             var currentUserId = "1";
@@ -761,6 +762,13 @@ public class BookingService : IBookingService
                     guideUser.Wallet.Balance += amountToWalletGuide;
                     _unitOfWork.UserRepository.Update(guideUser);
 
+                    var tripPlan = await _unitOfWork.TripPlanRepository
+                        .ActiveEntities
+                        .FirstOrDefaultAsync(tp => tp.Id == existingBooking.TripPlanId)
+                        ?? throw CustomExceptionFactory.CreateNotFoundError("trip plan");
+                    tripPlan.Status = TripPlanStatus.Booked;
+                    _unitOfWork.TripPlanRepository.Update(tripPlan);
+
                     var dateRange = existingBooking.StartDate.Date <= existingBooking.EndDate.Date
                         ? Enumerable.Range(0, (existingBooking.EndDate.Date - existingBooking.StartDate.Date).Days + 1)
                             .Select(d => existingBooking.StartDate.Date.AddDays(d))
@@ -819,8 +827,6 @@ public class BookingService : IBookingService
                 LastUpdatedTime = currentTime
             };
 
-            _unitOfWork.BeginTransaction();
-
             await _unitOfWork.TransactionEntryRepository.AddAsync(order);
             await _unitOfWork.SaveAsync();
 
@@ -839,20 +845,21 @@ public class BookingService : IBookingService
                 await _unitOfWork.SaveAsync();
             }
 
-            _unitOfWork.CommitTransaction();
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync();
             return true;
         }
         catch (CustomException)
         {
-            _unitOfWork.RollBack();
+            await transaction.RollbackAsync();
             throw;
         }
         catch (Exception ex)
         {
-            _unitOfWork.RollBack();
+            await transaction.RollbackAsync();
             Console.WriteLine("Error occurred:");
             Console.WriteLine(ex.Message);
-            throw CustomExceptionFactory.CreateInternalServerError();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
         finally
         {
