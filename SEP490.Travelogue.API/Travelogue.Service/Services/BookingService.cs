@@ -554,7 +554,8 @@ public class BookingService : IBookingService
                 amount: (int)totalAmount,
                 description: $"Payment for Travelogue",
                 items: items,
-                cancelUrl: "https://29fc513e3d3d.ngrok-free.app/api/booking/lander",
+                // cancelUrl: "https://29fc513e3d3d.ngrok-free.app/api/booking/lander",
+                cancelUrl: "http://yourapp.com/cancel",
                 returnUrl: "http://yourapp.com/success",
                 expiredAt: (int)currentTime.AddMinutes(5).ToUnixTimeSeconds()
             );
