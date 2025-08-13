@@ -59,22 +59,22 @@ public class TourGuideController : ControllerBase
         ));
     }
 
-    /// <summary>
-    /// Cấp quyền Tour Guide cho người dùng dựa trên email.
-    /// </summary>
-    /// <param name="emails"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    [HttpPost("assign")]
-    public async Task<IActionResult> AssignToTourGuideAsync([FromBody] List<string> emails, CancellationToken cancellationToken)
-    {
-        var result = await _tourGuideService.AssignToTourGuideAsync(emails, cancellationToken);
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
-        ));
-    }
 
+    // [HttpPost("assign")]
+    // public async Task<IActionResult> AssignToTourGuideAsync([FromBody] List<string> emails, CancellationToken cancellationToken)
+    // {
+    //     var result = await _tourGuideService.AssignToTourGuideAsync(emails, cancellationToken);
+    //     return Ok(ResponseModel<object>.OkResponseModel(
+    //         data: result,
+    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+    //     ));
+    // }
+
+    /// <summary>
+    /// tour guide tự lấy các schedule của mình theo loại (all, booking, tour schedule)
+    /// </summary>
+    /// <param name="filter"></param>
+    /// <returns></returns>
     [HttpGet("schedules")]
     public async Task<IActionResult> GetSchedules([FromQuery] TourGuideScheduleFilterDto filter)
     {
@@ -85,6 +85,11 @@ public class TourGuideController : ControllerBase
         ));
     }
 
+    /// <summary>
+    /// Tour guide tạo yêu cầu để cập nhật giá
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
     [HttpPost("booking-price-request")]
     public async Task<IActionResult> CreateBookingPriceRequestAsync(
     [FromBody] BookingPriceRequestCreateDto dto)
@@ -96,6 +101,11 @@ public class TourGuideController : ControllerBase
         ));
     }
 
+    /// <summary>
+    /// moderator chấp nhận yêu cầu của tour guide
+    /// </summary>
+    /// <param name="requestId"></param>
+    /// <returns></returns>
     [HttpPut("booking-price-request/{requestId}/approve")]
     public async Task<IActionResult> ApproveBookingPriceRequestAsync(Guid requestId)
     {
@@ -106,6 +116,12 @@ public class TourGuideController : ControllerBase
         ));
     }
 
+    /// <summary>
+    /// moderator từ chối yêu cầu cập nhật giá
+    /// </summary>
+    /// <param name="requestId"></param>
+    /// <param name="dto"></param>
+    /// <returns></returns>
     [HttpPut("booking-price-request/{requestId}/reject")]
     public async Task<IActionResult> RejectBookingPriceRequestAsync(
         Guid requestId,

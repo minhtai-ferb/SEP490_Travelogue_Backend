@@ -17,10 +17,33 @@ public class WorkshopController : ControllerBase
         _workshopService = workshopService;
     }
 
+    /// <summary>
+    /// user filter theo tên các workshop
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="craftVillageId"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpGet()]
     public async Task<IActionResult> GetFilteredWorkshopsAsync([FromQuery] string? name, [FromQuery] Guid? craftVillageId, CancellationToken cancellationToken)
     {
         var result = await _workshopService.GetFilteredWorkshopsAsync(name, craftVillageId, cancellationToken);
+        return Ok(ResponseModel<List<WorkshopResponseDto>>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "workshops")
+        ));
+    }
+
+    /// <summary>
+    /// moderator filter các workshop theo các điều kiện kèm theo status (đã duyệt hay chưa)
+    /// </summary>
+    /// <param name="filter"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    [HttpGet("moderator-filter")]
+    public async Task<IActionResult> ModeratorGetFilteredWorkshopsAsync([FromQuery] FilterWorkshop filter, CancellationToken cancellationToken)
+    {
+        var result = await _workshopService.ModeratorGetFilteredWorkshopsAsync(filter, cancellationToken);
         return Ok(ResponseModel<List<WorkshopResponseDto>>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "workshops")
@@ -88,37 +111,37 @@ public class WorkshopController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Xác nhận workshop
-    /// </summary>
-    /// <param name="workshopId">ID của workshop</param>
-    /// <param name="model">Thông tin xác nhận</param>
-    /// <param name="cancellationToken">Token để hủy thao tác</param>
-    /// <returns>Thông tin workshop đã xác nhận</returns>
-    [HttpPut("{workshopId}/confirm")]
-    [ProducesResponseType(typeof(ResponseModel<WorkshopResponseDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> ConfirmWorkshop(Guid workshopId, [FromBody] ConfirmWorkshopDto model, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var result = await _workshopService.ConfirmWorkshopAsync(workshopId, model);
-            return Ok(ResponseModel<WorkshopResponseDto>.OkResponseModel(
-                data: result,
-                message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "workshop status")
-            ));
-        }
-        catch (CustomException ex)
-        {
-            return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
-        }
-    }
 
+    // [HttpPut("{workshopId}/confirm")]
+    // [ProducesResponseType(typeof(ResponseModel<WorkshopResponseDto>), StatusCodes.Status200OK)]
+    // [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
+    // [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
+    // public async Task<IActionResult> ConfirmWorkshop(Guid workshopId, [FromBody] ConfirmWorkshopDto model, CancellationToken cancellationToken)
+    // {
+    //     try
+    //     {
+    //         var result = await _workshopService.ConfirmWorkshopAsync(workshopId, model);
+    //         return Ok(ResponseModel<WorkshopResponseDto>.OkResponseModel(
+    //             data: result,
+    //             message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "workshop status")
+    //         ));
+    //     }
+    //     catch (CustomException ex)
+    //     {
+    //         return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+    //     }
+    // }
+
+    /// <summary>
+    /// gửi workshop cho moderator để duyệt
+    /// </summary>
+    /// <param name="workshopId"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpPut("submit/{workshopId}")]
     public async Task<IActionResult> SubmitWorkshopForReviewAsync(Guid workshopId, CancellationToken cancellationToken)
     {
@@ -160,6 +183,12 @@ public class WorkshopController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// làng nghề xóa workshop
+    /// </summary>
+    /// <param name="workshopId"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpPatch("{workshopId}")]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
@@ -319,7 +348,7 @@ public class WorkshopController : ControllerBase
     /// <param name="dto">Thông tin lịch trình cần cập nhật</param>
     /// <param name="cancellationToken">Token để hủy thao tác</param>
     /// <returns>Lịch trình đã cập nhật</returns>
-    [HttpPut("{scheduleId}")]
+    [HttpPut("update-schedule/{scheduleId}")]
     [ProducesResponseType(typeof(ResponseModel<ScheduleResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
@@ -380,61 +409,59 @@ public class WorkshopController : ControllerBase
     /// <param name="workshopId">ID của workshop</param>
     /// <param name="createDtos">Danh sách ảnh cần thêm</param>
     /// <returns>Danh sách media đã được thêm</returns>
-    [HttpPost("workshop-media")]
-    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> AddWorkshopMedias(Guid workshopId, [FromBody] List<WorkshopMediaCreateDto> createDtos)
-    {
-        try
-        {
-            var result = await _workshopService.AddWorkshopMediasAsync(workshopId, createDtos);
-            return Ok(ResponseModel<object>.OkResponseModel(
-                data: result,
-                message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "media")
-            ));
-        }
-        catch (CustomException ex)
-        {
-            return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
-        }
-        catch (Exception)
-        {
-            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
-        }
-    }
+    // [HttpPost("workshop-media")]
+    // [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status200OK)]
+    // [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
+    // [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
+    // public async Task<IActionResult> AddWorkshopMedias(Guid workshopId, [FromBody] List<WorkshopMediaCreateDto> createDtos)
+    // {
+    //     try
+    //     {
+    //         var result = await _workshopService.AddWorkshopMediasAsync(workshopId, createDtos);
+    //         return Ok(ResponseModel<object>.OkResponseModel(
+    //             data: result,
+    //             message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "media")
+    //         ));
+    //     }
+    //     catch (CustomException ex)
+    //     {
+    //         return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
+    //     }
+    //     catch (Exception)
+    //     {
+    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+    //     }
+    // }
 
     /// <summary>
     /// Xóa một media của workshop
     /// </summary>
     /// <param name="mediaId">ID của media cần xóa</param>
     /// <returns>Thông báo xóa thành công</returns>
-    [HttpDelete("workshop-media/{mediaId:guid}")]
-    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> DeleteWorkshopMedia(Guid mediaId)
-    {
-        try
-        {
-            var success = await _workshopService.DeleteWorkshopMediaAsync(mediaId);
-            if (!success)
-                throw CustomExceptionFactory.CreateBadRequestError("Không thể xóa media.");
+    // [HttpDelete("workshop-media/{mediaId:guid}")]
+    // [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status200OK)]
+    // [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
+    // [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
+    // public async Task<IActionResult> DeleteWorkshopMedia(Guid mediaId)
+    // {
+    //     try
+    //     {
+    //         var success = await _workshopService.DeleteWorkshopMediaAsync(mediaId);
+    //         if (!success)
+    //             throw CustomExceptionFactory.CreateBadRequestError("Không thể xóa media.");
 
-            return Ok(ResponseModel<object>.OkResponseModel(
-                data: null,
-                message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "media")
-            ));
-        }
-        catch (CustomException ex)
-        {
-            return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
-        }
-        catch (Exception)
-        {
-            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
-        }
-    }
-
-
+    //         return Ok(ResponseModel<object>.OkResponseModel(
+    //             data: null,
+    //             message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "media")
+    //         ));
+    //     }
+    //     catch (CustomException ex)
+    //     {
+    //         return BadRequest(ResponseModel<object>.ErrorResponseModel(ex.StatusCode, ex.Message));
+    //     }
+    //     catch (Exception)
+    //     {
+    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+    //     }
+    // }
 }

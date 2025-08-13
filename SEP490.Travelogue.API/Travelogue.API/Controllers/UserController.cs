@@ -227,6 +227,12 @@ public class UserController : ControllerBase
     //     ));
     // }
 
+    /// <summary>
+    /// tạo yêu cầu để nâng cấp role cho tour guide
+    /// </summary>
+    /// <param name="model"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpPost("tour-guide-request")]
     public async Task<IActionResult> CreateTourGuideRequest([FromBody] CreateTourGuideRequestDto model, CancellationToken cancellationToken = default)
     {
@@ -236,7 +242,12 @@ public class UserController : ControllerBase
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "user")
         ));
     }
-
+    /// <summary>
+    /// lấy tất cả các yêu cầu trở thành tour guide
+    /// </summary>
+    /// <param name="status"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpGet("tour-guide-request")]
     public async Task<IActionResult> GetTourGuideRequests([FromQuery] TourGuideRequestStatus? status, CancellationToken cancellationToken = default)
     {
@@ -247,6 +258,12 @@ public class UserController : ControllerBase
         ));
     }
 
+    /// <summary>
+    /// xem chi tiết yêu cầu trở thành tour guide (moderator)
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpGet("tour-guide-request/{id}")]
     public async Task<IActionResult> GetTourGuideRequestById(Guid id, CancellationToken cancellationToken = default)
     {
@@ -257,6 +274,14 @@ public class UserController : ControllerBase
         ));
     }
 
+    /// <summary>
+    /// người dùng tự xem các yêu cầu trở thành tour guide mà mình đã gửi (user)
+    /// </summary>
+    /// <param name="status"></param>
+    /// <param name="pageNumber"></param>
+    /// <param name="pageSize"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpGet("my-tour-guide-requests")]
     public async Task<IActionResult> GetMyTourGuideRequests(
         [FromQuery] TourGuideRequestStatus? status,
@@ -270,6 +295,12 @@ public class UserController : ControllerBase
         ));
     }
 
+    /// <summary>
+    /// kiểm tra yêu cầu trở thành tour guide mới nhất (moderator)
+    /// </summary>
+    /// <param name="userId"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpGet("latest-tour-guide-request")]
     public async Task<IActionResult> GetLatestTourGuideRequest(
         [FromQuery] Guid? userId,
@@ -282,6 +313,13 @@ public class UserController : ControllerBase
         ));
     }
 
+    /// <summary>
+    /// người dùng tự cập nhật yêu cầu trước khi được xử lý (user)
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="model"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpPut("tour-guide-request/{id}")]
     public async Task<IActionResult> UpdateTourGuideRequest(Guid id, [FromBody] UpdateTourGuideRequestDto model, CancellationToken cancellationToken = default)
     {
@@ -292,6 +330,12 @@ public class UserController : ControllerBase
         ));
     }
 
+    /// <summary>
+    /// người dùng xóa yêu cầu trước khi được xử lý (user)
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpPatch("tour-guide-request/{id}")]
     public async Task<IActionResult> DeleteTourGuideRequest(Guid id, CancellationToken cancellationToken = default)
     {
@@ -302,6 +346,30 @@ public class UserController : ControllerBase
         ));
     }
 
+    /// <summary>
+    /// moderator review yêu cầu mà người dùng gửi 
+    /// </summary>
+    /// <remarks>
+    /// Trạng thái yêu cầu của <see cref="TourGuideRequestStatus"/>:
+    /// <list type="bullet">
+    ///   <item>
+    ///     <term>Pending (1)</term>
+    ///     <description>Chờ xác nhận</description>
+    ///   </item>
+    ///   <item>
+    ///     <term>Approved (2)</term>
+    ///     <description>Đã xác nhận</description>
+    ///   </item>
+    ///   <item>
+    ///     <term>Rejected (3)</term>
+    ///     <description>Từ chối</description>
+    ///   </item>
+    /// </list>
+    /// </remarks>
+    /// <param name="requestId"></param>
+    /// <param name="model"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpPut("{requestId}/review")]
     public async Task<IActionResult> ReviewTourGuideRequest(Guid requestId, [FromBody] ReviewTourGuideRequestDto model, CancellationToken cancellationToken = default)
     {
@@ -311,17 +379,28 @@ public class UserController : ControllerBase
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "user")
         ));
     }
-
+    /// <summary>
+    /// tạo yêu cầu để trở thành làng nghề
+    /// </summary>
+    /// <param name="model"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpPost("craft-village-request")]
     public async Task<IActionResult> CreateCraftVillageRequest([FromBody] CreateCraftVillageRequestDto model, CancellationToken cancellationToken = default)
     {
         var result = await _userService.CreateCraftVillageRequestAsync(model, cancellationToken);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS)
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
         ));
     }
 
+    /// <summary>
+    /// Lấy yêu cầu trở thành tour guide (moderator)
+    /// </summary>
+    /// <param name="status"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpGet("craft-village-request")]
     public async Task<IActionResult> GetCraftVillageRequests([FromQuery] CraftVillageRequestStatus? status, CancellationToken cancellationToken = default)
     {
@@ -332,6 +411,14 @@ public class UserController : ControllerBase
         ));
     }
 
+    /// <summary>
+    /// người dùng tự lấy yêu cầu của người dùng trở thành role làng nghề (user)
+    /// </summary>
+    /// <param name="status"></param>
+    /// <param name="pageNumber"></param>
+    /// <param name="pageSize"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpGet("my-craft-village-requests")]
     public async Task<IActionResult> GetMyCraftVillageRequests(
         [FromQuery] CraftVillageRequestStatus? status,
@@ -345,6 +432,12 @@ public class UserController : ControllerBase
         ));
     }
 
+    /// <summary>
+    /// moderator check yêu cầu mới nhất của người dùng
+    /// </summary>
+    /// <param name="userId"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpGet("latest-craft-village-request/{userId:guid}")]
     public async Task<IActionResult> GetLatestCraftVillageRequest(
         Guid userId,
@@ -357,6 +450,13 @@ public class UserController : ControllerBase
         ));
     }
 
+    /// <summary>
+    /// moderator review yêu cầu trở thành làng nghề
+    /// </summary>
+    /// <param name="requestId"></param>
+    /// <param name="model"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpPut("craft-village-request/{requestId}/review")]
     public async Task<IActionResult> ReviewCraftVillageRequest(Guid requestId, [FromBody] ReviewCraftVillageRequestDto model, CancellationToken cancellationToken = default)
     {
@@ -367,6 +467,12 @@ public class UserController : ControllerBase
         ));
     }
 
+    /// <summary>
+    /// lấy chi tiết yêu cầu trở thành làng nghề
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpGet("craft-village-request/{id}")]
     public async Task<IActionResult> GetCraftVillageRequest(Guid id, CancellationToken cancellationToken = default)
     {
@@ -377,6 +483,12 @@ public class UserController : ControllerBase
         ));
     }
 
+    /// <summary>
+    /// xóa yêu cầu trở thành làng nghề trước khi được xử lý
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     [HttpPatch("craft-village-request/{id}")]
     public async Task<IActionResult> DeleteCraftVillageRequest(Guid id, CancellationToken cancellationToken = default)
     {
