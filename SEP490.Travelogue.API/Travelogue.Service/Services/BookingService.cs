@@ -554,7 +554,7 @@ public class BookingService : IBookingService
                 amount: (int)totalAmount,
                 description: $"Payment for Travelogue",
                 items: items,
-                cancelUrl: "http://yourapp.com/cancel",
+                cancelUrl: "https://29fc513e3d3d.ngrok-free.app/api/booking/lander",
                 returnUrl: "http://yourapp.com/success",
                 expiredAt: (int)currentTime.AddMinutes(5).ToUnixTimeSeconds()
             );
@@ -762,12 +762,15 @@ public class BookingService : IBookingService
                     guideUser.Wallet.Balance += amountToWalletGuide;
                     _unitOfWork.UserRepository.Update(guideUser);
 
-                    var tripPlan = await _unitOfWork.TripPlanRepository
-                        .ActiveEntities
-                        .FirstOrDefaultAsync(tp => tp.Id == existingBooking.TripPlanId)
-                        ?? throw CustomExceptionFactory.CreateNotFoundError("trip plan");
-                    tripPlan.Status = TripPlanStatus.Booked;
-                    _unitOfWork.TripPlanRepository.Update(tripPlan);
+                    if (existingBooking.TripPlanId.HasValue)
+                    {
+                        var tripPlan = await _unitOfWork.TripPlanRepository
+                            .ActiveEntities
+                            .FirstOrDefaultAsync(tp => tp.Id == existingBooking.TripPlanId)
+                            ?? throw CustomExceptionFactory.CreateNotFoundError("trip plan");
+                        tripPlan.Status = TripPlanStatus.Booked;
+                        _unitOfWork.TripPlanRepository.Update(tripPlan);
+                    }
 
                     var dateRange = existingBooking.StartDate.Date <= existingBooking.EndDate.Date
                         ? Enumerable.Range(0, (existingBooking.EndDate.Date - existingBooking.StartDate.Date).Days + 1)
