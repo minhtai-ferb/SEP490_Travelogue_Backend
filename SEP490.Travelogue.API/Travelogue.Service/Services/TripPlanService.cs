@@ -164,7 +164,7 @@ public class TripPlanService : ITripPlanService
                 .FirstOrDefaultAsync(t => t.Id == tripPlanId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("TripPlan");
 
-            if (tripPlan.Bookings.Any() || tripPlan.Status == TripPlanStatus.Booked)
+            if (tripPlan.Bookings.Any(b => b.Status == BookingStatus.Confirmed) || tripPlan.Status == TripPlanStatus.Booked)
                 throw CustomExceptionFactory.CreateBadRequestError("Không thể cập nhật Trip plan đã được book");
 
             // Validate date range
@@ -554,6 +554,9 @@ public class TripPlanService : ITripPlanService
                 if (dto.StartTime >= dto.EndTime)
                     throw CustomExceptionFactory.CreateBadRequestError($"End time must be after start time for location {dto.LocationId}.");
             }
+
+            if (tripPlan.Bookings.Any(b => b.Status == BookingStatus.Confirmed) || tripPlan.Status == TripPlanStatus.Booked)
+                throw CustomExceptionFactory.CreateBadRequestError("Không thể cập nhật Trip plan đã được book");
 
             // Validate LocationId
             var locationIds = dtos.Select(d => d.LocationId).Distinct().ToList();
