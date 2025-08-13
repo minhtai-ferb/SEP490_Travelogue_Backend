@@ -95,20 +95,20 @@ namespace Travelogue.API.Controllers
             }
         }
 
-        [HttpGet("lander")]
-        public IActionResult Lander([FromQuery] string code, [FromQuery] string id,
-                             [FromQuery] bool cancel, [FromQuery] string status,
-                             [FromQuery] string orderCode)
-        {
-            return Ok(new
-            {
-                Code = code,
-                Id = id,
-                Cancel = cancel,
-                Status = status,
-                OrderCode = orderCode
-            });
-        }
+        // [HttpGet("lander")]
+        // public IActionResult Lander([FromQuery] string code, [FromQuery] string id,
+        //                      [FromQuery] bool cancel, [FromQuery] string status,
+        //                      [FromQuery] string orderCode)
+        // {
+        //     return Ok(new
+        //     {
+        //         Code = code,
+        //         Id = id,
+        //         Cancel = cancel,
+        //         Status = status,
+        //         OrderCode = orderCode
+        //     });
+        // }
 
         [HttpGet("my-bookings")]
         public async Task<IActionResult> GetMyBookings([FromQuery] BookingFilterDto filter)
