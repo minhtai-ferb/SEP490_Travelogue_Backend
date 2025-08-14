@@ -126,6 +126,9 @@ public class WalletService : IWalletService
             if (wallet == null)
                 throw CustomExceptionFactory.CreateNotFoundError("Wallet");
 
+            if (request.Amount < 10000)
+                throw CustomExceptionFactory.CreateBadRequestError("Số tiền muốn rút ít nhất là 10.000");
+
             if (wallet.Balance < request.Amount)
                 throw CustomExceptionFactory.CreateBadRequestError("Không đủ số dư");
 
