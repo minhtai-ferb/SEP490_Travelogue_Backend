@@ -287,8 +287,8 @@ public class AuthService : IAuthService
             var actionCodeSettings = new ActionCodeSettings()
             {
                 //Url = $"{domainBackend}/api/auth/verify-email?email={model.Email}",
-                Url = $"http://localhost:5070/api/auth/verify-email?token={user.VerificationToken}",
-                // Url = $"{domainFrontend}/auth/verify/{user.VerificationToken}",
+                // Url = $"http://localhost:5070/api/auth/verify-email?token={user.VerificationToken}",
+                Url = $"{domainFrontend}/auth/verify/{user.VerificationToken}",
                 HandleCodeInApp = false
             };
 
