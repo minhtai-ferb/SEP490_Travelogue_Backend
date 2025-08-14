@@ -5,7 +5,7 @@ using Travelogue.Service.BusinessModels.MediaModel;
 
 namespace Travelogue.Service.BusinessModels.LocationModels;
 
-public class LocationDataDetailModel
+public class LocationDataDetailModel : BaseDataModel
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;

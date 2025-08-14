@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Google.Protobuf;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
@@ -124,6 +125,7 @@ public class LocationService : ILocationService
         try
         {
             var currentUserId = _userContextService.GetCurrentUserId();
+            var currentUserIdGuid = Guid.Parse(_userContextService.GetCurrentUserId());
             var currentTime = _timeService.SystemTimeNow;
 
             var newLocation = _mapper.Map<Location>(model);
@@ -160,6 +162,18 @@ public class LocationService : ILocationService
                 ? await _unitOfWork.DistrictRepository.GetByIdAsync(newLocation.DistrictId.Value, cancellationToken)
                 : null;
 
+            var createdByName = await _unitOfWork.UserRepository
+                .ActiveEntities
+                .Where(u => u.Id == currentUserIdGuid)
+                .Select(u => u.FullName)
+                .FirstOrDefaultAsync();
+
+            var lastUpdatedByNameName = await _unitOfWork.UserRepository
+                .ActiveEntities
+                .Where(u => u.Id == currentUserIdGuid)
+                .Select(u => u.FullName)
+                .FirstOrDefaultAsync();
+
             var response = new LocationDataModel
             {
                 Id = newLocation.Id,
@@ -171,10 +185,15 @@ public class LocationService : ILocationService
                 Longitude = newLocation.Longitude,
                 OpenTime = newLocation.OpenTime,
                 CloseTime = newLocation.CloseTime,
-                Rating = 0,
                 Category = "",
                 DistrictId = newLocation.DistrictId,
                 DistrictName = district?.Name,
+                CreatedTime = newLocation.CreatedTime,
+                LastUpdatedTime = newLocation.LastUpdatedTime,
+                CreatedBy = newLocation.CreatedBy,
+                LastUpdatedBy = newLocation.LastUpdatedBy,
+                CreatedByName = createdByName,
+                LastUpdatedByName = lastUpdatedByNameName,
                 Medias = locationMedias.Select(m => new MediaResponse
                 {
                     MediaUrl = m.MediaUrl,
@@ -435,11 +454,12 @@ public class LocationService : ILocationService
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentUserIdGuid = Guid.Parse(_userContextService.GetCurrentUserId());
             // Find the Location with its associated CraftVillage
             var location = await _unitOfWork.LocationRepository
                 .ActiveEntities
                 .Include(l => l.CraftVillage)
-
                 .FirstOrDefaultAsync(l => l.Id == locationId, cancellationToken);
 
             if (location == null)
@@ -465,6 +485,7 @@ public class LocationService : ILocationService
             location.DistrictId = dto.DistrictId;
             location.LocationType = LocationType.CraftVillage;
             location.LastUpdatedTime = DateTime.UtcNow;
+            location.LastUpdatedBy = currentUserId;
 
             // Update or create CraftVillage
             if (location.CraftVillage == null)
@@ -502,6 +523,18 @@ public class LocationService : ILocationService
 
             await transaction.CommitAsync(cancellationToken);
 
+            var createdByName = await _unitOfWork.UserRepository
+               .ActiveEntities
+               .Where(u => u.Id == currentUserIdGuid)
+               .Select(u => u.FullName)
+               .FirstOrDefaultAsync();
+
+            var lastUpdatedByNameName = await _unitOfWork.UserRepository
+                .ActiveEntities
+                .Where(u => u.Id == currentUserIdGuid)
+                .Select(u => u.FullName)
+                .FirstOrDefaultAsync();
+
             var model = new LocationDataModel
             {
                 Id = location.Id,
@@ -515,6 +548,12 @@ public class LocationService : ILocationService
                 Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(location.Id),
                 DistrictId = location.DistrictId,
                 DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(location.DistrictId ?? Guid.Empty),
+                CreatedTime = location.CreatedTime,
+                LastUpdatedTime = location.LastUpdatedTime,
+                CreatedBy = location.CreatedBy,
+                LastUpdatedBy = location.LastUpdatedBy,
+                CreatedByName = createdByName,
+                LastUpdatedByName = lastUpdatedByNameName,
                 Medias = await GetMediaWithoutVideoByIdAsync(location.Id, cancellationToken),
             };
             return model;
