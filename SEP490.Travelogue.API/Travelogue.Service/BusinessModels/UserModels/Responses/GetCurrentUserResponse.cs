@@ -7,4 +7,5 @@ public class GetCurrentUserResponse
     public bool? EmailConfirmed { get; set; }
     public string? PhoneNumber { get; set; }
     public decimal UserWalletAmount { get; set; }
+    public List<string> Roles { get; set; }
 }
