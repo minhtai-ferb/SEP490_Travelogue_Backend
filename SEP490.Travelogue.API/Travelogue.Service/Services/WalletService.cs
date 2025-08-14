@@ -303,6 +303,7 @@ public class WalletService : IWalletService
             request.Note = adminNote;
             request.LastUpdatedTime = currentTime;
 
+            _unitOfWork.WithdrawalRequestRepository.Update(request);
             await _unitOfWork.SaveAsync();
         }
         catch (CustomException)
@@ -334,6 +335,7 @@ public class WalletService : IWalletService
             request.Note = reason;
             request.LastUpdatedTime = currentTime;
 
+            _unitOfWork.WithdrawalRequestRepository.Update(request);
             await _unitOfWork.SaveAsync();
         }
         catch (CustomException)
