@@ -75,7 +75,7 @@ public class WalletController : ControllerBase
 
     [HttpPatch("withdrawal-requests/{requestId:guid}/approve")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ResponseModel<string>))]
-    public async Task<IActionResult> Approve(Guid requestId, [FromQuery] string proofImageUrl, [FromQuery] string adminNote, CancellationToken cancellationToken)
+    public async Task<IActionResult> Approve(Guid requestId, [FromQuery] string proofImageUrl, [FromQuery] string? adminNote, CancellationToken cancellationToken)
     {
         await _walletService.ApproveAsync(requestId, proofImageUrl, adminNote);
         return Ok(ResponseModel<string>.OkResponseModel(
