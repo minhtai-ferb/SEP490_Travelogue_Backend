@@ -167,10 +167,10 @@ public class LocationController : ControllerBase
     [HttpPut("{locationId}/scenic-spot")]
     public async Task<IActionResult> UpdateScenicSpotData(
         Guid locationId,
-        [FromBody] HistoricalLocationUpdateDto dto,
+        [FromBody] LocationUpdateDto dto,
         CancellationToken cancellationToken = default)
     {
-        var result = await _locationService.UpdateHistoricalLocationDataAsync(locationId, dto, cancellationToken);
+        var result = await _locationService.UpdateScenicSpotDataAsync(locationId, dto, cancellationToken);
 
         return Ok(ResponseModel<LocationDataModel>.OkResponseModel(
             data: result,
