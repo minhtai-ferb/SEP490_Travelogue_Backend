@@ -290,7 +290,16 @@ public class WorkshopService : IWorkshopService
                 Content = workshop.Content,
                 Status = workshop.Status,
                 StatusText = _enumService.GetEnumDisplayName<WorkshopStatus>(workshop.Status),
-                CraftVillageId = workshop.CraftVillageId
+                CraftVillageId = workshop.CraftVillageId,
+                Medias = workshopMedias.Select(m => new MediaResponse
+                {
+                    MediaUrl = m.MediaUrl,
+                    FileName = Path.GetFileName(m.MediaUrl),
+                    FileType = Path.GetExtension(m.MediaUrl)?.TrimStart('.'),
+                    IsThumbnail = m.IsThumbnail,
+                    SizeInBytes = 00,
+                    CreatedTime = m.CreatedTime
+                }).ToList()
             };
         }
         catch (CustomException)
