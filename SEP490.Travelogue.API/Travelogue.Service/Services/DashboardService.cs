@@ -107,6 +107,67 @@ public class DashboardService : IDashboardService
         }
     }
 
+    // public async Task<RevenueStatisticResponse> GetRevenueStatisticsAsync(DateTime fromDate, DateTime toDate)
+    // {
+    //     try
+    //     {
+    //         var adjustedToDate = toDate.Date.AddDays(1).AddTicks(-1);
+    //         var adjustedFromDate = fromDate.Date;
+
+    //         var filteredBookings = _unitOfWork.BookingRepository
+    //             .ActiveEntities
+    //             .Where(b => b.BookingDate >= adjustedFromDate
+    //                 && b.BookingDate <= adjustedToDate
+    //                 && b.Status == BookingStatus.Confirmed);
+
+    //         var groupedByDate = filteredBookings
+    //             .GroupBy(b => b.BookingDate.Date);
+
+    //         var revenuePerDate = groupedByDate
+    //             .Select(g => new RevenueDataItem
+    //             {
+    //                 Date = g.Key,
+    //                 Revenue = g.Sum(b => b.FinalPrice)
+    //             });
+
+    //         var revenueData = await revenuePerDate.OrderBy(r => r.Date).ToListAsync();
+
+    //         var totalRevenue = revenueData.Sum(r => r.Revenue);
+
+    //         var allDates = Enumerable.Range(0, (toDate.Date - fromDate.Date).Days + 1)
+    //             .Select(d => fromDate.Date.AddDays(d))
+    //             .ToList();
+
+    //         var completeRevenueData = allDates
+    //             .GroupJoin(revenueData,
+    //                 date => date,
+    //                 data => data.Date,
+    //                 (date, data) => new RevenueDataItem
+    //                 {
+    //                     Date = date,
+    //                     Revenue = data.FirstOrDefault()?.Revenue ?? 0m
+    //                 })
+    //             .OrderBy(r => r.Date)
+    //             .ToList();
+
+    //         return new RevenueStatisticResponse
+    //         {
+    //             FromDate = fromDate,
+    //             ToDate = toDate,
+    //             TotalRevenue = totalRevenue,
+    //             RevenueDataItem = completeRevenueData
+    //         };
+    //     }
+    //     catch (CustomException)
+    //     {
+    //         throw;
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+    //     }
+    // }
+
     public async Task<RevenueStatisticResponse> GetRevenueStatisticsAsync(DateTime fromDate, DateTime toDate)
     {
         try
@@ -120,19 +181,23 @@ public class DashboardService : IDashboardService
                     && b.BookingDate <= adjustedToDate
                     && b.Status == BookingStatus.Confirmed);
 
-            var groupedByDate = filteredBookings
-                .GroupBy(b => b.BookingDate.Date);
+            var commissionRate = await GetBookingCommissionPercentAsync();
 
-            var revenuePerDate = groupedByDate
+            var groupedByDate = filteredBookings
+                .GroupBy(b => b.BookingDate.Date)
                 .Select(g => new RevenueDataItem
                 {
                     Date = g.Key,
+                    GrossRevenue = g.Sum(b => b.FinalPrice),
+                    Commission = g.Sum(b => b.BookingType == BookingType.TourGuide || b.BookingType == BookingType.Workshop ? b.FinalPrice * commissionRate : 0m),
+                    NetRevenue = g.Sum(b => b.BookingType == BookingType.TourGuide || b.BookingType == BookingType.Workshop ? b.FinalPrice * (1 - commissionRate) : b.FinalPrice),
                     Revenue = g.Sum(b => b.FinalPrice)
                 });
 
-            var revenueData = await revenuePerDate.OrderBy(r => r.Date).ToListAsync();
+            var revenueData = await groupedByDate.OrderBy(r => r.Date).ToListAsync();
 
-            var totalRevenue = revenueData.Sum(r => r.Revenue);
+            var totalGrossRevenue = revenueData.Sum(r => r.GrossRevenue);
+            var totalNetRevenue = revenueData.Sum(r => r.NetRevenue);
 
             var allDates = Enumerable.Range(0, (toDate.Date - fromDate.Date).Days + 1)
                 .Select(d => fromDate.Date.AddDays(d))
@@ -145,6 +210,8 @@ public class DashboardService : IDashboardService
                     (date, data) => new RevenueDataItem
                     {
                         Date = date,
+                        GrossRevenue = data.FirstOrDefault()?.GrossRevenue ?? 0m,
+                        NetRevenue = data.FirstOrDefault()?.NetRevenue ?? 0m,
                         Revenue = data.FirstOrDefault()?.Revenue ?? 0m
                     })
                 .OrderBy(r => r.Date)
@@ -154,7 +221,9 @@ public class DashboardService : IDashboardService
             {
                 FromDate = fromDate,
                 ToDate = toDate,
-                TotalRevenue = totalRevenue,
+                TotalRevenue = totalGrossRevenue,
+                GrossRevenue = totalGrossRevenue,
+                NetRevenue = totalNetRevenue,
                 RevenueDataItem = completeRevenueData
             };
         }
@@ -455,6 +524,30 @@ public class DashboardService : IDashboardService
                 PageNumber = pageNumber,
                 PageSize = pageSize
             };
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    private async Task<decimal> GetBookingCommissionPercentAsync()
+    {
+        try
+        {
+            var commissionSetting = await _unitOfWork.SystemSettingRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(s => s.Key == SystemSettingKey.BookingCommissionPercent)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("system setting BookingCommissionPercent");
+
+            if (!decimal.TryParse(commissionSetting.Value, out var commissionPercent))
+                throw CustomExceptionFactory.CreateBadRequestError("Giá trị hoa hồng không hợp lệ.");
+
+            return commissionPercent;
         }
         catch (CustomException)
         {

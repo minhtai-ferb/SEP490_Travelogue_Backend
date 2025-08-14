@@ -57,6 +57,7 @@ public interface ILocationService
         CancellationToken cancellationToken = default);
     Task<LocationDataModel> UpdateCraftVillageDataAsync(Guid locationId, CraftVillageUpdateDto dto, CancellationToken cancellationToken = default);
     Task<LocationDataModel> UpdateHistoricalLocationDataAsync(Guid locationId, HistoricalLocationUpdateDto dto, CancellationToken cancellationToken = default);
+    Task<LocationDataModel> UpdateScenicSpotDataAsync(Guid locationId, LocationUpdateDto dto, CancellationToken cancellationToken = default);
 }
 
 public class LocationService : ILocationService
@@ -366,7 +367,7 @@ public class LocationService : ILocationService
         {
             if (model == null)
             {
-                throw new InvalidOperationException("CraftVillage data is missing for type 'CraftVillage'.");
+                throw new InvalidOperationException("CraftVillage data is missing for type CraftVillage.");
             }
 
             var location = await _unitOfWork.LocationRepository.GetByIdAsync(locationId, cancellationToken)
@@ -378,7 +379,6 @@ public class LocationService : ILocationService
                 throw CustomExceptionFactory.CreateBadRequestError("Location is not of type Craft Village.");
             }
 
-            // Add CraftVillage data
             var craftVillage = new CraftVillage
             {
                 PhoneNumber = model.PhoneNumber,
@@ -387,6 +387,7 @@ public class LocationService : ILocationService
                 WorkshopsAvailable = model.WorkshopsAvailable,
                 LocationId = location.Id
             };
+
             await _unitOfWork.CraftVillageRepository.AddAsync(craftVillage);
 
             await _unitOfWork.SaveAsync();
@@ -935,7 +936,7 @@ public class LocationService : ILocationService
                 throw CustomExceptionFactory.CreateBadRequestError("Location not found.");
             }
 
-            if (location.LocationType != LocationType.HistoricalSite)
+            if (location.LocationType != LocationType.ScenicSpot)
             {
                 throw CustomExceptionFactory.CreateBadRequestError("The specified location is not a Craft Village.");
             }
@@ -949,8 +950,10 @@ public class LocationService : ILocationService
             location.OpenTime = dto.OpenTime;
             location.CloseTime = dto.CloseTime;
             location.DistrictId = dto.DistrictId;
-            location.LocationType = LocationType.HistoricalSite;
+            location.LocationType = LocationType.ScenicSpot;
             location.LastUpdatedTime = DateTime.UtcNow;
+
+            await UpdateLocationMediasAsync(locationId, dto.MediaDtos, cancellationToken);
 
             await _unitOfWork.SaveAsync();
 
