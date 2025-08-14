@@ -94,12 +94,18 @@ public class RefundRequestService : IRefundRequestService
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync();
 
+            var username = await _unitOfWork.UserRepository
+                .ActiveEntities
+                .Where(u => u.Id == refundRequest.UserId)
+                .Select(u => u.FullName)
+                .FirstOrDefaultAsync();
+
             return new RefundRequestDto
             {
                 Id = refundRequest.Id,
                 BookingId = refundRequest.BookingId,
                 UserId = refundRequest.UserId,
-                UserName = refundRequest.User.FullName,
+                UserName = username ?? string.Empty,
                 RefundAmount = refundRequest.RefundAmount,
                 Status = refundRequest.Status,
                 StatusText = _enumService.GetEnumDisplayName<RefundRequestStatus>(refundRequest.Status),
