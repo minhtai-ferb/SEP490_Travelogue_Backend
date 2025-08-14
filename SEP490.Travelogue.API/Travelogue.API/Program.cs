@@ -1,5 +1,4 @@
 using System.Net;
-using System.Text.Json;
 using FirebaseAdmin;
 using FirebaseAdmin.Auth;
 using Google.Apis.Auth.OAuth2;
@@ -52,10 +51,43 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddHttpClient<MailTemplateService>();
 
-FirebaseApp.Create(new AppOptions()
+// FirebaseApp.Create(new AppOptions()
+// {
+//     Credential = GoogleCredential.FromFile("Config/serviceAccountKey.json")
+// });
+
+//FirebaseInitializer.InitFirebase();
+
+//var serviceAccountPath = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
+
+//-------------- chay duoc
+//if (string.IsNullOrEmpty(serviceAccountPath))
+//{
+//    throw new Exception("GOOGLE_APPLICATION_CREDENTIALS is missing in environment variables.");
+//}
+
+//FirebaseApp.Create(new AppOptions
+//{
+//    Credential = GoogleCredential.FromFile(serviceAccountPath)
+//});
+// ------------------
+
+// Load file .env
+DotNetEnv.Env.Load("/.env");
+
+var serviceAccountPath = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
+
+if (string.IsNullOrEmpty(serviceAccountPath))
 {
-    Credential = GoogleCredential.FromFile("Config/serviceAccountKey.json")
+    throw new Exception("GOOGLE_APPLICATION_CREDENTIALS is missing in .env");
+}
+
+FirebaseApp.Create(new AppOptions
+{
+    Credential = GoogleCredential.FromFile(serviceAccountPath)
 });
+
+
 
 builder.Services.AddSingleton(FirebaseAuth.DefaultInstance);
 
