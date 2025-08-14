@@ -115,13 +115,15 @@ public class TripPlanService : ITripPlanService
     {
         try
         {
-            Guid userId = Guid.Parse(_userContextService.GetCurrentUserId());
+            Guid currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
 
             var pagedResult = await _unitOfWork.TripPlanRepository.GetPageWithSearchAsync(title, pageNumber, pageSize, cancellationToken);
 
-            var newsDataModels = _mapper.Map<List<TripPlanResponseDto>>(pagedResult.Items);
+            var tripPlanResponseModel = _mapper.Map<List<TripPlanResponseDto>>(pagedResult.Items);
 
-            foreach (var tripPlan in newsDataModels)
+            tripPlanResponseModel = tripPlanResponseModel.Where(x => x.UserId == currentUserId).ToList();
+
+            foreach (var tripPlan in tripPlanResponseModel)
             {
                 tripPlan.OwnerName = await _unitOfWork.UserRepository.GetUserNameByIdAsync(tripPlan.UserId) ?? string.Empty;
                 tripPlan.Status = tripPlan.Status;
@@ -130,7 +132,7 @@ public class TripPlanService : ITripPlanService
 
             var result = new PagedResult<TripPlanResponseDto>
             {
-                Items = newsDataModels,
+                Items = tripPlanResponseModel,
                 TotalCount = pagedResult.TotalCount,
                 PageNumber = pageNumber,
                 PageSize = pageSize

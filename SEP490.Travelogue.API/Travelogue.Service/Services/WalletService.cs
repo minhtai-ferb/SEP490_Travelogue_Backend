@@ -160,6 +160,7 @@ public class WalletService : IWalletService
         try
         {
             var query = _unitOfWork.WithdrawalRequestRepository.ActiveEntities
+                .Include(wr => wr.User)
                 .Include(wr => wr.BankAccount)
                 .AsQueryable();
 
@@ -190,6 +191,8 @@ public class WalletService : IWalletService
             {
                 Id = wr.Id,
                 WalletId = wr.WalletId,
+                UserId = wr.UserId,
+                UserName = wr.User.FullName,
                 Amount = wr.Amount,
                 Status = wr.Status,
                 StatusText = _enumService.GetEnumDisplayName<WithdrawalRequestStatus>(wr.Status),
@@ -225,6 +228,7 @@ public class WalletService : IWalletService
 
             var query = _unitOfWork.WithdrawalRequestRepository.ActiveEntities
                 .Where(w => w.UserId == currentUserId)
+                .Include(wr => wr.User)
                 .Include(wr => wr.BankAccount)
                 .AsQueryable();
 
@@ -251,6 +255,8 @@ public class WalletService : IWalletService
                 Id = wr.Id,
                 WalletId = wr.WalletId,
                 Amount = wr.Amount,
+                UserId = wr.UserId,
+                UserName = wr.User.FullName,
                 Status = wr.Status,
                 StatusText = _enumService.GetEnumDisplayName<WithdrawalRequestStatus>(wr.Status),
                 BankAccountId = wr.BankAccountId,
