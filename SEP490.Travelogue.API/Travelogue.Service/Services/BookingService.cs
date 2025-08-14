@@ -734,7 +734,13 @@ public class BookingService : IBookingService
                         ?? throw CustomExceptionFactory.CreateNotFoundError("user");
 
                     if (owner.Wallet == null)
-                        throw CustomExceptionFactory.CreateBadRequestError("Owner chưa có ví.");
+                    {
+                        owner.Wallet = new Wallet
+                        {
+                            UserId = owner.Id,
+                            Balance = 0
+                        };
+                    }
 
                     var amountToWalletWorkshop = existingBooking.FinalPrice * (1 - commissionPercent / 100m);
                     owner.Wallet.Balance += amountToWalletWorkshop;
@@ -758,6 +764,15 @@ public class BookingService : IBookingService
                         .Include(u => u.Wallet)
                         .FirstOrDefaultAsync(u => u.Id == tourGuide.UserId)
                         ?? throw CustomExceptionFactory.CreateNotFoundError("user");
+
+                    if (guideUser.Wallet == null)
+                    {
+                        guideUser.Wallet = new Wallet
+                        {
+                            UserId = guideUser.Id,
+                            Balance = 0
+                        };
+                    }
 
                     var amountToWalletGuide = existingBooking.FinalPrice * (1 - commissionPercent / 100m);
                     guideUser.Wallet.Balance += amountToWalletGuide;
@@ -989,9 +1004,14 @@ public class BookingService : IBookingService
                 .FirstOrDefaultAsync(b => b.Id == bookingId && b.UserId == currentUserId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("tour");
 
-            if (booking.Status == BookingStatus.Confirmed || booking.Status == BookingStatus.Expired)
-                throw CustomExceptionFactory.CreateBadRequestError("Không thể hủy đơn đã hoàn tất hoặc đã hết hạn.");
-
+            if (booking.Status == BookingStatus.Confirmed)
+            {
+                var hoursUntilStart = (booking.StartDate - currentTime).TotalHours;
+                if (hoursUntilStart < 24)
+                {
+                    throw CustomExceptionFactory.CreateBadRequestError("Không thể hủy đơn trong vòng 24 giờ trước khi bắt đầu.");
+                }
+            }
             booking.Status = BookingStatus.Cancelled;
             booking.CancelledAt = currentTime;
             booking.LastUpdatedTime = currentTime;
