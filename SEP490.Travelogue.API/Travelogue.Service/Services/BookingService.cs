@@ -509,7 +509,7 @@ public class BookingService : IBookingService
                 .Include(b => b.Tour)
                 .Include(b => b.TourSchedule)
                 .Include(b => b.TourGuide)
-                .ThenInclude(tg => tg!.User)
+                    .ThenInclude(tg => tg!.User)
                 .Include(b => b.Participants)
                 .FirstOrDefaultAsync(b => b.Id == bookingId && b.UserId == currentUserIdGuid, cancellationToken)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Booking not found or user not authorized.");

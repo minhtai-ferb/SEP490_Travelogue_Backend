@@ -1312,6 +1312,12 @@ public class UserService : IUserService
                 throw CustomExceptionFactory.CreateNotFoundError("User");
             }
 
+            var district = await _unitOfWork.DistrictRepository
+                .ActiveEntities
+                .Where(d => d.Id == model.DistrictId)
+                .FirstOrDefaultAsync()
+                ?? throw CustomExceptionFactory.CreateNotFoundError("district");
+
             var existingCraftVillage = await _unitOfWork.CraftVillageRepository
                 .ActiveEntities
                 .FirstOrDefaultAsync(cv => cv.OwnerId == user.Id);
@@ -1398,7 +1404,11 @@ public class UserService : IUserService
 
             var craftVillageRequest = await _unitOfWork.CraftVillageRequestRepository
                 .ActiveEntities
-                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("craftVillageRequest");
+
+            if (craftVillageRequest.Status != CraftVillageRequestStatus.Pending)
+                throw CustomExceptionFactory.CreateBadRequestError("Không thể cập nhật yêu cầu đã xử lý");
 
             if (craftVillageRequest == null)
                 throw CustomExceptionFactory.CreateNotFoundError("CraftVillageRequest");
@@ -1406,7 +1416,12 @@ public class UserService : IUserService
             if (craftVillageRequest.OwnerId != user.Id)
                 throw CustomExceptionFactory.CreateForbiddenError();
 
-            // Cập nhật dữ liệu
+            var district = await _unitOfWork.DistrictRepository
+               .ActiveEntities
+               .Where(d => d.Id == model.DistrictId)
+               .FirstOrDefaultAsync()
+               ?? throw CustomExceptionFactory.CreateNotFoundError("district");
+
             craftVillageRequest.Name = model.Name;
             craftVillageRequest.Description = model.Description;
             craftVillageRequest.Content = model.Content;
@@ -1504,7 +1519,11 @@ public class UserService : IUserService
                 throw CustomExceptionFactory.CreateBadRequestError("User");
             }
 
+            if (request.Status != CraftVillageRequestStatus.Pending)
+                throw CustomExceptionFactory.CreateBadRequestError("Không thể cập nhật yêu cầu đã xử lý");
+
             request.Status = model.Status;
+            request.RejectionReason = model.RejectionReason;
             request.ReviewedAt = DateTimeOffset.UtcNow;
             request.ReviewedBy = currentUserId;
             request.LastUpdatedTime = DateTimeOffset.UtcNow;
@@ -1586,11 +1605,23 @@ public class UserService : IUserService
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync();
 
-            await _emailService.SendEmailAsync(
+            if (model.Status == CraftVillageRequestStatus.Approved)
+            {
+                await _emailService.SendEmailAsync(
                     new[] { user.Email },
                     "Yêu cầu duyệt làng nghề được chấp nhận",
                     "Yêu cầu duyệt làng nghề được chấp nhận"
                 );
+            }
+
+            if (model.Status == CraftVillageRequestStatus.Rejected)
+            {
+                await _emailService.SendEmailAsync(
+                    new[] { user.Email },
+                    "Yêu cầu duyệt làng nghề đã bị từ chối",
+                    "Yêu cầu duyệt làng nghề được từ chối"
+                );
+            }
 
             var response = MapToCraftVillageRequestResponseDto(request, user);
             response.OwnerEmail = user.Email;
@@ -1724,6 +1755,9 @@ public class UserService : IUserService
                 .ActiveEntities
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("CraftVillageRequest");
+
+            if (request.Status != CraftVillageRequestStatus.Pending)
+                throw CustomExceptionFactory.CreateBadRequestError("Không thể xóa yêu cầu đã xử lý");
 
             if (request.OwnerId != currentUserId)
                 throw CustomExceptionFactory.CreateForbiddenError();

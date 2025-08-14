@@ -49,7 +49,10 @@ public class DashboardController : ControllerBase
     public async Task<IActionResult> GetBookingStatisticsAsync([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
     {
         var result = await _dashboardService.GetBookingStatisticsAsync(fromDate, toDate);
-        return Ok(result);
+        return Ok(ResponseModel<object>.OkResponseModel(
+             data: result,
+             message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+         ));
     }
 
     [HttpGet("tours/{tourId}")]
