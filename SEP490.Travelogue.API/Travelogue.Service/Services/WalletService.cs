@@ -18,7 +18,7 @@ public interface IWalletService
     Task RequestWithdrawalAsync(WithdrawalRequestCreateDto request);
     Task<List<WithdrawalRequestDto>> GetWithdrawalRequestAsync(WithdrawalRequestFilterDto filterDto);
     Task<List<WithdrawalRequestDto>> GetMyWithdrawalRequestAsync(MyWithdrawalRequestFilterDto filterDto);
-    Task ApproveAsync(Guid requestId, string proofImageUrl, string adminNote);
+    Task ApproveAsync(Guid requestId, string proofImageUrl, string? adminNote);
     Task RejectAsync(Guid requestId, string reason);
 }
 
@@ -283,7 +283,7 @@ public class WalletService : IWalletService
         }
     }
 
-    public async Task ApproveAsync(Guid requestId, string proofImageUrl, string adminNote)
+    public async Task ApproveAsync(Guid requestId, string proofImageUrl, string? adminNote)
     {
         try
         {
