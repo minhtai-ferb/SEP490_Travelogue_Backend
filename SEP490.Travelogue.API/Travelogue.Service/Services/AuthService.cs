@@ -110,15 +110,25 @@ public class AuthService : IAuthService
                 ?? throw CustomExceptionFactory.CreateForbiddenError();
             var result = _mapper.Map<GetCurrentUserResponse>(currentUser);
 
-            var hasWalletRole = _userContextService.HasAnyRole(AppRole.CRAFT_VILLAGE_OWNER, AppRole.TOUR_GUIDE);
-            if (hasWalletRole)
+            var roles = await _unitOfWork.UserRepository.GetRolesAsync(currentUser);
+            if (roles == null)
             {
-                result.UserWalletAmount = currentUser.Wallet?.Balance ?? 0.00m;
+                throw new CustomException(StatusCodes.Status403Forbidden, ResponseCodeConstants.UNAUTHORIZED, "Nguời dùng chưa được cấp quyền");
             }
-            else
-            {
-                result.UserWalletAmount = 0;
-            }
+
+            var roleNames = roles.Select(r => r.Name).ToList();
+
+            result.Roles = roleNames;
+
+            // var hasWalletRole = _userContextService.HasAnyRole(AppRole.CRAFT_VILLAGE_OWNER, AppRole.TOUR_GUIDE);
+            // if (hasWalletRole)
+            // {
+            result.UserWalletAmount = currentUser.Wallet?.Balance ?? 0.00m;
+            // }
+            // else
+            // {
+            //     result.UserWalletAmount = 0;
+            // }
 
             return result;
         }
