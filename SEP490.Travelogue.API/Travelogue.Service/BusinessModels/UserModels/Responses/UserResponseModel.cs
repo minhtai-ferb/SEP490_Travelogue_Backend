@@ -15,6 +15,7 @@ public class UserResponseModel : BaseDataModel
 
     public string? AvatarUrl { get; set; }
     public List<string> Roles { get; set; }
+    public decimal UserWalletAmount { get; set; }
 
     public Gender Sex { get; set; }
     public string? Address { get; set; }
