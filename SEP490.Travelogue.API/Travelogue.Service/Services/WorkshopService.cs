@@ -297,7 +297,7 @@ public class WorkshopService : IWorkshopService
                     FileName = Path.GetFileName(m.MediaUrl),
                     FileType = Path.GetExtension(m.MediaUrl)?.TrimStart('.'),
                     IsThumbnail = m.IsThumbnail,
-                    SizeInBytes = 0,
+                    SizeInBytes = 00,
                     CreatedTime = m.CreatedTime
                 }).ToList()
             };
