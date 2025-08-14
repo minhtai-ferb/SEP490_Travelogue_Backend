@@ -137,13 +137,12 @@ public class UserContextService : IUserContextService
             throw new CustomException(StatusCodes.Status401Unauthorized, ResponseCodeConstants.UNAUTHORIZED, ResponseMessages.LOGIN_REQUIRED);
         }
 
-        return roles.Any(role =>
-            user.IsInRole(role) ||
-            user.Claims.Any(c =>
-                (c.Type == ClaimTypes.Role || c.Type == "role") &&
-                c.Value.Equals(role, StringComparison.OrdinalIgnoreCase)
-            )
-        );
+        var userRoles = user.Claims
+            .Where(c => c.Type == ClaimTypes.Role || c.Type == "role")
+            .Select(c => c.Value)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return roles.Any(r => userRoles.Contains(r));
     }
 
     public bool IsAuthenticated()
