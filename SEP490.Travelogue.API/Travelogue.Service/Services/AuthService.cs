@@ -22,7 +22,7 @@ namespace Travelogue.Service.Services;
 
 public interface IAuthService
 {
-    Task<GetCurrentUserResponse> GetCurrentUser();
+    Task<UserResponseModel> GetCurrentUser();
     Task<GetCurrentUserResponse> GetUserByEmailAsync(string email, CancellationToken cancellationToken);
     Task<LoginResponse> RegisterAsync(RegisterModel userRequestModel);
     Task<bool> RegisterWithRoleAsync(RegisterModelWithRole userRequestModel);
@@ -96,21 +96,20 @@ public class AuthService : IAuthService
         this._httpContextAccessor = httpContextAccessor;
     }
 
-    public async Task<GetCurrentUserResponse> GetCurrentUser()
+    public async Task<UserResponseModel> GetCurrentUser()
     {
         try
         {
             var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
 
-            //Guid? currentUserIdLong = string.IsNullOrEmpty(currentUserId) ? null : Convert.ToInt64(currentUserId);
-            var currentUser = await _unitOfWork.UserRepository
+            var existingUser = await _unitOfWork.UserRepository
                 .ActiveEntities
-                .Include(u => u.Wallet)
-                .FirstOrDefaultAsync(u => u.Id == currentUserId)
-                ?? throw CustomExceptionFactory.CreateForbiddenError();
-            var result = _mapper.Map<GetCurrentUserResponse>(currentUser);
+                .Where(u => u.Id == currentUserId)
+                .FirstOrDefaultAsync()
+                ?? throw new CustomException(StatusCodes.Status204NoContent, ResponseCodeConstants.NOT_FOUND, ResponseMessages.NOT_FOUND);
+            var user = _mapper.Map<UserResponseModel>(existingUser);
 
-            var roles = await _unitOfWork.UserRepository.GetRolesAsync(currentUser);
+            var roles = await _unitOfWork.UserRepository.GetRolesAsync(existingUser);
             if (roles == null)
             {
                 throw new CustomException(StatusCodes.Status403Forbidden, ResponseCodeConstants.UNAUTHORIZED, "Nguời dùng chưa được cấp quyền");
@@ -118,19 +117,9 @@ public class AuthService : IAuthService
 
             var roleNames = roles.Select(r => r.Name).ToList();
 
-            result.Roles = roleNames;
-
-            // var hasWalletRole = _userContextService.HasAnyRole(AppRole.CRAFT_VILLAGE_OWNER, AppRole.TOUR_GUIDE);
-            // if (hasWalletRole)
-            // {
-            result.UserWalletAmount = currentUser.Wallet?.Balance ?? 0.00m;
-            // }
-            // else
-            // {
-            //     result.UserWalletAmount = 0;
-            // }
-
-            return result;
+            user.Roles = roleNames;
+            user.UserWalletAmount = existingUser.Wallet?.Balance ?? 0.00m;
+            return user;
         }
         catch (CustomException)
         {
