@@ -294,7 +294,11 @@ public class WalletService : IWalletService
 
             var currentTime = _timeService.SystemTimeNow;
 
-            var request = await _unitOfWork.WithdrawalRequestRepository.GetByIdAsync(requestId, new CancellationToken());
+            var request = await _unitOfWork.WithdrawalRequestRepository
+                .ActiveEntities
+                .Include(r => r.Wallet)
+                .Where(r => r.Id == requestId)
+                .FirstOrDefaultAsync();
             if (request == null || request.Status != WithdrawalRequestStatus.Pending)
                 throw CustomExceptionFactory.CreateBadRequestError("Yeeu cầu không hợp lệ");
 
@@ -303,6 +307,9 @@ public class WalletService : IWalletService
             request.Note = adminNote;
             request.LastUpdatedTime = currentTime;
 
+            request.Wallet.Balance -= request.Amount;
+
+            _unitOfWork.WalletRepository.Update(request.Wallet);
             _unitOfWork.WithdrawalRequestRepository.Update(request);
             await _unitOfWork.SaveAsync();
         }
