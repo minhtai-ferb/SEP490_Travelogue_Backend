@@ -173,15 +173,15 @@ public class AuthService : IAuthService
             newUser.IsDeleted = false;
 
             // tạo user
-            User? resultCreateUser = await _unitOfWork.UserRepository.CreateUser(newUser, model.Password);
-            if (resultCreateUser == null)
+            User? createdUser = await _unitOfWork.UserRepository.CreateUser(newUser, model.Password);
+            if (createdUser == null)
             {
                 throw CustomExceptionFactory.CreateInternalServerError("Tạo người dùng thất bại");
             }
 
-            resultCreateUser.CreatedBy = resultCreateUser.Id.ToString();
-            resultCreateUser.LastUpdatedBy = resultCreateUser.Id.ToString();
-            await _unitOfWork.UserRepository.UpdateAsync(resultCreateUser);
+            createdUser.CreatedBy = createdUser.Id.ToString();
+            createdUser.LastUpdatedBy = createdUser.Id.ToString();
+            await _unitOfWork.UserRepository.UpdateAsync(createdUser);
 
             // Thêm user vào role
             bool resultAddRole = await _unitOfWork.UserRepository.AddToRoleAsync(newUser, userRole.Id);
@@ -189,6 +189,15 @@ public class AuthService : IAuthService
             {
                 throw CustomExceptionFactory.CreateInternalServerError("Thêm role cho người dùng thất bại");
             }
+
+            var wallet = new Wallet
+            {
+                UserId = createdUser.Id,
+                Balance = 0m,
+                CreatedBy = createdUser.Id.ToString(),
+                LastUpdatedBy = createdUser.Id.ToString()
+            };
+            await _unitOfWork.WalletRepository.AddAsync(wallet);
 
             // Đăng ký tài khoản với Firebase
             var userRecordArgs = new UserRecordArgs()

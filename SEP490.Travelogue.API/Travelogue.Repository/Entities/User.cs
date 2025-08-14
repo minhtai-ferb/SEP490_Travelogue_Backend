@@ -35,7 +35,7 @@ public sealed class User : BaseEntity
     public string? VerificationToken { get; set; }
     public DateTimeOffset? VerificationTokenExpires { get; set; }
     public DateTimeOffset? LockoutEnd { get; set; }
-    public Wallet Wallet { get; set; }
+    public Wallet? Wallet { get; set; }
     public ICollection<UserRole>? UserRoles { get; set; }
     public ICollection<FavoriteLocation> FavoriteLocations { get; set; } = new List<FavoriteLocation>();
 
