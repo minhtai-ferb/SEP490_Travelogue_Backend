@@ -73,7 +73,7 @@ builder.Services.AddHttpClient<MailTemplateService>();
 // ------------------
 
 // Load file .env
-DotNetEnv.Env.Load("/.env");
+DotNetEnv.Env.Load("Config/.env");
 
 var serviceAccountPath = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
 
