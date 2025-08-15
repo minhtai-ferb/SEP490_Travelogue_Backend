@@ -11,6 +11,7 @@ public class TourGuideRequestResponseDto
     public string Introduction { get; set; }
     public decimal Price { get; set; }
     public TourGuideRequestStatus Status { get; set; }
+    public string? StatusText { get; set; }
     public string? RejectionReason { get; set; }
     public List<CertificationDto> Certifications { get; set; }
 }

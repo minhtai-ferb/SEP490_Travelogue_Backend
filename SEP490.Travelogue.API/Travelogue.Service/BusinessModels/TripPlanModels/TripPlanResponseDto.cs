@@ -1,4 +1,6 @@
-﻿namespace Travelogue.Service.BusinessModels.TripPlanModels;
+﻿using Travelogue.Repository.Entities.Enums;
+
+namespace Travelogue.Service.BusinessModels.TripPlanModels;
 
 public class TripPlanResponseDto : BaseDataModel
 {
@@ -10,4 +12,6 @@ public class TripPlanResponseDto : BaseDataModel
     public string? ImageUrl { get; set; }
     public Guid UserId { get; set; }
     public string OwnerName { get; set; } = string.Empty;
+    public TripPlanStatus? Status { get; set; }
+    public string? StatusText { get; set; }
 }

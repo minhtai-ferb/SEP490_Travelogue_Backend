@@ -16,6 +16,9 @@ public sealed class News : BaseEntity
     public Location? Location { get; set; }
 
     public NewsCategory? NewsCategory { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
 
+    public TypeExperience? TypeExperience { get; set; }
     public bool IsHighlighted { get; set; } = false;
 }

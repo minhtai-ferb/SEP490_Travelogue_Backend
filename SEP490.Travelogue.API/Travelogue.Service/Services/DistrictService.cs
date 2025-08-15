@@ -38,11 +38,12 @@ public class DistrictService : IDistrictService
     private readonly IUserContextService _userContextService;
     private readonly ITimeService _timeService;
     private readonly IMediaCloudService _mediaCloudService;
+    private readonly IMediaService _mediaService;
     private readonly ICloudinaryService _cloudinaryService;
 
     public DistrictService(
         IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService,
-        IMediaCloudService mediaCloudService, ICloudinaryService cloudinaryService)
+        IMediaCloudService mediaCloudService, ICloudinaryService cloudinaryService, IMediaService mediaService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -50,6 +51,7 @@ public class DistrictService : IDistrictService
         _timeService = timeService;
         _mediaCloudService = mediaCloudService;
         _cloudinaryService = cloudinaryService;
+        _mediaService = mediaService;
     }
 
     public async Task AddDistrictAsync(DistrictCreateModel districtCreateModel, CancellationToken cancellationToken)
@@ -355,12 +357,12 @@ public class DistrictService : IDistrictService
                     .FirstOrDefault(dm => dm.DistrictId == existingDistrict.Id);
                 if (oldMedia != null)
                 {
-                    await _cloudinaryService.DeleteImageAsync(oldMedia.MediaUrl);
+                    await _mediaService.DeleteImageAsync(oldMedia.MediaUrl);
                     _unitOfWork.DistrictMediaRepository.Remove(oldMedia);
                 }
 
                 // Upload ảnh mới
-                newMediaUrl = await _cloudinaryService.UploadImageAsync(imageUpload);
+                newMediaUrl = await _mediaService.UploadImageAsync(imageUpload);
 
                 var newDistrictMedia = new DistrictMedia
                 {

@@ -26,4 +26,5 @@ public sealed class WorkshopSchedule : BaseEntity
     public decimal ChildrenPrice { get; set; }
 
     public Workshop? Workshop { get; set; }
+    public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 }

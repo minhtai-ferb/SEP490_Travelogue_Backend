@@ -1,13 +1,13 @@
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.ReviewModels;
 
 namespace Travelogue.Service.BusinessModels.TourGuideModels;
 
 public class TourGuideDetailResponse
 {
-    public required string Email { get; set; }
-    public string? PhoneNumber { get; set; }
-    public required string FullName { get; set; } = string.Empty;
-
+    public Guid Id { get; set; }
+    public string Email { get; set; }
+    public string UserName { get; set; }
     public Gender Sex { get; set; }
     public string SexText
     {
@@ -23,5 +23,11 @@ public class TourGuideDetailResponse
         }
     }
     public string? Address { get; set; }
+    public int Rating { get; set; }
+    public decimal Price { get; set; }
     public string? Introduction { get; set; }
+    public string? AvatarUrl { get; set; }
+    public double AverageRating { get; set; }
+    public int TotalReviews { get; set; }
+    public List<ReviewResponseDto> Reviews { get; set; } = new List<ReviewResponseDto>();
 }

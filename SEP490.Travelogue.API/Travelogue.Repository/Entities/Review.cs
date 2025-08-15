@@ -10,9 +10,9 @@ public class Review : BaseEntity
 
     public Guid BookingId { get; set; }
 
-    public Guid? TourId { get; set; }
-    public Guid? WorkshopId { get; set; }
-    public Guid? TourGuideId { get; set; }
+    // public Guid? TourId { get; set; }
+    // public Guid? WorkshopId { get; set; }
+    // public Guid? TourGuideId { get; set; }
 
     public string? Comment { get; set; }
 

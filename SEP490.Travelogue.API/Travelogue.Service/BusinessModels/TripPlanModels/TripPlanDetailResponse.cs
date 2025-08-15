@@ -1,4 +1,6 @@
-﻿namespace Travelogue.Service.BusinessModels.TripPlanModels;
+﻿using Travelogue.Repository.Entities.Enums;
+
+namespace Travelogue.Service.BusinessModels.TripPlanModels;
 
 public class TripPlanDetailResponse
 {
@@ -8,6 +10,8 @@ public class TripPlanDetailResponse
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public int TotalDays { get; set; }
+    public TripPlanStatus? Status { get; set; }
+    public string? StatusText { get; set; }
     public List<TripDayDetail> Days { get; set; } = new List<TripDayDetail>();
 }
 
@@ -21,8 +25,9 @@ public class TripDayDetail
 
 public class TripActivity
 {
+    public Guid TripPlanLocationId { get; set; }
     public Guid LocationId { get; set; }
-    public string Type { get; set; } = string.Empty; // "Location", "Cuisine", "CraftVillage"
+    public string? Type { get; set; } = string.Empty; // "Location", "Cuisine", "CraftVillage"
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? Address { get; set; }

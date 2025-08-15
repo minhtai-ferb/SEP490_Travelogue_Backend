@@ -24,6 +24,7 @@ public class AuthController : ControllerBase
         _googleAuthService = googleAuthService;
     }
 
+
     /// <summary>
     /// Kiểm tra trạng thái xác minh email của người dùng.
     /// </summary>
@@ -120,12 +121,12 @@ public class AuthController : ControllerBase
     /// </summary>
     /// <returns></returns>
     [HttpGet("get-current-user")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ResponseModel<GetCurrentUserResponse>))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ResponseModel<UserResponseModel>))]
     [Authorize]
-    public async Task<ActionResult<GetCurrentUserResponse>> GetLoggedUser()
+    public async Task<ActionResult<UserResponseModel>> GetLoggedUser()
     {
         var response = await _authService.GetCurrentUser();
-        return Ok(ResponseModel<GetCurrentUserResponse>.OkResponseModel(
+        return Ok(ResponseModel<UserResponseModel>.OkResponseModel(
             data: response,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "user")
         ));

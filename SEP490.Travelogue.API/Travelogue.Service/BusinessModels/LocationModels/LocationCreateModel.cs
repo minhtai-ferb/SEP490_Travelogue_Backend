@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.MediaModel;
 
 namespace Travelogue.Service.BusinessModels.LocationModels;
 
@@ -19,4 +20,5 @@ public class LocationCreateModel
     public Guid? DistrictId { get; set; }
     [Required]
     public LocationType LocationType { get; set; }
+    public List<MediaDto> MediaDtos { get; set; } = new List<MediaDto>();
 }

@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Travelogue.Service.BusinessModels.MediaModel;
 
 namespace Travelogue.Service.BusinessModels.CuisineModels;
 
@@ -30,4 +31,6 @@ public class CuisineUpdateDto
 
     public string? SignatureProduct { get; set; }
     public string? CookingMethod { get; set; }
+
+    public List<MediaDto> MediaDtos { get; set; } = new List<MediaDto>();
 }

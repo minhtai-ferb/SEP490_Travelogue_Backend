@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Travelogue.Service.Commons.Interfaces;
-using Travelogue.Service.BusinessModels.MediaModel;
+using Travelogue.Service.Commons.BaseResponses;
+using Travelogue.Repository.Bases.Responses;
 
 namespace Travelogue.API.Controllers;
 
@@ -16,38 +16,93 @@ public class MediaController : ControllerBase
         _mediaService = mediaService;
     }
 
-    [HttpPost("upload")]
+    [HttpPost("upload-image")]
     public async Task<IActionResult> UploadImage([FromForm] IFormFile image)
     {
-        var url = await _mediaService.UploadImageAsync(image);
-        return Ok(new { imageUrl = url });
+        var response = await _mediaService.UploadImageAsync(image);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "image")
+        ));
     }
 
-    [HttpPost("upload-multiple")]
-    public async Task<IActionResult> UploadMultiple([FromForm] List<IFormFile> images)
+    [HttpPost("upload-multiple-images")]
+    public async Task<IActionResult> UploadMultipleImages([FromForm] List<IFormFile> images)
     {
-        var urls = await _mediaService.UploadMultipleImagesAsync(images);
-        return Ok(urls);
+        var response = await _mediaService.UploadMultipleImagesAsync(images);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "images")
+        ));
+    }
+
+    [HttpPost("upload-certification")]
+    public async Task<IActionResult> UploadCertification([FromForm] IFormFile certification)
+    {
+        var response = await _mediaService.UploadDocumentAsync(certification);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "certification")
+        ));
+    }
+
+    [HttpPost("upload-multiple-certifications")]
+    public async Task<IActionResult> UploadMultipleCertifications([FromForm] List<IFormFile> certifications)
+    {
+        var response = await _mediaService.UploadMultipleDocumentsAsync(certifications);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "certifications")
+        ));
+    }
+
+    [HttpDelete("certification/{fileName}")]
+    public async Task<IActionResult> DeleteCertification(string fileName)
+    {
+        var response = await _mediaService.DeleteDocumentAsync(fileName);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+        ));
+    }
+
+    [HttpDelete("certification/delete-multiple")]
+    public async Task<IActionResult> DeleteMultipleCertification([FromBody] List<string> fileNames)
+    {
+        var response = await _mediaService.DeleteDocumentsAsync(fileNames);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+        ));
     }
 
     [HttpDelete("delete/{fileName}")]
     public async Task<IActionResult> DeleteImage(string fileName)
     {
-        var result = await _mediaService.DeleteImageAsync(fileName);
-        return Ok(new { deleted = result });
+        var response = await _mediaService.DeleteImageAsync(fileName);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
+        ));
     }
 
-    [HttpPost("delete-multiple")]
+    [HttpDelete("delete-multiple")]
     public async Task<IActionResult> DeleteMultiple([FromBody] List<string> fileNames)
     {
-        var result = await _mediaService.DeleteImagesAsync(fileNames);
-        return Ok(new { deleted = result });
+        var response = await _mediaService.DeleteImagesAsync(fileNames);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
+        ));
     }
 
     [HttpGet("all")]
     public async Task<IActionResult> GetAllImages()
     {
-        var result = await _mediaService.GetAllImagesAsync();
-        return Ok(result);
+        var response = await _mediaService.GetAllImagesAsync();
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
+        ));
     }
 }

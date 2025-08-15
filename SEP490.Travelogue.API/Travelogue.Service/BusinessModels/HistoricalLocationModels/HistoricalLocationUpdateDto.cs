@@ -1,9 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.MediaModel;
 
 namespace Travelogue.Service.BusinessModels.HistoricalLocationModels;
 
-public class HistoricalLocationUpdateDto : BaseDataModel
+public class HistoricalLocationUpdateDto
 {
     [Required, StringLength(100)]
     public required string Name { get; set; }
@@ -26,4 +27,5 @@ public class HistoricalLocationUpdateDto : BaseDataModel
     public DateTime? EstablishedDate { get; set; }
     public Guid LocationId { get; set; }
     public TypeHistoricalLocation? TypeHistoricalLocation { get; set; }
+    public List<MediaDto> MediaDtos { get; set; } = new List<MediaDto>();
 }

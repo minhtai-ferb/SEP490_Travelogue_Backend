@@ -35,12 +35,24 @@ public class UnitOfWork : IUnitOfWork
     public IWorkshopRepository WorkshopRepository { get; }
     public IWorkshopActivityRepository WorkshopActivityRepository { get; }
     public IWorkshopScheduleRepository WorkshopScheduleRepository { get; }
-    public ITourGuideMappingRepository TourGuideMappingRepository { get; }
     public ITourGuideRequestRepository TourGuideRequestRepository { get; }
     public ICraftVillageRequestRepository CraftVillageRequestRepository { get; }
     public IWorkshopMediaRepository WorkshopMediaRepository { get; }
     public ITourMediaRepository TourMediaRepository { get; }
     public ICertificationRepository CertificationRepository { get; }
+    public IPromotionRepository PromotionRepository { get; }
+    public ITransactionEntryRepository TransactionEntryRepository { get; }
+    public IBookingPriceRequestRepository BookingPriceRequestRepository { get; }
+    public IRejectionRequestRepository RejectionRequestRepository { get; }
+    public IReviewRepository ReviewRepository { get; }
+    public IPromotionApplicableRepository PromotionApplicableRepository { get; }
+    public IAnnouncementRepository AnnouncementRepository { get; }
+    public IReportRepository ReportRepository { get; }
+    public IWalletRepository WalletRepository { get; }
+    public IWithdrawalRequestRepository WithdrawalRequestRepository { get; }
+    public IBankAccountRepository BankAccountRepository { get; }
+    public ISystemSettingRepository SystemSettingRepository { get; }
+    public IRefundRequestRepository RefundRequestRepository { get; }
 
     public UnitOfWork(ApplicationDbContext dbContext)
     {
@@ -70,12 +82,23 @@ public class UnitOfWork : IUnitOfWork
         WorkshopRepository = new WorkshopRepository(_dbContext);
         WorkshopActivityRepository = new WorkshopActivityRepository(_dbContext);
         WorkshopScheduleRepository = new WorkshopScheduleRepository(_dbContext);
-        TourGuideMappingRepository = new TourGuideMappingRepository(_dbContext);
         TourGuideRequestRepository = new TourGuideRequestRepository(_dbContext);
         CraftVillageRequestRepository = new CraftVillageRequestRepository(_dbContext);
         TourMediaRepository = new TourMediaRepository(_dbContext);
         WorkshopMediaRepository = new WorkshopMediaRepository(_dbContext);
         CertificationRepository = new CertificationRepository(_dbContext);
+        PromotionRepository = new PromotionRepository(_dbContext);
+        TransactionEntryRepository = new TransactionEntryRepository(_dbContext);
+        RejectionRequestRepository = new RejectionRequestRepository(_dbContext);
+        ReviewRepository = new ReviewRepository(_dbContext);
+        PromotionApplicableRepository = new PromotionApplicableRepository(_dbContext);
+        AnnouncementRepository = new AnnouncementRepository(_dbContext);
+        ReportRepository = new ReportRepository(_dbContext);
+        WalletRepository = new WalletRepository(_dbContext);
+        WithdrawalRequestRepository = new WithdrawalRequestRepository(_dbContext);
+        BankAccountRepository = new BankAccountRepository(_dbContext);
+        SystemSettingRepository = new SystemSettingRepository(_dbContext);
+        RefundRequestRepository = new RefundRequestRepository(_dbContext);
     }
 
     public IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity

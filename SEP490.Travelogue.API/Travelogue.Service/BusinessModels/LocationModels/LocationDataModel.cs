@@ -2,7 +2,7 @@
 
 namespace Travelogue.Service.BusinessModels.LocationModels;
 
-public class LocationDataModel
+public class LocationDataModel : BaseDataModel
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
@@ -11,7 +11,6 @@ public class LocationDataModel
     public string? Address { get; set; }
     public double Latitude { get; set; }
     public double Longitude { get; set; }
-    public double Rating { get; set; } = 0;
     public TimeSpan? OpenTime { get; set; }
     public TimeSpan? CloseTime { get; set; }
     public string Category { get; set; }

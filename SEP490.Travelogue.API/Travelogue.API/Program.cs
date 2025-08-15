@@ -9,6 +9,7 @@ using Travelogue.API.Middlewares;
 using Travelogue.Repository;
 using Travelogue.Repository.Data;
 using Travelogue.Service;
+using Travelogue.Service.Commons.SignalR;
 using Travelogue.Service.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,10 +51,43 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddHttpClient<MailTemplateService>();
 
-FirebaseApp.Create(new AppOptions()
+// FirebaseApp.Create(new AppOptions()
+// {
+//     Credential = GoogleCredential.FromFile("Config/serviceAccountKey.json")
+// });
+
+//FirebaseInitializer.InitFirebase();
+
+//var serviceAccountPath = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
+
+//-------------- chay duoc
+//if (string.IsNullOrEmpty(serviceAccountPath))
+//{
+//    throw new Exception("GOOGLE_APPLICATION_CREDENTIALS is missing in environment variables.");
+//}
+
+//FirebaseApp.Create(new AppOptions
+//{
+//    Credential = GoogleCredential.FromFile(serviceAccountPath)
+//});
+// ------------------
+
+// Load file .env
+DotNetEnv.Env.Load("Config/.env");
+
+var serviceAccountPath = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
+
+if (string.IsNullOrEmpty(serviceAccountPath))
 {
-    Credential = GoogleCredential.FromFile("Config/serviceAccountKey.json")
+    throw new Exception("GOOGLE_APPLICATION_CREDENTIALS is missing in .env");
+}
+
+FirebaseApp.Create(new AppOptions
+{
+    Credential = GoogleCredential.FromFile(serviceAccountPath)
 });
+
+
 
 builder.Services.AddSingleton(FirebaseAuth.DefaultInstance);
 
@@ -83,12 +117,19 @@ app.UseSwagger();
 app.UseSwaggerUI();
 //app.UseHttpsRedirection();
 app.UseHttpsRedirection();
+app.MapHub<NotificationHub>("/notificationHub");
 
-var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "images");
+var uploadImagesPath = Path.Combine(Directory.GetCurrentDirectory(), "images");
+var uploadDocumentsPath = Path.Combine(Directory.GetCurrentDirectory(), "documents");
 
-if (!Directory.Exists(uploadPath))
+if (!Directory.Exists(uploadImagesPath))
 {
-    Directory.CreateDirectory(uploadPath);
+    Directory.CreateDirectory(uploadImagesPath);
+}
+
+if (!Directory.Exists(uploadDocumentsPath))
+{
+    Directory.CreateDirectory(uploadDocumentsPath);
 }
 
 app.UseStaticFiles(new StaticFileOptions
@@ -97,6 +138,14 @@ app.UseStaticFiles(new StaticFileOptions
         Path.Combine(Directory.GetCurrentDirectory(), "images")),
     RequestPath = "/images"
 });
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(Directory.GetCurrentDirectory(), "documents")),
+    RequestPath = "/documents"
+});
+
 
 app.UseAuthentication();
 app.UseAuthorization();

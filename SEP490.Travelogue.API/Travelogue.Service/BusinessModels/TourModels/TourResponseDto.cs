@@ -1,8 +1,9 @@
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.MediaModel;
 
 namespace Travelogue.Service.BusinessModels.TourModels;
 
-public class TourResponseDto
+public class TourResponseDto : BaseDataModel
 {
     public Guid TourId { get; set; }
     public string? Name { get; set; }
@@ -29,4 +30,7 @@ public class TourResponseDto
             };
         }
     }
+    public double AverageRating { get; set; }
+    public int TotalReviews { get; set; }
+    public List<MediaResponse> Medias { get; set; } = new List<MediaResponse>();
 }

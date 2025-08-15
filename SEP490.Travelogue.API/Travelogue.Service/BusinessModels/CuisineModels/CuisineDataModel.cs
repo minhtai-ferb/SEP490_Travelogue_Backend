@@ -4,7 +4,7 @@ namespace Travelogue.Service.BusinessModels.CuisineModels;
 
 public class CuisineDataModel : BaseDataModel
 {
-    public Guid CuisineId { get; set; }
+    // public Guid CuisineId { get; set; }
     // public string Name { get; set; } = string.Empty;
     // public string? Description { get; set; }
     // public string? Content { get; set; }

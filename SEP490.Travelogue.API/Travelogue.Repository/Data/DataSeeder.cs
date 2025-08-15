@@ -54,6 +54,7 @@ public static class DataSeeder
             // Role
             var roleRepo = unitOfWork.RoleRepository;
             var userRepo = unitOfWork.UserRepository;
+            var walletRepo = unitOfWork.WalletRepository;
             var userRoleRepo = unitOfWork.UserRoleRepository;
 
             var adminRoleName = AppRole.ADMIN;
@@ -128,6 +129,20 @@ public static class DataSeeder
                 existingUser.SetPassword("string");
 
                 await userRepo.AddAsync(existingUser);
+            }
+
+            var existingWallet = await walletRepo.ActiveEntities.FirstOrDefaultAsync(w => w.UserId == existingUser.Id);
+            if (existingWallet == null)
+            {
+                var wallet = new Wallet
+                {
+                    UserId = existingUser.Id,
+                    Balance = 0m,
+                    CreatedBy = existingUser.Id.ToString(),
+                    LastUpdatedBy = existingUser.Id.ToString()
+                };
+                await walletRepo.AddAsync(wallet);
+                await unitOfWork.SaveAsync();
             }
 
             // Firebase Authentication

@@ -18,7 +18,7 @@ public class TourGuideMappingProfile : Profile
             .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.FullName))
             .ForMember(dest => dest.Sex, opt => opt.MapFrom(src => src.User.Sex))
             .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.User.Address))
-            .ForMember(dest => dest.Rating, opt => opt.MapFrom(src => src.Rating))
+            .ForMember(dest => dest.AverageRating, opt => opt.MapFrom(src => src.Rating))
             .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Price))
             .ForMember(dest => dest.Introduction, opt => opt.MapFrom(src => src.Introduction))
             .ReverseMap();

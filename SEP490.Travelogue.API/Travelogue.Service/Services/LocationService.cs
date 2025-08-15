@@ -1,10 +1,10 @@
 ﻿using AutoMapper;
+using Google.Protobuf;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Bases.Responses;
-using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
@@ -37,7 +37,7 @@ public interface ILocationService
     Task AddFavoriteLocationAsync(Guid locationId, CancellationToken cancellationToken);
     Task RemoveFavoriteLocationAsync(Guid locationId, CancellationToken cancellationToken);
     Task<LocationMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, CancellationToken cancellationToken);
-    Task<LocationMediaResponse> UploadMediaAsync(Guid id, List<IFormFile> imageUploads, string? thumbnailFileName, CancellationToken cancellationToken);
+    Task<LocationMediaResponse> UploadMediaAsync(Guid id, UploadMediasDto uploadMediasDto, string? thumbnailFileName, CancellationToken cancellationToken);
     Task<LocationMediaResponse> AddLocationWithMediaAsync(LocationCreateWithMediaFileModel locationCreateModel, string? thumbnailSelected, CancellationToken cancellationToken);
     Task UpdateLocationAsync(Guid id, LocationUpdateWithMediaFileModel locationUpdateModel, string? thumbnailSelected, CancellationToken cancellationToken);
     Task<bool> DeleteMediaAsync(Guid id, List<string> deletedImages, CancellationToken cancellationToken);
@@ -58,6 +58,7 @@ public interface ILocationService
         CancellationToken cancellationToken = default);
     Task<LocationDataModel> UpdateCraftVillageDataAsync(Guid locationId, CraftVillageUpdateDto dto, CancellationToken cancellationToken = default);
     Task<LocationDataModel> UpdateHistoricalLocationDataAsync(Guid locationId, HistoricalLocationUpdateDto dto, CancellationToken cancellationToken = default);
+    Task<LocationDataModel> UpdateScenicSpotDataAsync(Guid locationId, LocationUpdateDto dto, CancellationToken cancellationToken = default);
 }
 
 public class LocationService : ILocationService
@@ -123,11 +124,10 @@ public class LocationService : ILocationService
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
-            // Validate user role
             var currentUserId = _userContextService.GetCurrentUserId();
+            var currentUserIdGuid = Guid.Parse(_userContextService.GetCurrentUserId());
             var currentTime = _timeService.SystemTimeNow;
 
-            // Map and set common fields
             var newLocation = _mapper.Map<Location>(model);
             newLocation.CreatedBy = currentUserId;
             newLocation.LastUpdatedBy = currentUserId;
@@ -136,8 +136,71 @@ public class LocationService : ILocationService
 
             await _unitOfWork.LocationRepository.AddAsync(newLocation);
             await _unitOfWork.SaveAsync();
+
+            List<LocationMedia> locationMedias = new();
+            if (model.MediaDtos.Any())
+            {
+                locationMedias = model.MediaDtos.Select(media => new LocationMedia
+                {
+                    Id = Guid.NewGuid(),
+                    LocationId = newLocation.Id,
+                    MediaUrl = media.MediaUrl,
+                    IsThumbnail = media.IsThumbnail,
+                    CreatedBy = currentUserId,
+                    LastUpdatedBy = currentUserId,
+                    CreatedTime = currentTime,
+                    LastUpdatedTime = currentTime
+                }).ToList();
+
+                await _unitOfWork.LocationMediaRepository.AddRangeAsync(locationMedias);
+                await _unitOfWork.SaveAsync();
+            }
+
             await transaction.CommitAsync(cancellationToken);
-            var response = _mapper.Map<LocationDataModel>(newLocation);
+
+            var district = newLocation.DistrictId.HasValue
+                ? await _unitOfWork.DistrictRepository.GetByIdAsync(newLocation.DistrictId.Value, cancellationToken)
+                : null;
+
+            var createdByName = await _unitOfWork.UserRepository
+                .ActiveEntities
+                .Where(u => u.Id == currentUserIdGuid)
+                .Select(u => u.FullName)
+                .FirstOrDefaultAsync();
+
+            var lastUpdatedByNameName = await _unitOfWork.UserRepository
+                .ActiveEntities
+                .Where(u => u.Id == currentUserIdGuid)
+                .Select(u => u.FullName)
+                .FirstOrDefaultAsync();
+
+            var response = new LocationDataModel
+            {
+                Id = newLocation.Id,
+                Name = newLocation.Name,
+                Description = newLocation.Description,
+                Content = newLocation.Content,
+                Address = newLocation.Address,
+                Latitude = newLocation.Latitude,
+                Longitude = newLocation.Longitude,
+                OpenTime = newLocation.OpenTime,
+                CloseTime = newLocation.CloseTime,
+                Category = "",
+                DistrictId = newLocation.DistrictId,
+                DistrictName = district?.Name,
+                CreatedTime = newLocation.CreatedTime,
+                LastUpdatedTime = newLocation.LastUpdatedTime,
+                CreatedBy = newLocation.CreatedBy,
+                LastUpdatedBy = newLocation.LastUpdatedBy,
+                CreatedByName = createdByName,
+                LastUpdatedByName = lastUpdatedByNameName,
+                Medias = locationMedias.Select(m => new MediaResponse
+                {
+                    MediaUrl = m.MediaUrl,
+                    IsThumbnail = m.IsThumbnail
+                }).ToList()
+            };
+
             return response;
         }
         catch (CustomException)
@@ -150,11 +213,8 @@ public class LocationService : ILocationService
             await _unitOfWork.RollBackAsync();
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
-        finally
-        {
-            //  _unitOfWork.Dispose();
-        }
     }
+
 
     public async Task<LocationDataModel> AddCuisineDataAsync(Guid locationId, CuisineCreateModel? model, CancellationToken cancellationToken)
     {
@@ -283,7 +343,11 @@ public class LocationService : ILocationService
                 cuisine.LastUpdatedTime = DateTime.UtcNow;
             }
 
+            await UpdateLocationMediasAsync(locationId, dto.MediaDtos, cancellationToken);
+
             await _unitOfWork.SaveAsync();
+
+            await transaction.CommitAsync(cancellationToken);
 
             var model = new LocationDataModel
             {
@@ -301,7 +365,6 @@ public class LocationService : ILocationService
                 Medias = await GetMediaWithoutVideoByIdAsync(location.Id, cancellationToken),
             };
 
-            await transaction.CommitAsync(cancellationToken);
             return model;
         }
         catch (CustomException)
@@ -323,7 +386,7 @@ public class LocationService : ILocationService
         {
             if (model == null)
             {
-                throw new InvalidOperationException("CraftVillage data is missing for type 'CraftVillage'.");
+                throw new InvalidOperationException("CraftVillage data is missing for type CraftVillage.");
             }
 
             var location = await _unitOfWork.LocationRepository.GetByIdAsync(locationId, cancellationToken)
@@ -335,7 +398,6 @@ public class LocationService : ILocationService
                 throw CustomExceptionFactory.CreateBadRequestError("Location is not of type Craft Village.");
             }
 
-            // Add CraftVillage data
             var craftVillage = new CraftVillage
             {
                 PhoneNumber = model.PhoneNumber,
@@ -344,6 +406,7 @@ public class LocationService : ILocationService
                 WorkshopsAvailable = model.WorkshopsAvailable,
                 LocationId = location.Id
             };
+
             await _unitOfWork.CraftVillageRepository.AddAsync(craftVillage);
 
             await _unitOfWork.SaveAsync();
@@ -391,11 +454,12 @@ public class LocationService : ILocationService
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentUserIdGuid = Guid.Parse(_userContextService.GetCurrentUserId());
             // Find the Location with its associated CraftVillage
             var location = await _unitOfWork.LocationRepository
                 .ActiveEntities
                 .Include(l => l.CraftVillage)
-
                 .FirstOrDefaultAsync(l => l.Id == locationId, cancellationToken);
 
             if (location == null)
@@ -421,6 +485,7 @@ public class LocationService : ILocationService
             location.DistrictId = dto.DistrictId;
             location.LocationType = LocationType.CraftVillage;
             location.LastUpdatedTime = DateTime.UtcNow;
+            location.LastUpdatedBy = currentUserId;
 
             // Update or create CraftVillage
             if (location.CraftVillage == null)
@@ -452,7 +517,23 @@ public class LocationService : ILocationService
                 location.CraftVillage.LastUpdatedTime = DateTime.UtcNow;
             }
 
+            await UpdateLocationMediasAsync(locationId, dto.MediaDtos, cancellationToken);
+
             await _unitOfWork.SaveAsync();
+
+            await transaction.CommitAsync(cancellationToken);
+
+            var createdByName = await _unitOfWork.UserRepository
+               .ActiveEntities
+               .Where(u => u.Id == currentUserIdGuid)
+               .Select(u => u.FullName)
+               .FirstOrDefaultAsync();
+
+            var lastUpdatedByNameName = await _unitOfWork.UserRepository
+                .ActiveEntities
+                .Where(u => u.Id == currentUserIdGuid)
+                .Select(u => u.FullName)
+                .FirstOrDefaultAsync();
 
             var model = new LocationDataModel
             {
@@ -467,10 +548,14 @@ public class LocationService : ILocationService
                 Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(location.Id),
                 DistrictId = location.DistrictId,
                 DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(location.DistrictId ?? Guid.Empty),
+                CreatedTime = location.CreatedTime,
+                LastUpdatedTime = location.LastUpdatedTime,
+                CreatedBy = location.CreatedBy,
+                LastUpdatedBy = location.LastUpdatedBy,
+                CreatedByName = createdByName,
+                LastUpdatedByName = lastUpdatedByNameName,
                 Medias = await GetMediaWithoutVideoByIdAsync(location.Id, cancellationToken),
             };
-
-            await transaction.CommitAsync(cancellationToken);
             return model;
         }
         catch (CustomException)
@@ -835,6 +920,80 @@ public class LocationService : ILocationService
                 location.HistoricalLocation.LastUpdatedTime = DateTime.UtcNow;
             }
 
+            await UpdateLocationMediasAsync(locationId, dto.MediaDtos, cancellationToken);
+
+            await _unitOfWork.SaveAsync();
+
+            await transaction.CommitAsync(cancellationToken);
+
+            var model = new LocationDataModel
+            {
+                Id = location.Id,
+                Name = location.Name,
+                Description = location.Description,
+                Content = location.Content,
+                Latitude = location.Latitude,
+                Longitude = location.Longitude,
+                OpenTime = location.OpenTime,
+                CloseTime = location.CloseTime,
+                Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(location.Id),
+                DistrictId = location.DistrictId,
+                DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(location.DistrictId ?? Guid.Empty),
+                Medias = await GetMediaWithoutVideoByIdAsync(location.Id, cancellationToken),
+            };
+
+            return model;
+        }
+        catch (CustomException)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<LocationDataModel> UpdateScenicSpotDataAsync(Guid locationId, LocationUpdateDto dto, CancellationToken cancellationToken = default)
+    {
+        if (dto == null)
+        {
+            throw CustomExceptionFactory.CreateBadRequestError("Craft village data cannot be null.");
+        }
+
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var location = await _unitOfWork.LocationRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(l => l.Id == locationId, cancellationToken);
+
+            if (location == null)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Location not found.");
+            }
+
+            if (location.LocationType != LocationType.ScenicSpot)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("The specified location is not a Craft Village.");
+            }
+
+            location.Name = dto.Name;
+            location.Description = dto.Description;
+            location.Content = dto.Content;
+            location.Address = dto.Address;
+            location.Latitude = dto.Latitude;
+            location.Longitude = dto.Longitude;
+            location.OpenTime = dto.OpenTime;
+            location.CloseTime = dto.CloseTime;
+            location.DistrictId = dto.DistrictId;
+            location.LocationType = LocationType.ScenicSpot;
+            location.LastUpdatedTime = DateTime.UtcNow;
+
+            await UpdateLocationMediasAsync(locationId, dto.MediaDtos, cancellationToken);
+
             await _unitOfWork.SaveAsync();
 
             var model = new LocationDataModel
@@ -1006,19 +1165,20 @@ public class LocationService : ILocationService
             if (cuisine != null)
             {
                 locationDataModel.Cuisine = _mapper.Map<CuisineDataModel>(cuisine);
-                locationDataModel.Cuisine.CuisineId = cuisine.Id;
+                // locationDataModel.Cuisine.CuisineId = cuisine.Id;
             }
 
             if (craftVillage != null)
             {
                 locationDataModel.CraftVillage = _mapper.Map<CraftVillageDataModel>(craftVillage);
-                locationDataModel.CraftVillage.CraftVillageId = craftVillage.Id;
+                // locationDataModel.CraftVillage.CraftVillageId = craftVillage.Id;
             }
 
             if (historicalLocation != null)
             {
                 locationDataModel.HistoricalLocation = _mapper.Map<HistoricalLocationDataModel>(historicalLocation);
-                locationDataModel.HistoricalLocation.HistoricalLocationId = historicalLocation.Id;
+                // locationDataModel.HistoricalLocation.HistoricalLocationId = historicalLocation.Id;
+                locationDataModel.HistoricalLocation.HeritageRankName = _enumService.GetEnumDisplayName<HeritageRank>(historicalLocation.HeritageRank) ?? string.Empty;
             }
 
             locationDataModel.Medias = await GetMediaWithoutVideoByIdAsync(id, cancellationToken);
@@ -1862,7 +2022,7 @@ public class LocationService : ILocationService
 
     public async Task<LocationMediaResponse> UploadMediaAsync(
         Guid id,
-        List<IFormFile>? imageUploads,
+        UploadMediasDto uploadMediasDto,
         string? thumbnailSelected,
         CancellationToken cancellationToken)
     {
@@ -1876,7 +2036,7 @@ public class LocationService : ILocationService
                 throw CustomExceptionFactory.CreateNotFoundError("location");
             }
 
-            if (imageUploads == null || imageUploads.Count == 0)
+            if (uploadMediasDto.Files == null || uploadMediasDto.Files.Count == 0)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("images");
             }
@@ -1885,7 +2045,7 @@ public class LocationService : ILocationService
                 .Where(dm => dm.LocationId == existingLocation.Id).ToList();
 
             // Nếu không có ảnh mới & không có thumbnailSelected => Chỉ cập nhật thông tin location
-            if ((imageUploads == null || imageUploads.Count == 0) && string.IsNullOrEmpty(thumbnailSelected))
+            if ((uploadMediasDto.Files == null || uploadMediasDto.Files.Count == 0) && string.IsNullOrEmpty(thumbnailSelected))
             {
                 await _unitOfWork.SaveAsync();
                 await transaction.CommitAsync(cancellationToken);
@@ -1911,7 +2071,7 @@ public class LocationService : ILocationService
             }
 
             // Nếu không có ảnh mới nhưng có thumbnailSelected là ảnh cũ -> Dừng ở đây
-            if (imageUploads == null || imageUploads.Count == 0)
+            if (uploadMediasDto.Files == null || uploadMediasDto.Files.Count == 0)
             {
                 await _unitOfWork.SaveAsync();
                 await transaction.CommitAsync(cancellationToken);
@@ -1924,13 +2084,13 @@ public class LocationService : ILocationService
             }
 
             // Có ảnh mới -> Upload lên Cloudinary
-            // var imageUrls = await _cloudinaryService.UploadImagesAsync(imageUploads);
-            var imageUrls = await _mediaService.UploadMultipleImagesAsync(imageUploads);
+            // var imageUrls = await _cloudinaryService.UploadImagesAsync(uploadMediasDto.Files);
+            var imageUrls = await _mediaService.UploadMultipleImagesAsync(uploadMediasDto.Files);
             var mediaResponses = new List<MediaResponse>();
 
-            for (int i = 0; i < imageUploads.Count; i++)
+            for (int i = 0; i < uploadMediasDto.Files.Count; i++)
             {
-                var imageUpload = imageUploads[i];
+                var imageUpload = uploadMediasDto.Files[i];
                 bool isThumbnail = false;
 
                 // Nếu thumbnailSelected là tên file -> Đặt ảnh mới làm thumbnail
@@ -2173,7 +2333,7 @@ public class LocationService : ILocationService
             {
                 var locationMedia = await _unitOfWork.LocationMediaRepository
                     .Entities
-                    .FirstOrDefaultAsync(m => m.LocationId == id && m.MediaUrl == imageUpload && !m.IsDeleted, cancellationToken);
+                    .FirstOrDefaultAsync(m => m.LocationId == id && m.MediaUrl.Contains(imageUpload) && !m.IsDeleted, cancellationToken);
 
                 if (locationMedia != null)
                 {
@@ -2284,6 +2444,86 @@ public class LocationService : ILocationService
             location.Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(location.Id);
 
             // location.HeritageRankName = _enumService.GetEnumDisplayName(location.HeritageRank);
+        }
+    }
+
+    private async Task UpdateLocationMediasAsync(Guid locationId, List<MediaDto> mediaDtos, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (mediaDtos == null || !mediaDtos.Any())
+                return;
+
+            var existingMedias = await _unitOfWork.LocationMediaRepository.ActiveEntities
+                .Where(m => m.LocationId == locationId)
+                .ToListAsync(cancellationToken);
+
+            foreach (var mediaDto in mediaDtos)
+            {
+                string fileName = Path.GetFileName(new Uri(mediaDto.MediaUrl).LocalPath);
+                string fileType = Path.GetExtension(fileName).TrimStart('.');
+
+                var existingMedia = existingMedias.FirstOrDefault(m => m.MediaUrl == mediaDto.MediaUrl);
+
+                if (existingMedia != null)
+                {
+                    if (existingMedia.IsThumbnail != mediaDto.IsThumbnail)
+                    {
+                        existingMedia.IsThumbnail = mediaDto.IsThumbnail;
+                        _unitOfWork.LocationMediaRepository.Update(existingMedia);
+                    }
+                }
+                else
+                {
+                    var newMedia = new LocationMedia
+                    {
+                        LocationId = locationId,
+                        MediaUrl = mediaDto.MediaUrl,
+                        FileName = fileName,
+                        FileType = fileType,
+                        SizeInBytes = 0,
+                        IsThumbnail = mediaDto.IsThumbnail,
+                        CreatedTime = DateTime.UtcNow,
+                        IsDeleted = false
+                    };
+
+                    await _unitOfWork.LocationMediaRepository.AddAsync(newMedia);
+                }
+            }
+
+            var allMediasAfterUpdate = await _unitOfWork.LocationMediaRepository.ActiveEntities
+                .Where(m => m.LocationId == locationId)
+                .ToListAsync(cancellationToken);
+
+            var thumbnails = allMediasAfterUpdate.Where(m => m.IsThumbnail).ToList();
+
+            if (!thumbnails.Any())
+            {
+                // kh có ảnh nào là thumbnail, chọn ảnh đầu tiên
+                var first = allMediasAfterUpdate.FirstOrDefault();
+                if (first != null)
+                {
+                    first.IsThumbnail = true;
+                    _unitOfWork.LocationMediaRepository.Update(first);
+                }
+            }
+            else if (thumbnails.Count > 1)
+            {
+                // giữ lại 1 ảnh đầu tiên làm thumbnail
+                foreach (var extraThumb in thumbnails.Skip(1))
+                {
+                    extraThumb.IsThumbnail = false;
+                    _unitOfWork.LocationMediaRepository.Update(extraThumb);
+                }
+            }
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 

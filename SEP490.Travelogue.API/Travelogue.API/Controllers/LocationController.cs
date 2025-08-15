@@ -6,6 +6,7 @@ using Travelogue.Service.BusinessModels.CraftVillageModels;
 using Travelogue.Service.BusinessModels.CuisineModels;
 using Travelogue.Service.BusinessModels.HistoricalLocationModels;
 using Travelogue.Service.BusinessModels.LocationModels;
+using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 
@@ -157,6 +158,27 @@ public class LocationController : ControllerBase
     }
 
     /// <summary>
+    /// Cập nhật dữ liệu danh lam thắng cảnh
+    /// </summary>
+    /// <param name="locationId"></param>
+    /// <param name="dto"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    [HttpPut("{locationId}/scenic-spot")]
+    public async Task<IActionResult> UpdateScenicSpotData(
+        Guid locationId,
+        [FromBody] LocationUpdateDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _locationService.UpdateScenicSpotDataAsync(locationId, dto, cancellationToken);
+
+        return Ok(ResponseModel<LocationDataModel>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "historical location")
+        ));
+    }
+
+    /// <summary>
     /// Xóa location theo id
     /// </summary>
     /// <param name="id"></param>
@@ -216,15 +238,15 @@ public class LocationController : ControllerBase
     /// <param name="id"></param>
     /// <param name="model"></param>
     /// <returns></returns>
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateLocation(Guid id, [FromBody] LocationUpdateModel model)
-    {
-        await _locationService.UpdateLocationAsync(id, model, new CancellationToken());
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: true,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
-        ));
-    }
+    // [HttpPut("{id}")]
+    // public async Task<IActionResult> UpdateLocation(Guid id, [FromBody] LocationUpdateModel model)
+    // {
+    //     await _locationService.UpdateLocationAsync(id, model, new CancellationToken());
+    //     return Ok(ResponseModel<object>.OkResponseModel(
+    //         data: true,
+    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "location")
+    //     ));
+    // }
 
     [HttpGet("nearest-cuisine")]
     public async Task<IActionResult> GetNearestCuisineLocations(Guid locationId, CancellationToken cancellationToken)
@@ -327,16 +349,18 @@ public class LocationController : ControllerBase
     //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPLOAD_SUCCESS, "media")
     //     ));
     // }
-    [HttpPost("upload-media")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> UploadMediaV2(Guid id, [FromForm] List<IFormFile> imageUploads, string? thumbnailFileName)
-    {
-        var result = await _locationService.UploadMediaAsync(id, imageUploads, thumbnailFileName, new CancellationToken());
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPLOAD_SUCCESS, "media")
-        ));
-    }
+
+    // lay thi lay ham nay
+    // [HttpPost("upload-media")]
+    // [ProducesResponseType(StatusCodes.Status200OK)]
+    // public async Task<IActionResult> UploadMediaV2(Guid id, [FromForm] UploadMediasDto imageUploads, string? thumbnailFileName)
+    // {
+    //     var result = await _locationService.UploadMediaAsync(id, imageUploads, thumbnailFileName, new CancellationToken());
+    //     return Ok(ResponseModel<object>.OkResponseModel(
+    //         data: result,
+    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPLOAD_SUCCESS, "media")
+    //     ));
+    // }
 
     [HttpGet("heritage-rank")]
     public IActionResult GetOrderStatus()
@@ -364,16 +388,16 @@ public class LocationController : ControllerBase
     /// <param name="id"></param>
     /// <param name="deletedImages"></param>
     /// <returns></returns>
-    [HttpDelete("delete-media")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> DeleteMedia(Guid id, List<string> deletedImages)
-    {
-        var result = await _locationService.DeleteMediaAsync(id, deletedImages, new CancellationToken());
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "media")
-        ));
-    }
+    // [HttpDelete("delete-media")]
+    // [ProducesResponseType(StatusCodes.Status200OK)]
+    // public async Task<IActionResult> DeleteMedia(Guid id, List<string> deletedImages)
+    // {
+    //     var result = await _locationService.DeleteMediaAsync(id, deletedImages, new CancellationToken());
+    //     return Ok(ResponseModel<object>.OkResponseModel(
+    //         data: result,
+    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.DELETE_SUCCESS, "media")
+    //     ));
+    // }
 
     /// <summary>
     /// Lấy tất cả historicalLocation

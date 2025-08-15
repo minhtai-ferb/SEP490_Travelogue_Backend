@@ -35,7 +35,7 @@ public sealed class User : BaseEntity
     public string? VerificationToken { get; set; }
     public DateTimeOffset? VerificationTokenExpires { get; set; }
     public DateTimeOffset? LockoutEnd { get; set; }
-    public Wallet Wallet { get; set; }
+    public Wallet? Wallet { get; set; }
     public ICollection<UserRole>? UserRoles { get; set; }
     public ICollection<FavoriteLocation> FavoriteLocations { get; set; } = new List<FavoriteLocation>();
 
@@ -136,5 +136,6 @@ public sealed class User : BaseEntity
     public ICollection<Message> SentMessages { get; set; } = new List<Message>();
     public ICollection<Message> ReceivedMessages { get; set; } = new List<Message>();
     public ICollection<UserAnnouncement> UserAnnouncements { get; set; } = new List<UserAnnouncement>();
+    public ICollection<BankAccount> BankAccounts { get; set; } = new List<BankAccount>();
     // public ICollection<TourGroupMember> TourGroupMembers { get; set; } = new List<TourGroupMember>();
 }

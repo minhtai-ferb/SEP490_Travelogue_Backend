@@ -9,5 +9,6 @@ public interface IUserContextService
     bool HasRole(string roleName);
     bool HasRole(params string[] roles);
     bool HasAnyRole(params string[] roles);
+    bool HasAnyRoleOrAnonymous(params string[] roles);
     bool IsAuthenticated();
 }

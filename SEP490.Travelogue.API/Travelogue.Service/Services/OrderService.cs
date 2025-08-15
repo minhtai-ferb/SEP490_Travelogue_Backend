@@ -65,26 +65,23 @@ public class OrderService : IOrderService
                 // Predefined tour: Validate tour schedule and guide assignment
                 tourSchedule = await _unitOfWork.TourScheduleRepository.GetAsync(
                     ts => ts.Id == request.TourScheduleId.Value && ts.TourId == request.TourId,
-                    q => q.Include(ts => ts.TourGuideMappings),
+                    q => q.Include(ts => ts.TourGuideSchedules),
                     cancellationToken)
                     ?? throw CustomExceptionFactory.CreateNotFoundError("Tour schedule not found or not associated with the tour plan version.");
 
-                if (!tourSchedule.TourGuideMappings.Any(tsg => tsg.TourGuideId == request.TourGuideId))
+                if (!tourSchedule.TourGuideSchedules.Any(tsg => tsg.TourGuideId == request.TourGuideId))
                     throw CustomExceptionFactory.CreateBadRequestError("Tour guide is not assigned to this tour schedule.");
 
-                // Use tour schedule dates
                 startDate = tourSchedule.DepartureDate;
-                endDate = tourSchedule.DepartureDate.AddDays(tourSchedule.TotalDays - 1);
-                totalDays = tourSchedule.TotalDays;
+                endDate = tourSchedule.DepartureDate.AddDays(tourSchedule.Tour.TotalDays - 1);
+                totalDays = tourSchedule.Tour.TotalDays;
 
-                // Check participant capacity
                 int totalParticipants = request.AdultCount + request.ChildCount;
                 if (totalParticipants <= 0)
                     throw CustomExceptionFactory.CreateBadRequestError("At least one participant is required.");
                 if (tourSchedule.CurrentBooked + totalParticipants > tourSchedule.MaxParticipant)
                     throw CustomExceptionFactory.CreateBadRequestError("Tour schedule has reached maximum participant capacity.");
 
-                // Use tour schedule pricing
                 totalAmount = (request.AdultCount * tourSchedule.AdultPrice) + (request.ChildCount * tourSchedule.ChildrenPrice);
             }
             else
@@ -113,7 +110,6 @@ public class OrderService : IOrderService
                 totalAmount = tourGuide.Price * totalDays;
             }
 
-            // Check tour guide availability
             var conflictingSchedules = await _unitOfWork.TourGuideScheduleRepository.FindAsync(
                 s => s.TourGuideId == request.TourGuideId &&
                      s.Date >= startDate && s.Date <= endDate,
@@ -121,11 +117,9 @@ public class OrderService : IOrderService
             if (conflictingSchedules.Any())
                 throw CustomExceptionFactory.CreateBadRequestError("Tour guide is not available for the requested dates.");
 
-            // Calculate total price
             if (totalAmount <= 0)
                 throw CustomExceptionFactory.CreateBadRequestError("Total amount must be greater than zero.");
 
-            // Create booking
             var booking = new Booking
             {
                 TourId = request.TourId,

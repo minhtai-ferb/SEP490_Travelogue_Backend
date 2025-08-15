@@ -1,6 +1,8 @@
 ﻿using System.Text;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Entities;
+using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Repository.Data;
 
@@ -41,6 +43,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<TourGuide> TourGuides { get; set; }
     public DbSet<Certification> Certifications { get; set; }
     public DbSet<TourGuideRequest> TourGuideRequests { get; set; }
+    public DbSet<RejectionRequest> RejectionRequests { get; set; }
     public DbSet<TourGuideRequestCertification> TourGuideRequestCertifications { get; set; }
     public DbSet<Tour> Tours { get; set; }
     public DbSet<TourSchedule> TourSchedules { get; set; }
@@ -64,11 +67,12 @@ public class ApplicationDbContext : DbContext
 
     // Financial and Transaction Management
     public DbSet<Booking> Bookings { get; set; }
-    public DbSet<Transaction> Transactions { get; set; }
+    public DbSet<TransactionEntry> Transactions { get; set; }
     public DbSet<Promotion> Promotions { get; set; }
     public DbSet<WithdrawalRequest> WithdrawalRequests { get; set; }
     public DbSet<BookingWithdrawal> BookingWithdrawals { get; set; }
     public DbSet<RefundRequest> RefundRequests { get; set; }
+    public DbSet<BankAccount> BankAccounts { get; set; }
 
     // Feedback and Reporting
     public DbSet<Review> Reviews { get; set; }
@@ -89,6 +93,10 @@ public class ApplicationDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.Entity<SystemSetting>().HasData(
+            new SystemSetting { Id = Guid.NewGuid(), Key = SystemSettingKey.BookingCommissionPercent, Value = "10", Unit = "%" }
+        );
+
         modelBuilder.Entity<Message>()
             .HasOne(m => m.Sender)
             .WithMany(u => u.SentMessages)
@@ -100,6 +108,17 @@ public class ApplicationDbContext : DbContext
             .WithMany(u => u.ReceivedMessages)
             .HasForeignKey(m => m.ReceiverId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Promotion>()
+            .HasIndex(p => p.PromotionCode)
+            .IsUnique();
+
+        modelBuilder.Entity<CraftVillageRequest>()
+            .Property(e => e.Medias)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<MediaRequest>>(v, (JsonSerializerOptions?)null) ?? new List<MediaRequest>()
+            );
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes())
         {

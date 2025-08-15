@@ -1,19 +1,21 @@
 using AutoMapper;
-using Google.Protobuf;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
+using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.ReviewModels;
 using Travelogue.Service.BusinessModels.TourGuideModels;
+using Travelogue.Service.Commons.Implementations;
 using Travelogue.Service.Commons.Interfaces;
 
 namespace Travelogue.Service.Services;
 
 public interface ITourGuideService
 {
-    Task<TourGuideDataModel?> GetTourGuideByIdAsync(Guid id, CancellationToken cancellationToken);
+    Task<TourGuideDetailResponse?> GetTourGuideByIdAsync(Guid id, CancellationToken cancellationToken);
     Task<List<TourGuideDataModel>> GetAllTourGuidesAsync(CancellationToken cancellationToken);
     Task<TourGuideDataModel?> AssignToTourGuideAsync(List<string> emails, CancellationToken cancellationToken);
     // Task<TourGuideDataModel> AddTourGuideAsync(TourGuideCreateModel tourGuideCreateModel, CancellationToken cancellationToken);
@@ -23,6 +25,13 @@ public interface ITourGuideService
     Task<CertificationDto> AddCertificationAsync(CertificationDto dto, CancellationToken cancellationToken);
     Task<CertificationDto> SoftDeleteCertificationAsync(Guid certificationId, CancellationToken cancellationToken);
     Task<PagedResult<TourGuideDataModel>> GetPagedTourGuideWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<BookingPriceRequestResponseDto> CreateBookingPriceRequestAsync(BookingPriceRequestCreateDto dto);
+    Task<BookingPriceRequestResponseDto> ApproveBookingPriceRequestAsync(Guid requestId);
+    Task<BookingPriceRequestResponseDto> RejectBookingPriceRequestAsync(Guid requestId, RejectBookingPriceRequestDto dto);
+    Task<List<TourGuideScheduleResponseDto>> GetSchedulesAsync(TourGuideScheduleFilterDto filter);
+    Task<RejectionRequestResponseDto> CreateRejectionRequestAsync(RejectionRequestCreateDto dto);
+    Task<RejectionRequestResponseDto> ApproveRejectionRequestAsync(Guid requestId, Guid newTourGuideId);
+    Task<RejectionRequestResponseDto> RejectRejectionRequestAsync(Guid requestId, RejectRejectionRequestDto dto);
 }
 
 public class TourGuideService : ITourGuideService
@@ -32,14 +41,18 @@ public class TourGuideService : ITourGuideService
     private readonly IMapper _mapper;
     private readonly IUserContextService _userContextService;
     private readonly ITimeService _timeService;
+    private readonly IEmailService _emailService;
+    private readonly IEnumService _enumService;
 
-    public TourGuideService(IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService)
+    public TourGuideService(IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService, IEmailService emailService, IEnumService enumService)
     {
         _unitOfWork = unitOfWork;
         // ?? throw new ArgumentNullException(nameof(unitOfWork));
         _mapper = mapper;
         _userContextService = userContextService;
         _timeService = timeService;
+        _emailService = emailService;
+        _enumService = enumService;
     }
 
     public async Task<TourGuideDataModel?> AssignToTourGuideAsync(List<string> emails, CancellationToken cancellationToken)
@@ -137,17 +150,47 @@ public class TourGuideService : ITourGuideService
     {
         try
         {
-            var existingTourGuide = await _unitOfWork.TourGuideRepository.ActiveEntities
+            var existingTourGuides = await _unitOfWork.TourGuideRepository.ActiveEntities
                 .Include(tg => tg.User)
                 .ToListAsync(cancellationToken);
-            if (existingTourGuide == null || existingTourGuide.Count == 0)
+
+            if (existingTourGuides == null || !existingTourGuides.Any())
             {
                 return new List<TourGuideDataModel>();
             }
 
-            var dataModel = _mapper.Map<List<TourGuideDataModel>>(existingTourGuide);
+            var tourGuideIds = existingTourGuides.Select(tg => tg.Id).ToList();
 
-            return dataModel;
+            var allReviews = await _unitOfWork.ReviewRepository.ActiveEntities
+                .Include(r => r.Booking)
+                .Where(r => r.Booking.TourGuideId.HasValue && tourGuideIds.Contains(r.Booking.TourGuideId.Value))
+                .ToListAsync(cancellationToken);
+
+            var result = new List<TourGuideDataModel>();
+
+            foreach (var tg in existingTourGuides)
+            {
+                var reviewsForGuide = allReviews.Where(r => r.Booking.TourGuideId == tg.Id).ToList();
+
+                var model = new TourGuideDataModel
+                {
+                    Id = tg.Id,
+                    Email = tg.User.Email,
+                    UserName = tg.User.FullName,
+                    Sex = tg.User.Sex,
+                    Address = tg.User.Address,
+                    // AverageRating = tg.Rating,
+                    Price = tg.Price,
+                    Introduction = tg.Introduction,
+                    AvatarUrl = tg.User.AvatarUrl,
+                    TotalReviews = reviewsForGuide.Count,
+                    AverageRating = reviewsForGuide.Any() ? reviewsForGuide.Average(r => r.Rating) : 0.0
+                };
+
+                result.Add(model);
+            }
+
+            return result;
         }
         catch (CustomException)
         {
@@ -157,26 +200,22 @@ public class TourGuideService : ITourGuideService
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
-        finally
-        {
-            ////  _unitOfWork.Dispose();
-        }
     }
 
     public async Task<List<TourGuideDataModel>> GetTourGuidesByFilterAsync(TourGuideFilterRequest request, CancellationToken cancellationToken)
     {
         try
         {
-            var existingTourGuide = await _unitOfWork.TourGuideRepository.ActiveEntities
+            var existingTourGuides = await _unitOfWork.TourGuideRepository.ActiveEntities
                 .Include(tg => tg.User)
                 .Include(tg => tg.TourGuideSchedules)
                 .ToListAsync(cancellationToken);
-            if (existingTourGuide == null || existingTourGuide.Count() == 0)
+            if (existingTourGuides == null || existingTourGuides.Count() == 0)
             {
                 return new List<TourGuideDataModel>();
             }
 
-            existingTourGuide = existingTourGuide
+            existingTourGuides = existingTourGuides
                 .Where(tg => string.IsNullOrEmpty(request.FullName) || tg.User.FullName.ToLower().Contains(request.FullName.ToLower()))
                 .Where(tg => !request.MinRating.HasValue || tg.Rating >= request.MinRating.Value)
                 .Where(tg => !request.MaxRating.HasValue || tg.Rating <= request.MaxRating.Value)
@@ -187,7 +226,36 @@ public class TourGuideService : ITourGuideService
                      !tg.TourGuideSchedules.Any(s => s.Date >= request.StartDate.Value && s.Date <= request.EndDate.Value))
                 .ToList();
 
-            var result = _mapper.Map<List<TourGuideDataModel>>(existingTourGuide);
+            var tourGuideIds = existingTourGuides.Select(tg => tg.Id).ToList();
+
+            var allReviews = await _unitOfWork.ReviewRepository.ActiveEntities
+                .Include(r => r.Booking)
+                .Where(r => r.Booking.TourGuideId.HasValue && tourGuideIds.Contains(r.Booking.TourGuideId.Value))
+                .ToListAsync(cancellationToken);
+
+            var result = new List<TourGuideDataModel>();
+
+            foreach (var tg in existingTourGuides)
+            {
+                var reviewsForGuide = allReviews.Where(r => r.Booking.TourGuideId == tg.Id).ToList();
+
+                var guideModel = new TourGuideDataModel
+                {
+                    Id = tg.Id,
+                    Email = tg.User.Email,
+                    UserName = tg.User.FullName,
+                    Sex = tg.User.Sex,
+                    Address = tg.User.Address,
+                    // AverageRating = tg.Rating,
+                    Price = tg.Price,
+                    Introduction = tg.Introduction,
+                    AvatarUrl = tg.User.AvatarUrl,
+                    TotalReviews = reviewsForGuide.Count,
+                    AverageRating = reviewsForGuide.Any() ? Math.Round(reviewsForGuide.Average(r => r.Rating), 2) : 0.0
+                };
+
+                result.Add(guideModel);
+            }
 
             return result;
         }
@@ -251,13 +319,14 @@ public class TourGuideService : ITourGuideService
         }
     }
 
-    public async Task<TourGuideDataModel?> GetTourGuideByIdAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<TourGuideDetailResponse?> GetTourGuideByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
             var tourGuide = await _unitOfWork.TourGuideRepository.ActiveEntities
                 .Include(tg => tg.User)
+                .Include(tg => tg.Bookings)
                 .FirstOrDefaultAsync(tg => tg.Id == id, cancellationToken);
 
             if (tourGuide == null)
@@ -265,10 +334,51 @@ public class TourGuideService : ITourGuideService
                 return null;
             }
 
-            var tourGuideDetailResponse = _mapper.Map<TourGuideDataModel>(tourGuide);
+            var reviews = await _unitOfWork.ReviewRepository.ActiveEntities
+                .Include(r => r.User)
+                .Where(r => r.Booking.TourGuideId == id)
+                .ToListAsync();
+
+            double averageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0.0;
+
+            var rating = new RatingDetailsDto
+            {
+                AverageRating = Math.Round(averageRating, 2),
+                TotalReviews = reviews.Count,
+                Reviews = reviews.Select(r => new ReviewResponseDto
+                {
+                    Id = r.Id,
+                    UserId = r.UserId,
+                    UserName = r.User?.FullName ?? string.Empty,
+                    BookingId = r.BookingId,
+                    TourId = r.Booking.TourId,
+                    WorkshopId = r.Booking.WorkshopId,
+                    TourGuideId = r.Booking.TourGuideId,
+                    Comment = r.Comment,
+                    Rating = r.Rating,
+                    CreatedAt = r.CreatedTime,
+                    UpdatedAt = r.LastUpdatedTime
+                }).ToList()
+            };
+
+            var tourGuideDetail = new TourGuideDetailResponse
+            {
+                Id = tourGuide.Id,
+                Email = tourGuide.User.Email,
+                UserName = tourGuide.User.FullName,
+                Sex = tourGuide.User.Sex,
+                Address = tourGuide.User.Address,
+                Rating = tourGuide.Rating,
+                Price = tourGuide.Price,
+                Introduction = tourGuide.Introduction,
+                AvatarUrl = tourGuide.User.AvatarUrl,
+                Reviews = rating.Reviews,
+                TotalReviews = rating.TotalReviews,
+                AverageRating = rating.AverageRating,
+            };
 
             await transaction.CommitAsync(cancellationToken);
-            return tourGuideDetailResponse;
+            return tourGuideDetail;
         }
         catch (CustomException)
         {
@@ -302,8 +412,8 @@ public class TourGuideService : ITourGuideService
                 ?? throw CustomExceptionFactory.CreateForbiddenError();
 
             tourGuide.Introduction = tourGuideUpdateModel.Introduction;
-            tourGuide.Languages = tourGuideUpdateModel.Languages;
-            tourGuide.Tags = tourGuideUpdateModel.Tags;
+            // tourGuide.Languages = tourGuideUpdateModel.Languages;
+            // tourGuide.Tags = tourGuideUpdateModel.Tags;
 
             await _unitOfWork.UserRepository.UpdateAsync(user);
             _unitOfWork.TourGuideRepository.Update(tourGuide);
@@ -321,6 +431,607 @@ public class TourGuideService : ITourGuideService
         catch (Exception ex)
         {
             await _unitOfWork.RollBackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<BookingPriceRequestResponseDto> CreateBookingPriceRequestAsync(BookingPriceRequestCreateDto dto)
+    {
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentUserIdGuid = Guid.Parse(_userContextService.GetCurrentUserId());
+            var currentTime = _timeService.SystemTimeNow;
+
+            var isTourGuide = _userContextService.HasRole(AppRole.TOUR_GUIDE);
+            if (!isTourGuide)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
+            var tourGuide = await _unitOfWork.TourGuideRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(t => t.UserId == currentUserIdGuid)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Tour Guide");
+
+            // còn yêu cầu đang pending
+            var existingPendingRequest = await _unitOfWork.BookingPriceRequestRepository
+                .ActiveEntities
+                .AnyAsync(r => r.TourGuideId == tourGuide.Id && r.Status == BookingPriceRequestStatus.Pending);
+            if (existingPendingRequest)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Bạn đã có một yêu cầu giá đang chờ duyệt. Vui lòng chờ hoặc liên hệ Moderator.");
+            }
+
+            if (dto.Price < 10000)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Giá phải lớn hơn hoặc bằng 10000.");
+            }
+
+            var request = new BookingPriceRequest
+            {
+                Id = Guid.NewGuid(),
+                TourGuideId = tourGuide.Id,
+                Price = dto.Price,
+                Status = BookingPriceRequestStatus.Pending,
+            };
+
+            await _unitOfWork.BookingPriceRequestRepository.AddAsync(request);
+            await _unitOfWork.SaveAsync();
+
+            // Gửi email thông báo cho Moderator
+            var moderators = await _unitOfWork.UserRepository.GetUsersByRoleAsync(AppRole.MODERATOR);
+            foreach (var moderator in moderators)
+            {
+                await _emailService.SendEmailAsync(
+                   new[] { moderator.Email },
+                    "Có người dùng cần đăng ký role",
+                    "Có người dùng cần đăng ký role"
+                );
+            }
+
+            var response = new BookingPriceRequestResponseDto
+            {
+                TourGuideId = request.TourGuideId,
+                Price = request.Price,
+                Status = request.Status,
+                StatusText = _enumService.GetEnumDisplayName<BookingPriceRequestStatus>(request.Status),
+                RejectionReason = request.RejectionReason,
+                ReviewedAt = request.ReviewedAt,
+                ReviewedBy = request.ReviewedBy
+            };
+
+            return response;
+        }
+        catch (CustomException)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<BookingPriceRequestResponseDto> ApproveBookingPriceRequestAsync(Guid requestId)
+    {
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+            var currentTime = _timeService.SystemTimeNow;
+
+            var isModerator = _userContextService.HasRole(AppRole.MODERATOR);
+            if (!isModerator)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
+            var request = await _unitOfWork.BookingPriceRequestRepository
+                .ActiveEntities
+                .Include(r => r.TourGuide)
+                    .ThenInclude(t => t.User)
+                .FirstOrDefaultAsync(r => r.Id == requestId)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Yêu cầu giá không tồn tại.");
+
+            if (request.Status != BookingPriceRequestStatus.Pending)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Yêu cầu giá đã được xử lý.");
+            }
+
+            request.Status = BookingPriceRequestStatus.Approved;
+            request.ReviewedBy = currentUserId;
+            request.ReviewedAt = currentTime;
+
+            var tourGuide = await _unitOfWork.TourGuideRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(t => t.Id == request.TourGuideId)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Tour Guide");
+
+            tourGuide.Price = request.Price;
+
+            await _unitOfWork.SaveAsync();
+            await _emailService.SendEmailAsync(
+                new[] { tourGuide.User.Email },
+                $"Giá booking của bạn đã được duyệt",
+                $"Giá {request.Price} đã được duyệt và sẽ hiển thị cho khách hàng."
+            );
+
+            var response = new BookingPriceRequestResponseDto
+            {
+                TourGuideId = request.TourGuideId,
+                Price = request.Price,
+                Status = request.Status,
+                StatusText = _enumService.GetEnumDisplayName<BookingPriceRequestStatus>(request.Status),
+                RejectionReason = request.RejectionReason,
+                ReviewedAt = request.ReviewedAt,
+                ReviewedBy = request.ReviewedBy
+            };
+
+            return response;
+        }
+        catch (CustomException)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<BookingPriceRequestResponseDto> RejectBookingPriceRequestAsync(Guid requestId, RejectBookingPriceRequestDto dto)
+    {
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+            var currentTime = _timeService.SystemTimeNow;
+
+            var isModerator = _userContextService.HasRole(AppRole.MODERATOR);
+            if (!isModerator)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
+            var request = await _unitOfWork.BookingPriceRequestRepository
+                .ActiveEntities
+                .Include(r => r.TourGuide)
+                .ThenInclude(t => t.User)
+                .FirstOrDefaultAsync(r => r.Id == requestId)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Yêu cầu giá không tồn tại.");
+
+            if (request.Status != BookingPriceRequestStatus.Pending)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Yêu cầu giá đã được xử lý.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Reason))
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Lý do từ chối không được để trống.");
+            }
+
+            request.Status = BookingPriceRequestStatus.Rejected;
+            request.ReviewedBy = currentUserId;
+            request.ReviewedAt = currentTime;
+            request.RejectionReason = dto.Reason;
+
+            await _unitOfWork.SaveAsync();
+
+            // Gửi email thông báo cho Tour Guide
+            await _emailService.SendEmailAsync(
+                new[] { request.TourGuide.User.Email },
+                $"Giá booking của bạn đã bị từ chối",
+                $"Giá {request.Price} đã bị từ chối. Lý do: {request.RejectionReason}. Vui lòng chỉnh sửa và gửi lại."
+            );
+
+            var response = new BookingPriceRequestResponseDto
+            {
+                TourGuideId = request.TourGuideId,
+                Price = request.Price,
+                Status = request.Status,
+                StatusText = _enumService.GetEnumDisplayName<BookingPriceRequestStatus>(request.Status),
+                RejectionReason = request.RejectionReason,
+                ReviewedAt = request.ReviewedAt,
+                ReviewedBy = request.ReviewedBy
+            };
+
+            return response;
+        }
+        catch (CustomException)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<RejectionRequestResponseDto> CreateRejectionRequestAsync(RejectionRequestCreateDto dto)
+    {
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+            var currentTime = _timeService.SystemTimeNow;
+
+            var isTourGuide = _userContextService.HasRole(AppRole.TOUR_GUIDE);
+            if (!isTourGuide)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
+            var tourGuide = await _unitOfWork.TourGuideRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(t => t.UserId == currentUserId)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Tour Guide");
+
+            // kiểm tra xem có yêu cầu trước đó chưa duyệt
+            var existingPendingRequest = await _unitOfWork.RejectionRequestRepository
+                .ActiveEntities
+                .AnyAsync(r => r.TourGuideId == tourGuide.Id &&
+                    r.Status == RejectionRequestStatus.Pending &&
+                    ((dto.RequestType == RejectionRequestType.TourSchedule && r.TourScheduleId == dto.TourScheduleId) ||
+                    (dto.RequestType == RejectionRequestType.Booking && r.BookingId == dto.BookingId)));
+            if (existingPendingRequest)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Bạn đã có một yêu cầu từ chối đang chờ duyệt cho mục này.");
+            }
+
+            // Kiểm tra input
+            if (string.IsNullOrWhiteSpace(dto.Reason))
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Lý do từ chối không được để trống.");
+            }
+
+            if (dto.RequestType == RejectionRequestType.TourSchedule)
+            {
+                var scheduleExists = await _unitOfWork.TourGuideScheduleRepository
+                    .ActiveEntities
+                    .AnyAsync(s => s.TourScheduleId == dto.TourScheduleId && s.TourGuideId == tourGuide.Id);
+
+                if (!scheduleExists)
+                    throw CustomExceptionFactory.CreateNotFoundError("Tour Schedule không tồn tại hoặc không thuộc về bạn.");
+            }
+            else if (dto.RequestType == RejectionRequestType.Booking)
+            {
+                var booking = await _unitOfWork.BookingRepository
+                    .ActiveEntities
+                    .FirstOrDefaultAsync(b => b.Id == dto.BookingId && b.TourGuideId == tourGuide.Id)
+                    ?? throw CustomExceptionFactory.CreateNotFoundError("Booking không tồn tại hoặc không thuộc về bạn.");
+            }
+            else
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Loại yêu cầu không hợp lệ.");
+            }
+
+            var request = new RejectionRequest
+            {
+                Id = Guid.NewGuid(),
+                TourGuideId = tourGuide.Id,
+                RequestType = dto.RequestType,
+                TourScheduleId = dto.RequestType == RejectionRequestType.TourSchedule ? dto.TourScheduleId : null,
+                BookingId = dto.RequestType == RejectionRequestType.Booking ? dto.BookingId : null,
+                Reason = dto.Reason,
+                Status = RejectionRequestStatus.Pending,
+                CreatedTime = currentTime
+            };
+
+            await _unitOfWork.RejectionRequestRepository.AddAsync(request);
+            await _unitOfWork.SaveAsync();
+
+            // Gửi email thông báo cho Moderator
+            var moderators = await _unitOfWork.UserRepository.GetUsersByRoleAsync(AppRole.MODERATOR);
+            foreach (var moderator in moderators)
+            {
+                await _emailService.SendEmailAsync(
+                    new[] { moderator.Email },
+                    $"Yêu cầu từ chối {dto.RequestType} từ Tour Guide {tourGuide.User.FullName}",
+                    $"Tour Guide {tourGuide.User.FullName} muốn từ chối {dto.RequestType} (ID: {(dto.RequestType == RejectionRequestType.TourSchedule ? dto.TourScheduleId : dto.BookingId)}). Lý do: {dto.Reason}. Xem chi tiết tại /admin/rejection-requests/{request.Id}"
+                );
+            }
+
+            var response = new RejectionRequestResponseDto
+            {
+                TourGuideId = request.TourGuideId,
+                RequestType = request.RequestType,
+                TourScheduleId = request.TourScheduleId,
+                BookingId = request.BookingId,
+                Reason = request.Reason,
+                Status = request.Status,
+                StatusText = _enumService.GetEnumDisplayName<BookingPriceRequestStatus>(request.Status),
+                ModeratorComment = request.ModeratorComment,
+                ReviewedAt = request.ReviewedAt,
+                ReviewedBy = request.ReviewedBy
+            };
+
+            return response;
+        }
+        catch (CustomException)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<RejectionRequestResponseDto> ApproveRejectionRequestAsync(Guid requestId, Guid newTourGuideId)
+    {
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+            var currentTime = _timeService.SystemTimeNow;
+
+            var isModerator = _userContextService.HasRole(AppRole.MODERATOR);
+            if (!isModerator)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
+            var request = await _unitOfWork.RejectionRequestRepository
+                .ActiveEntities
+                .Include(r => r.TourGuide)
+                .ThenInclude(t => t.User)
+                .Include(r => r.TourSchedule)
+                .Include(r => r.Booking)
+                .ThenInclude(b => b != null ? b.User : null)
+                .FirstOrDefaultAsync(r => r.Id == requestId)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Yêu cầu từ chối không tồn tại.");
+
+            if (request.Status != RejectionRequestStatus.Pending)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Yêu cầu từ chối đã được xử lý.");
+            }
+
+            request.Status = RejectionRequestStatus.Approved;
+            request.ReviewedBy = currentUserId;
+            request.ReviewedAt = currentTime;
+
+            if (request.RequestType == RejectionRequestType.TourSchedule && request.TourSchedule != null)
+            {
+                var guideSchedules = await _unitOfWork.TourGuideScheduleRepository
+                    .ActiveEntities
+                    .Where(x => x.TourScheduleId == request.TourSchedule.Id)
+                    .ToListAsync();
+
+                foreach (var guideSchedule in guideSchedules)
+                {
+                    guideSchedule.IsDeleted = true;
+                    guideSchedule.DeletedBy = currentUserId.ToString();
+                    guideSchedule.DeletedTime = currentTime;
+                    _unitOfWork.TourGuideScheduleRepository.Update(guideSchedule);
+                }
+
+                var newTourGuide = await _unitOfWork.TourGuideRepository
+                    .ActiveEntities
+                    .FirstOrDefaultAsync(tg => tg.Id == newTourGuideId)
+                    ?? throw CustomExceptionFactory.CreateNotFoundError("Tour Guide mới");
+
+                if (newTourGuide.Id == request.TourGuideId)
+                    throw CustomExceptionFactory.CreateBadRequestError("Tour Guide mới không được trùng với người từ chối.");
+
+                bool alreadyAssigned = await _unitOfWork.TourGuideScheduleRepository
+                    .ActiveEntities
+                    .AnyAsync(s => s.TourScheduleId == request.TourSchedule.Id && s.TourGuideId == newTourGuideId);
+                if (alreadyAssigned)
+                    throw CustomExceptionFactory.CreateBadRequestError("Tour Guide mới đã có lịch này.");
+
+                var newSchedule = new TourGuideSchedule
+                {
+                    Id = Guid.NewGuid(),
+                    TourScheduleId = request.TourSchedule.Id,
+                    TourGuideId = newTourGuideId,
+                    CreatedBy = currentUserId.ToString(),
+                    CreatedTime = currentTime
+                };
+                await _unitOfWork.TourGuideScheduleRepository.AddAsync(newSchedule);
+            }
+            else if (request.RequestType == RejectionRequestType.Booking && request.Booking != null)
+            {
+                request.Booking.Status = BookingStatus.Cancelled;
+                _unitOfWork.BookingRepository.Update(request.Booking);
+
+                await _emailService.SendEmailAsync(
+                    new[] { request.Booking.User.Email },
+                    $"Booking của bạn đã bị từ chối",
+                    $"Booking (ID: {request.BookingId}) đã bị từ chối bởi Tour Guide {request.TourGuide.User.FullName}. Lý do: {request.Reason}."
+                );
+            }
+
+            await _unitOfWork.SaveAsync();
+
+            // Gửi email 
+            await _emailService.SendEmailAsync(
+                new[] { request.TourGuide.User.Email },
+                $"Yêu cầu từ chối {request.RequestType} của bạn đã được duyệt",
+                $"Yêu cầu từ chối {request.RequestType} (ID: {(request.RequestType == RejectionRequestType.TourSchedule ? request.TourScheduleId : request.BookingId)}) đã được duyệt."
+            );
+
+            var response = new RejectionRequestResponseDto
+            {
+                TourGuideId = request.TourGuideId,
+                RequestType = request.RequestType,
+                TourScheduleId = request.TourScheduleId,
+                BookingId = request.BookingId,
+                Reason = request.Reason,
+                Status = request.Status,
+                StatusText = _enumService.GetEnumDisplayName<BookingPriceRequestStatus>(request.Status),
+                ModeratorComment = request.ModeratorComment,
+                ReviewedAt = request.ReviewedAt,
+                ReviewedBy = request.ReviewedBy
+            };
+
+            return response;
+        }
+        catch (CustomException)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<RejectionRequestResponseDto> RejectRejectionRequestAsync(Guid requestId, RejectRejectionRequestDto dto)
+    {
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+            var currentTime = _timeService.SystemTimeNow;
+
+            var isModerator = _userContextService.HasRole(AppRole.MODERATOR);
+            if (!isModerator)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
+            var request = await _unitOfWork.RejectionRequestRepository
+                .ActiveEntities
+                .Include(r => r.TourGuide)
+                .ThenInclude(t => t.User)
+                .FirstOrDefaultAsync(r => r.Id == requestId)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Yêu cầu từ chối không tồn tại.");
+
+            if (request.Status != RejectionRequestStatus.Pending)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Yêu cầu từ chối đã được xử lý.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.ModeratorComment))
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Lý do từ chối không được để trống.");
+            }
+
+            request.Status = RejectionRequestStatus.Rejected;
+            request.ReviewedBy = currentUserId;
+            request.ReviewedAt = currentTime;
+            request.ModeratorComment = dto.ModeratorComment;
+
+            await _unitOfWork.SaveAsync();
+
+            // Gửi email 
+            await _emailService.SendEmailAsync(
+                new[] { request.TourGuide.User.Email },
+                $"Yêu cầu từ chối {request.RequestType} của bạn đã bị từ chối",
+                $"Yêu cầu từ chối {request.RequestType} (ID: {(request.RequestType == RejectionRequestType.TourSchedule ? request.TourScheduleId : request.BookingId)}) đã bị từ chối. Lý do: {request.ModeratorComment}."
+            );
+
+            var response = new RejectionRequestResponseDto
+            {
+                TourGuideId = request.TourGuideId,
+                RequestType = request.RequestType,
+                TourScheduleId = request.TourScheduleId,
+                BookingId = request.BookingId,
+                Reason = request.Reason,
+                Status = request.Status,
+                StatusText = _enumService.GetEnumDisplayName<BookingPriceRequestStatus>(request.Status),
+                ModeratorComment = request.ModeratorComment,
+                ReviewedAt = request.ReviewedAt,
+                ReviewedBy = request.ReviewedBy
+            };
+
+            return response;
+        }
+        catch (CustomException)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollBackAsync();
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<TourGuideScheduleResponseDto>> GetSchedulesAsync(TourGuideScheduleFilterDto filter)
+    {
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            var isTourGuide = _userContextService.HasRole(AppRole.TOUR_GUIDE);
+            if (!isTourGuide)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
+            var tourGuide = await _unitOfWork.TourGuideRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(t => t.UserId == currentUserId)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Tour Guide");
+
+            IQueryable<TourGuideSchedule> query = _unitOfWork.TourGuideScheduleRepository
+                .ActiveEntities
+                .Where(s => s.TourGuideId == tourGuide.Id)
+                .Include(s => s.TourSchedule)
+                    .ThenInclude(ts => ts.Tour)
+                .Include(s => s.Booking)
+                    .ThenInclude(b => b.User);
+
+            if (filter.FilterType == ScheduleFilterType.TourSchedule)
+            {
+                query = query.Where(s => s.TourScheduleId != null);
+            }
+            else if (filter.FilterType == ScheduleFilterType.Booking)
+            {
+                query = query.Where(s => s.BookingId != null);
+            }
+
+            if (filter.StartDate.HasValue && filter.EndDate.HasValue)
+            {
+                if (filter.StartDate > filter.EndDate)
+                {
+                    throw CustomExceptionFactory.CreateBadRequestError("Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.");
+                }
+                query = query.Where(s => s.Date >= filter.StartDate.Value && s.Date <= filter.EndDate.Value);
+            }
+            else if (filter.StartDate.HasValue)
+            {
+                query = query.Where(s => s.Date >= filter.StartDate.Value);
+            }
+            else if (filter.EndDate.HasValue)
+            {
+                query = query.Where(s => s.Date <= filter.EndDate.Value);
+            }
+
+            var schedules = await query
+                .OrderBy(s => s.Date)
+                .ToListAsync();
+
+            var result = schedules.Select(s => new TourGuideScheduleResponseDto
+            {
+                Id = s.Id,
+                TourGuideId = s.TourGuideId,
+                TourScheduleId = s.TourScheduleId,
+                BookingId = s.BookingId,
+                Date = s.Date,
+                Note = s.Note,
+                TourName = s.TourSchedule != null ? s.TourSchedule.Tour?.Name : null,
+                CustomerName = s.Booking != null ? s.Booking.User?.FullName : null,
+                Price = s.TourSchedule != null ? s.TourSchedule.AdultPrice : (s.Booking != null ? s.Booking.FinalPrice : null),
+                ScheduleType = s.TourScheduleId != null ? "TourSchedule" : (s.BookingId != null ? "Booking" : "Unknown")
+            }).ToList();
+
+            return result;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }

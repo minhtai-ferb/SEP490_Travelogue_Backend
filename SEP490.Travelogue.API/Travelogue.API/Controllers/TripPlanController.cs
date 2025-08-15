@@ -54,15 +54,15 @@ public class TripPlansController : ControllerBase
     /// <param name="id"></param>
     /// <param name="model"></param>
     /// <returns></returns>
-    [HttpPut("old-update/{id}")]
-    public async Task<IActionResult> OldUpdateTripPlan(Guid id, [FromBody] TripPlanUpdateModel model)
-    {
-        await _tripPlanService.UpdateTripPlanAsync(id, model, new CancellationToken());
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: true,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "news")
-        ));
-    }
+    // [HttpPut("old-update/{id}")]
+    // public async Task<IActionResult> OldUpdateTripPlan(Guid id, [FromBody] TripPlanUpdateModel model)
+    // {
+    //     await _tripPlanService.UpdateTripPlanAsync(id, model, new CancellationToken());
+    //     return Ok(ResponseModel<object>.OkResponseModel(
+    //         data: true,
+    //         message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "news")
+    //     ));
+    // }
 
     [HttpPut("trip-plan-location/{id}")]
     public async Task<IActionResult> UpdateTripPlan(Guid id, [FromBody] List<UpdateTripPlanLocationDto> model)

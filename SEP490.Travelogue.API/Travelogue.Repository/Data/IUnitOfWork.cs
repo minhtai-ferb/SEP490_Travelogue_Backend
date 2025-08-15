@@ -31,12 +31,24 @@ public interface IUnitOfWork //: IDisposable
     IWorkshopRepository WorkshopRepository { get; }
     IWorkshopActivityRepository WorkshopActivityRepository { get; }
     IWorkshopScheduleRepository WorkshopScheduleRepository { get; }
-    ITourGuideMappingRepository TourGuideMappingRepository { get; }
     ITourGuideRequestRepository TourGuideRequestRepository { get; }
     ICraftVillageRequestRepository CraftVillageRequestRepository { get; }
     IWorkshopMediaRepository WorkshopMediaRepository { get; }
     ITourMediaRepository TourMediaRepository { get; }
     ICertificationRepository CertificationRepository { get; }
+    IPromotionRepository PromotionRepository { get; }
+    ITransactionEntryRepository TransactionEntryRepository { get; }
+    IBookingPriceRequestRepository BookingPriceRequestRepository { get; }
+    IRejectionRequestRepository RejectionRequestRepository { get; }
+    IReviewRepository ReviewRepository { get; }
+    IPromotionApplicableRepository PromotionApplicableRepository { get; }
+    IAnnouncementRepository AnnouncementRepository { get; }
+    IReportRepository ReportRepository { get; }
+    IWalletRepository WalletRepository { get; }
+    IWithdrawalRequestRepository WithdrawalRequestRepository { get; }
+    IBankAccountRepository BankAccountRepository { get; }
+    ISystemSettingRepository SystemSettingRepository { get; }
+    IRefundRequestRepository RefundRequestRepository { get; }
 
     IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity;
     void Save();

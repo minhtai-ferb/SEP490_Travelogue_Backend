@@ -100,6 +100,29 @@ public class UserContextService : IUserContextService
         return user.IsInRole(role) || user.Claims.Any(c => (c.Type == ClaimTypes.Role || c.Type == "role") && c.Value.Equals(role, StringComparison.OrdinalIgnoreCase));
     }
 
+    public bool HasAnyRoleOrAnonymous(params string[] roles)
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
+        {
+            return false;
+        }
+
+        var user = httpContext.User;
+        if (user == null || user?.Identity == null || !user.Identity.IsAuthenticated)
+        {
+            return false; // chưa đăng nhập → không có role
+        }
+
+        return roles.Any(role =>
+            user.IsInRole(role) ||
+            user.Claims.Any(c =>
+                (c.Type == ClaimTypes.Role || c.Type == "role") &&
+                c.Value.Equals(role, StringComparison.OrdinalIgnoreCase)
+            )
+        );
+    }
+
     public bool HasAnyRole(params string[] roles)
     {
         var httpContext = _httpContextAccessor.HttpContext;
@@ -114,13 +137,12 @@ public class UserContextService : IUserContextService
             throw new CustomException(StatusCodes.Status401Unauthorized, ResponseCodeConstants.UNAUTHORIZED, ResponseMessages.LOGIN_REQUIRED);
         }
 
-        return roles.Any(role =>
-            user.IsInRole(role) ||
-            user.Claims.Any(c =>
-                (c.Type == ClaimTypes.Role || c.Type == "role") &&
-                c.Value.Equals(role, StringComparison.OrdinalIgnoreCase)
-            )
-        );
+        var userRoles = user.Claims
+            .Where(c => c.Type == ClaimTypes.Role || c.Type == "role")
+            .Select(c => c.Value)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return roles.Any(r => userRoles.Contains(r));
     }
 
     public bool IsAuthenticated()

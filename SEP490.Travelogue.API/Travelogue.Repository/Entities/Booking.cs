@@ -11,6 +11,8 @@ public sealed class Booking : BaseEntity
     public Guid? TourId { get; set; }
     public Guid? TourScheduleId { get; set; }
     public Guid? TourGuideId { get; set; }
+    public Guid? TripPlanId { get; set; }
+    public Guid? WorkshopScheduleId { get; set; }
     public Guid? WorkshopId { get; set; }
     public string? PaymentLinkId { get; set; }
 
@@ -19,7 +21,7 @@ public sealed class Booking : BaseEntity
 
     [Required]
     [EnumDataType(typeof(BookingStatus))]
-    public BookingStatus Status { get; set; }
+    public BookingStatus Status { get; set; } = BookingStatus.Pending;
 
     [Required]
     [EnumDataType(typeof(BookingType))]
@@ -27,8 +29,9 @@ public sealed class Booking : BaseEntity
 
     [Required]
     public DateTimeOffset BookingDate { get; set; }
+    public DateTimeOffset StartDate { get; set; }
+    public DateTimeOffset EndDate { get; set; }
     public DateTimeOffset? CancelledAt { get; set; }
-    public bool IsOpenToJoin { get; set; } = false;
 
     public Guid? PromotionId { get; set; }
 
@@ -46,13 +49,15 @@ public sealed class Booking : BaseEntity
 
     public User? User { get; set; }
     public Tour? Tour { get; set; }
+    public TourSchedule? TourSchedule { get; set; }
     public TourGuide? TourGuide { get; set; }
     public Workshop? Workshop { get; set; }
+    public WorkshopSchedule? WorkshopSchedule { get; set; }
     public TripPlan? TripPlan { get; set; }
-    public TourSchedule? TourSchedule { get; set; }
 
     [ForeignKey("PromotionId")]
     public Promotion? Promotion { get; set; }
-    public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+    public ICollection<TransactionEntry> Transactions { get; set; } = new List<TransactionEntry>();
+    public ICollection<Review> Reviews { get; set; } = new List<Review>();
     public ICollection<BookingParticipant> Participants { get; set; } = new List<BookingParticipant>();
 }

@@ -13,7 +13,7 @@ public sealed class TourGuideRequest : BaseEntity
     [Required]
     public required string Introduction { get; set; }
 
-    [Range(0, double.MaxValue)]
+    [Range(10000, double.MaxValue)]
     public decimal Price { get; set; }
     public TourGuideRequestStatus Status { get; set; }
 

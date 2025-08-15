@@ -7,19 +7,23 @@ namespace Travelogue.Service.Services;
 public interface IEnumService
 {
     List<EnumResponse> GetEnumValues<T>() where T : Enum;
-    string GetEnumDisplayName<T>(T enumValue) where T : Enum;
+    string? GetEnumDisplayName<T>(object? enumValue) where T : Enum;
 }
 
 public class EnumService : IEnumService
 {
-    public string GetEnumDisplayName<T>(T enumValue) where T : Enum
+    public string? GetEnumDisplayName<T>(object? enumValue) where T : Enum
     {
-        return enumValue.GetType()
-                   .GetMember(enumValue.ToString())
-                   .First()
-                   .GetCustomAttribute<DisplayAttribute>()?
-                   .Name ?? enumValue.ToString();
+        if (enumValue == null) return null;
+
+        if (!Enum.IsDefined(typeof(T), enumValue))
+            return null;
+
+        var member = typeof(T).GetMember(enumValue.ToString()!);
+        var displayAttr = member[0].GetCustomAttribute<DisplayAttribute>();
+        return displayAttr?.Name ?? enumValue.ToString();
     }
+
 
     public List<EnumResponse> GetEnumValues<T>() where T : Enum
     {

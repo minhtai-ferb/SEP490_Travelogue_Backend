@@ -15,7 +15,11 @@ public class NewsDataModel : BaseDataModel
 
     public NewsCategory NewsCategory { get; set; }
     public string? CategoryName { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
     public bool IsHighlighted { get; set; }
+    public TypeExperience? TypeExperience { get; set; }
+    public string? TypeExperienceText { get; set; } = string.Empty;
 
-    public List<MediaResponse> Medias { get; set; } = new List<MediaResponse>();
+    public List<MediaResponse> Medias { get; set; } = new List<MediaResponse>(); 
 }

@@ -4,6 +4,7 @@ using System.Text;
 using AutoMapper;
 using FirebaseAdmin.Auth;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Travelogue.Repository.Bases.Exceptions;
@@ -21,7 +22,7 @@ namespace Travelogue.Service.Services;
 
 public interface IAuthService
 {
-    Task<GetCurrentUserResponse> GetCurrentUser();
+    Task<UserResponseModel> GetCurrentUser();
     Task<GetCurrentUserResponse> GetUserByEmailAsync(string email, CancellationToken cancellationToken);
     Task<LoginResponse> RegisterAsync(RegisterModel userRequestModel);
     Task<bool> RegisterWithRoleAsync(RegisterModelWithRole userRequestModel);
@@ -95,15 +96,30 @@ public class AuthService : IAuthService
         this._httpContextAccessor = httpContextAccessor;
     }
 
-    public async Task<GetCurrentUserResponse> GetCurrentUser()
+    public async Task<UserResponseModel> GetCurrentUser()
     {
         try
         {
-            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
 
-            //Guid? currentUserIdLong = string.IsNullOrEmpty(currentUserId) ? null : Convert.ToInt64(currentUserId);
-            var currentUser = await _unitOfWork.UserRepository.GetByIdAsync(Guid.Parse(currentUserId!), new CancellationToken());
-            return _mapper.Map<GetCurrentUserResponse>(currentUser);
+            var existingUser = await _unitOfWork.UserRepository
+                .ActiveEntities
+                .Where(u => u.Id == currentUserId)
+                .FirstOrDefaultAsync()
+                ?? throw new CustomException(StatusCodes.Status204NoContent, ResponseCodeConstants.NOT_FOUND, ResponseMessages.NOT_FOUND);
+            var user = _mapper.Map<UserResponseModel>(existingUser);
+
+            var roles = await _unitOfWork.UserRepository.GetRolesAsync(existingUser);
+            if (roles == null)
+            {
+                throw new CustomException(StatusCodes.Status403Forbidden, ResponseCodeConstants.UNAUTHORIZED, "Nguời dùng chưa được cấp quyền");
+            }
+
+            var roleNames = roles.Select(r => r.Name).ToList();
+
+            user.Roles = roleNames;
+            user.UserWalletAmount = existingUser.Wallet?.Balance ?? 0.00m;
+            return user;
         }
         catch (CustomException)
         {
@@ -157,15 +173,15 @@ public class AuthService : IAuthService
             newUser.IsDeleted = false;
 
             // tạo user
-            User? resultCreateUser = await _unitOfWork.UserRepository.CreateUser(newUser, model.Password);
-            if (resultCreateUser == null)
+            User? createdUser = await _unitOfWork.UserRepository.CreateUser(newUser, model.Password);
+            if (createdUser == null)
             {
                 throw CustomExceptionFactory.CreateInternalServerError("Tạo người dùng thất bại");
             }
 
-            resultCreateUser.CreatedBy = resultCreateUser.Id.ToString();
-            resultCreateUser.LastUpdatedBy = resultCreateUser.Id.ToString();
-            await _unitOfWork.UserRepository.UpdateAsync(resultCreateUser);
+            createdUser.CreatedBy = createdUser.Id.ToString();
+            createdUser.LastUpdatedBy = createdUser.Id.ToString();
+            await _unitOfWork.UserRepository.UpdateAsync(createdUser);
 
             // Thêm user vào role
             bool resultAddRole = await _unitOfWork.UserRepository.AddToRoleAsync(newUser, userRole.Id);
@@ -173,6 +189,15 @@ public class AuthService : IAuthService
             {
                 throw CustomExceptionFactory.CreateInternalServerError("Thêm role cho người dùng thất bại");
             }
+
+            var wallet = new Wallet
+            {
+                UserId = createdUser.Id,
+                Balance = 0m,
+                CreatedBy = createdUser.Id.ToString(),
+                LastUpdatedBy = createdUser.Id.ToString()
+            };
+            await _unitOfWork.WalletRepository.AddAsync(wallet);
 
             // Đăng ký tài khoản với Firebase
             var userRecordArgs = new UserRecordArgs()
@@ -261,7 +286,6 @@ public class AuthService : IAuthService
 
     public async Task<bool> ResendEmailVerificationAsync(string email, CancellationToken cancellationToken)
     {
-
         try
         {
             var user = await _unitOfWork.UserRepository.GetUserByEmailAsync(email) ??
@@ -271,6 +295,7 @@ public class AuthService : IAuthService
             var actionCodeSettings = new ActionCodeSettings()
             {
                 //Url = $"{domainBackend}/api/auth/verify-email?email={model.Email}",
+                // Url = $"http://localhost:5070/api/auth/verify-email?token={user.VerificationToken}",
                 Url = $"{domainFrontend}/auth/verify/{user.VerificationToken}",
                 HandleCodeInApp = false
             };
@@ -284,11 +309,17 @@ public class AuthService : IAuthService
             };
 
             // Gửi email xác thực
-            await _emailService.SendEmailWithTemplateAsync(
-                selectedEmail,
-                "Xác minh đăng ký Goyoung Tây Ninh",
-                MailTemplateLinks.VerifyAccountMailTemplate,
-                mailModel);
+            // await _emailService.SendEmailWithTemplateAsync(
+            //     selectedEmail,
+            //     "Xác minh đăng ký Travelogue",
+            //     MailTemplateLinks.VerifyAccountMailTemplate,
+            //     mailModel);
+
+            await _emailService.SendEmailAsync(
+                    new[] { user.Email },
+                   "Xác minh đăng ký Travelogue",
+                    $"{verificationLink}"
+                );
             return true;
         }
         catch (CustomException)
@@ -381,8 +412,7 @@ public class AuthService : IAuthService
             // Verify nguoi dung
             var actionCodeSettings = new ActionCodeSettings()
             {
-                //Url = "http://143.198.206.133:8888/api/auth/verify-email",
-                Url = "https://goyoungtayninh.netlify.app/",
+                Url = "https://travelogue.onl/",
                 HandleCodeInApp = false
             };
 
@@ -573,6 +603,7 @@ public class AuthService : IAuthService
                 VerificationToken = accessToken,
                 RefreshTokens = refreshToken,
                 UserId = user.Id,
+                AvatarUrl = user.AvatarUrl,
                 FullName = user.FullName,
                 Email = user.Email!,
                 IsEmailVerified = user.IsEmailVerified ?? false,
@@ -661,6 +692,7 @@ public class AuthService : IAuthService
                 VerificationToken = accessToken,
                 RefreshTokens = refreshToken,
                 UserId = user.Id,
+                AvatarUrl = user.AvatarUrl,
                 FullName = user.FullName,
                 Email = user.Email!,
                 IsEmailVerified = user.IsEmailVerified ?? false,
@@ -730,6 +762,7 @@ public class AuthService : IAuthService
                 RefreshTokens = newRefreshToken,
                 UserId = user.Id,
                 FullName = user.FullName,
+                AvatarUrl = user.AvatarUrl,
                 Email = user.Email!,
                 IsEmailVerified = user.IsEmailVerified ?? false,
                 Roles = roleNames
@@ -876,6 +909,7 @@ public class AuthService : IAuthService
                 RefreshTokens = refreshToken,
                 UserId = user.Id,
                 FullName = user.FullName,
+                AvatarUrl = user.AvatarUrl,
                 Email = user.Email!,
                 IsEmailVerified = user.IsEmailVerified ?? false,
                 Roles = roleNames
@@ -1032,7 +1066,8 @@ public class AuthService : IAuthService
                 FullName = user.FullName,
                 Email = user.Email!,
                 IsEmailVerified = user.IsEmailVerified ?? false,
-                Roles = roleNames
+                Roles = roleNames,
+                AvatarUrl = user.AvatarUrl
             };
         }
         catch (CustomException)

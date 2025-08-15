@@ -22,8 +22,10 @@ public class TourGuideDataModel
         }
     }
     public string? Address { get; set; }
-    public int Rating { get; set; }
+    // public double AverageRating { get; set; }
     public decimal Price { get; set; }
     public string? Introduction { get; set; }
     public string? AvatarUrl { get; set; }
+    public double AverageRating { get; set; }
+    public int TotalReviews { get; set; }
 }
