@@ -57,7 +57,7 @@ public interface IUserService
     Task<PagedResult<TourGuideRequestResponseDto>> GetMyTourGuideRequestsAsync(TourGuideRequestStatus? status, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
     Task<TourGuideRequestResponseDto> GetLatestTourGuideRequestsAsync(Guid? userId, CancellationToken cancellationToken = default);
     Task<PagedResult<CraftVillageRequestResponseDto>> GetMyCraftVillageRequestsAsync(CraftVillageRequestStatus? status, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
-    Task<CraftVillageRequestResponseDto> GetLatestTourGuideRequestsAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<CraftVillageRequestResponseDto> GetLatestCraftVillageRequestsAsync(Guid userId, CancellationToken cancellationToken = default);
 }
 
 public class UserService : IUserService
@@ -1713,7 +1713,7 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<CraftVillageRequestResponseDto> GetLatestTourGuideRequestsAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<CraftVillageRequestResponseDto> GetLatestCraftVillageRequestsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -1722,6 +1722,7 @@ public class UserService : IUserService
             .AsQueryable();
 
             var latestRequest = await query
+                .Where(x => x.OwnerId == userId)
                 .OrderByDescending(x => x.CreatedTime)
                 .FirstOrDefaultAsync(cancellationToken);
 

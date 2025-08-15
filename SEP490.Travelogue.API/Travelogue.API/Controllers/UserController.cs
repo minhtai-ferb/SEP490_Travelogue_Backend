@@ -443,7 +443,7 @@ public class UserController : ControllerBase
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        var result = await _userService.GetLatestTourGuideRequestsAsync(userId, cancellationToken);
+        var result = await _userService.GetLatestCraftVillageRequestsAsync(userId, cancellationToken);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "latest craft village request")
