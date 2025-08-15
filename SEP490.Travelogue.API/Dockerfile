@@ -16,7 +16,7 @@ COPY . .
 
 # Publish
 WORKDIR "/src/Travelogue.API"
-RUN dotnet publish -c Release -o /app/publish
+RUN dotnet publish "Travelogue.API.csproj" -c Release -o /app/publish
 
 # ----- Runtime stage -----
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
