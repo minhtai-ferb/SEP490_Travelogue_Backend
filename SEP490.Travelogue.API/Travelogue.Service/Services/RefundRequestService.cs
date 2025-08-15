@@ -56,7 +56,7 @@ public class RefundRequestService : IRefundRequestService
             if (existingRequest != null)
                 throw CustomExceptionFactory.CreateBadRequestError("Đã tồn tại yêu cầu hoàn tiền cho booking này.");
 
-            if (!(booking.Status == BookingStatus.Confirmed
+            if (!(booking.Status == BookingStatus.Cancelled
                 || booking.Status == BookingStatus.CancelledByProvider))
             {
                 throw CustomExceptionFactory.CreateBadRequestError("Booking không đủ điều kiện hoàn tiền.");
