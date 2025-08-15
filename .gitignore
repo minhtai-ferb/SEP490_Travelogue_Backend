@@ -363,4 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 
 # Ignore Firebase service account key
-Config/serviceAccountKey.json
+SEP490.Travelogue.API/Travelogue.API/Config/serviceAccountKey.json
