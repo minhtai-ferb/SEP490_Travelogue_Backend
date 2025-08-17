@@ -25,6 +25,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://*:5565
       - ConnectionStrings__DefaultConnectionMySQL=server=mysql;port=3306;user=server;password=12345;database=travelogue
+      - GOOGLE_APPLICATION_CREDENTIALS=Config/serviceAccountKey.json
     volumes:
       - ./images:/app/images
       - ./documents:/app/documents 

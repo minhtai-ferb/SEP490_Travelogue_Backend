@@ -1,9 +1,10 @@
-name: Auto Deploy to VPS
+﻿name: Auto Deploy to VPS
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   deploy:
@@ -13,10 +14,6 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v3
 
-      - name: Create file config form secrets
-        run: |
-          echo "${{ secrets.APPSETTINGS_JSON }}" > appsettings.json
-          echo "${{ secrets.FIREBASE_KEY_JSON }}" > Config/serviceAccountKey.json
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -26,9 +23,22 @@ jobs:
 
       - name: SSH to VPS and deploy
         run: |
-          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
-            cd /root/travelogue/SEP490.Travelogue.API
-            git pull origin main
-            docker compose down
-            docker compose up --build -d
-          EOF
+         ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
+          set -e
+          cd /root/travelogue/SEP490.Travelogue.API
+
+          mkdir -p Travelogue.API/Config
+
+          cat > Travelogue.API/appsettings.json << '__APP_JSON__'
+            ${{ secrets.APPSETTINGS_JSON }}
+            __APP_JSON__
+
+          cat > Travelogue.API/Config/serviceAccountKey.json << '__FIREBASE_JSON__'
+            ${{ secrets.FIREBASE_KEY_JSON }}
+            __FIREBASE_JSON__
+
+          git pull origin main
+          docker compose down
+          docker compose up --build -d
+         EOF
+
