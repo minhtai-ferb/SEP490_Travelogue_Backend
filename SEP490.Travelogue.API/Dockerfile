@@ -23,7 +23,6 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
 COPY --from=build /app/publish .
-COPY Travelogue.API/Config ./Config
 
 # Expose backend port
 EXPOSE 5565
