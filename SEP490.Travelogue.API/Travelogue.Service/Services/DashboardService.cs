@@ -5,7 +5,6 @@ using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
-using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.BookingModels;
 using Travelogue.Service.BusinessModels.DashboardModels;
@@ -35,6 +34,12 @@ public interface IDashboardService
         BookingStatus? status,
         int pageNumber,
         int pageSize);
+
+    Task<TourStatisticDto> GetTourBookingStatisticAsync(Guid tourId);
+    Task<TourStatisticDto> GetTourGuideBookingStatisticAsync(Guid tourGuideId);
+    Task<TourStatisticDto> GetWorkshopScheduleBookingStatisticAsync(Guid workshopScheduleId);
+    Task<TourStatisticDto> GetWorkshopBookingStatisticAsync(Guid workshopId);
+    Task<TourStatisticDto> GetTourScheduleBookingStatisticAsync(Guid tourScheduleId);
 }
 
 public class DashboardService : IDashboardService
@@ -535,96 +540,573 @@ public class DashboardService : IDashboardService
         }
     }
 
-    public async Task<List<BookingDataModel>> GetUserBookingsAsync(BookingFilterDto filter)
+    public async Task<TourStatisticDto> GetTourBookingStatisticAsync(Guid tourId)
     {
         try
         {
-            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+            var isAdminOrModerator = _userContextService.HasAnyRoleOrAnonymous(AppRole.ADMIN, AppRole.MODERATOR);
 
-            var isUser = _userContextService.HasRole(AppRole.USER);
-            if (!isUser)
+            if (!isAdminOrModerator)
             {
                 throw CustomExceptionFactory.CreateForbiddenError();
             }
 
-            IQueryable<Booking> query = _unitOfWork.BookingRepository
-                .ActiveEntities
-                .Where(b => b.UserId == currentUserId)
-                .Include(b => b.TourGuide)
-                    .ThenInclude(tg => tg.User)
-                .Include(b => b.Tour)
-                .Include(b => b.TourSchedule)
-                .Include(b => b.TripPlan)
-                .Include(b => b.Workshop)
-                .Include(b => b.WorkshopSchedule)
-                .Include(b => b.Promotion);
+            var query = _unitOfWork.TourRepository.ActiveEntities
+                .Include(t => t.Bookings)
+                    .ThenInclude(b => b.User)
+                .Where(t => t.Id == tourId);
 
-            // status
-            if (filter.Status.HasValue)
-            {
-                query = query.Where(b => b.Status == filter.Status.Value);
-            }
-
-            // bookng type
-            if (filter.BookingType.HasValue)
-            {
-                query = query.Where(b => b.BookingType == filter.BookingType.Value);
-            }
-
-            // ngày tháng
-            if (filter.StartDate.HasValue && filter.EndDate.HasValue)
-            {
-                if (filter.StartDate > filter.EndDate)
+            var bookingEntities = await _unitOfWork.BookingRepository.ActiveEntities
+                .Where(b => b.TourId == tourId)
+                .Select(b => new
                 {
-                    throw CustomExceptionFactory.CreateBadRequestError("Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.");
-                }
-                query = query.Where(b => b.BookingDate >= filter.StartDate.Value && b.BookingDate <= filter.EndDate.Value);
-            }
-            else if (filter.StartDate.HasValue)
-            {
-                query = query.Where(b => b.BookingDate >= filter.StartDate.Value);
-            }
-            else if (filter.EndDate.HasValue)
-            {
-                query = query.Where(b => b.BookingDate <= filter.EndDate.Value);
-            }
-
-            var bookings = await query
+                    b.Id,
+                    b.UserId,
+                    UserName = b.User != null ? b.User.FullName : string.Empty,
+                    b.TourId,
+                    TourName = b.Tour != null ? b.Tour.Name : string.Empty,
+                    b.TourScheduleId,
+                    DepartureDate = b.TourSchedule != null ? b.TourSchedule.DepartureDate : DateTime.MinValue,
+                    b.Status,
+                    b.BookingType,
+                    b.BookingDate,
+                    b.StartDate,
+                    b.EndDate,
+                    b.PaymentLinkId,
+                    b.CancelledAt,
+                    b.PromotionId,
+                    b.OriginalPrice,
+                    b.DiscountAmount,
+                    b.FinalPrice
+                })
                 .OrderBy(b => b.BookingDate)
                 .ToListAsync();
 
-            var result = bookings.Select(b => new BookingDataModel
-            {
-                Id = b.Id,
-                UserId = b.UserId,
-                UserName = b.User?.FullName ?? string.Empty,
-                TourId = b.TourId,
-                TourName = b.Tour?.Name ?? string.Empty,
-                TourScheduleId = b.TourScheduleId,
-                DepartureDate = b.TourSchedule?.DepartureDate,
-                TourGuideId = b.TourGuideId,
-                TourGuideName = b.TourGuide?.User?.FullName ?? string.Empty,
-                TripPlanId = b.TripPlanId,
-                TripPlanName = b.TripPlan?.Name ?? string.Empty,
-                WorkshopId = b.WorkshopId,
-                WorkshopName = b.Workshop?.Name ?? string.Empty,
-                WorkshopScheduleId = b.WorkshopScheduleId,
-                PaymentLinkId = b.PaymentLinkId,
-                Status = b.Status,
-                StatusText = _enumService.GetEnumDisplayName<BookingStatus>(b.Status),
-                BookingType = b.BookingType,
-                BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(b.BookingType),
-                BookingDate = b.BookingDate,
-                StartDate = b.StartDate,
-                EndDate = b.EndDate,
-                CancelledAt = b.CancelledAt,
-                PromotionId = b.PromotionId,
-                OriginalPrice = b.OriginalPrice,
-                DiscountAmount = b.DiscountAmount,
-                FinalPrice = b.FinalPrice
-            }).ToList();
+            var bookings = bookingEntities
+                .Select(b => new BookingDataModel
+                {
+                    Id = b.Id,
+                    UserId = b.UserId,
+                    UserName = b.UserName,
+                    TourId = b.TourId,
+                    TourName = b.TourName,
+                    TourScheduleId = b.TourScheduleId,
+                    DepartureDate = b.DepartureDate,
+                    Status = b.Status,
+                    StatusText = _enumService.GetEnumDisplayName<BookingStatus>(b.Status),
+                    BookingType = b.BookingType,
+                    BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(b.BookingType),
+                    BookingDate = b.BookingDate,
+                    StartDate = b.StartDate,
+                    EndDate = b.EndDate,
+                    PaymentLinkId = b.PaymentLinkId,
+                    PromotionId = b.PromotionId,
+                    CancelledAt = b.CancelledAt,
+                    OriginalPrice = b.OriginalPrice,
+                    DiscountAmount = b.DiscountAmount,
+                    FinalPrice = b.FinalPrice,
+                })
+                .ToList();
 
-            return result;
+            var tourStatistic = await query
+                .Select(t => new TourStatisticDto
+                {
+                    // TourId = t.Id,
+                    // TourName = t.Name,
+                    // TourStatus = t.Status.ToString(),
+                    TotalBookings = t.Bookings.Count,
+                    PendingBookings = t.Bookings.Count(b => b.Status == BookingStatus.Pending),
+                    ConfirmedBookings = t.Bookings.Count(b => b.Status == BookingStatus.Confirmed),
+                    CancelledBookings = t.Bookings.Count(b => b.Status == BookingStatus.Cancelled),
+                    ExpiredBookings = t.Bookings.Count(b => b.Status == BookingStatus.Expired),
+                    CancelledByProviderBookings = t.Bookings.Count(b => b.Status == BookingStatus.CancelledByProvider),
+                    CompletedBookings = t.Bookings.Count(b => b.Status == BookingStatus.Completed),
+                    CompletionRate = t.Bookings.Any() ? (t.Bookings.Count(b => b.Status == BookingStatus.Completed) * 100.0 / t.Bookings.Count) : 0,
+                    TotalRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed)
+                        .Sum(b => b.FinalPrice),
+                    ConfirmedRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Confirmed)
+                        .Sum(b => b.FinalPrice),
+                    CompletedRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Completed)
+                        .Sum(b => b.FinalPrice),
+                    LostRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Cancelled ||
+                                    b.Status == BookingStatus.Expired ||
+                                    b.Status == BookingStatus.CancelledByProvider)
+                        .Sum(b => b.FinalPrice),
+                    Bookings = bookings,
+                })
+                .FirstOrDefaultAsync();
+
+            if (tourStatistic == null)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("Tour");
+            }
+
+            return tourStatistic;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<TourStatisticDto> GetTourScheduleBookingStatisticAsync(Guid tourScheduleId)
+    {
+        try
+        {
+            var isAdminOrModerator = _userContextService.HasAnyRoleOrAnonymous(AppRole.ADMIN, AppRole.MODERATOR);
+
+            if (!isAdminOrModerator)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
+            var query = _unitOfWork.TourRepository.ActiveEntities
+                .Include(t => t.Bookings)
+                    .ThenInclude(b => b.User)
+                .Include(t => t.TourSchedules)
+                .Where(t => t.TourSchedules.Any(ts => ts.Id == tourScheduleId));
+
+            var bookingEntities = await _unitOfWork.BookingRepository.ActiveEntities
+                .Where(b => b.TourScheduleId == tourScheduleId)
+                .Select(b => new
+                {
+                    b.Id,
+                    b.UserId,
+                    UserName = b.User != null ? b.User.FullName : string.Empty,
+                    b.TourId,
+                    TourName = b.Tour != null ? b.Tour.Name : string.Empty,
+                    b.TourScheduleId,
+                    DepartureDate = b.TourSchedule != null ? b.TourSchedule.DepartureDate : DateTime.MinValue,
+                    b.Status,
+                    b.BookingType,
+                    b.BookingDate,
+                    b.StartDate,
+                    b.EndDate,
+                    b.PaymentLinkId,
+                    b.CancelledAt,
+                    b.PromotionId,
+                    b.OriginalPrice,
+                    b.DiscountAmount,
+                    b.FinalPrice
+                })
+                .OrderBy(b => b.BookingDate)
+                .ToListAsync();
+
+            var bookings = bookingEntities
+                .Select(b => new BookingDataModel
+                {
+                    Id = b.Id,
+                    UserId = b.UserId,
+                    UserName = b.UserName,
+                    TourId = b.TourId,
+                    TourName = b.TourName,
+                    TourScheduleId = b.TourScheduleId,
+                    DepartureDate = b.DepartureDate,
+                    Status = b.Status,
+                    StatusText = _enumService.GetEnumDisplayName<BookingStatus>(b.Status),
+                    BookingType = b.BookingType,
+                    BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(b.BookingType),
+                    BookingDate = b.BookingDate,
+                    StartDate = b.StartDate,
+                    EndDate = b.EndDate,
+                    PaymentLinkId = b.PaymentLinkId,
+                    PromotionId = b.PromotionId,
+                    CancelledAt = b.CancelledAt,
+                    OriginalPrice = b.OriginalPrice,
+                    DiscountAmount = b.DiscountAmount,
+                    FinalPrice = b.FinalPrice,
+                })
+                .ToList();
+
+            var tourStatistic = await query
+                .Select(t => new TourStatisticDto
+                {
+                    // TourId = t.Id,
+                    // TourName = t.Name,
+                    // TourStatus = t.Status.ToString(),
+                    TotalBookings = t.Bookings.Count,
+                    PendingBookings = t.Bookings.Count(b => b.Status == BookingStatus.Pending),
+                    ConfirmedBookings = t.Bookings.Count(b => b.Status == BookingStatus.Confirmed),
+                    CancelledBookings = t.Bookings.Count(b => b.Status == BookingStatus.Cancelled),
+                    ExpiredBookings = t.Bookings.Count(b => b.Status == BookingStatus.Expired),
+                    CancelledByProviderBookings = t.Bookings.Count(b => b.Status == BookingStatus.CancelledByProvider),
+                    CompletedBookings = t.Bookings.Count(b => b.Status == BookingStatus.Completed),
+                    CompletionRate = t.Bookings.Any() ? (t.Bookings.Count(b => b.Status == BookingStatus.Completed) * 100.0 / t.Bookings.Count) : 0,
+                    TotalRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed)
+                        .Sum(b => b.FinalPrice),
+                    ConfirmedRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Confirmed)
+                        .Sum(b => b.FinalPrice),
+                    CompletedRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Completed)
+                        .Sum(b => b.FinalPrice),
+                    LostRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Cancelled ||
+                                    b.Status == BookingStatus.Expired ||
+                                    b.Status == BookingStatus.CancelledByProvider)
+                        .Sum(b => b.FinalPrice),
+                    Bookings = bookings,
+                })
+                .FirstOrDefaultAsync();
+
+            if (tourStatistic == null)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("Tour");
+            }
+
+            return tourStatistic;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<TourStatisticDto> GetWorkshopBookingStatisticAsync(Guid workshopId)
+    {
+        try
+        {
+            var isAdminOrModerator = _userContextService.HasAnyRoleOrAnonymous(AppRole.ADMIN, AppRole.MODERATOR);
+
+            if (!isAdminOrModerator)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
+            var query = _unitOfWork.WorkshopRepository.ActiveEntities
+                .Include(t => t.Bookings)
+                    .ThenInclude(b => b.User)
+                .Where(t => t.Id == workshopId);
+
+            var bookingEntities = await _unitOfWork.BookingRepository.ActiveEntities
+                .Where(b => b.TourId == workshopId)
+                .Select(b => new
+                {
+                    b.Id,
+                    b.UserId,
+                    UserName = b.User != null ? b.User.FullName : string.Empty,
+                    b.WorkshopId,
+                    WorkshopName = b.Workshop != null ? b.Workshop.Name : string.Empty,
+                    b.WorkshopScheduleId,
+                    b.Status,
+                    b.BookingType,
+                    b.BookingDate,
+                    b.StartDate,
+                    b.EndDate,
+                    b.PaymentLinkId,
+                    b.CancelledAt,
+                    b.PromotionId,
+                    b.OriginalPrice,
+                    b.DiscountAmount,
+                    b.FinalPrice
+                })
+                .OrderBy(b => b.BookingDate)
+                .ToListAsync();
+
+            var bookings = bookingEntities
+                .Select(b => new BookingDataModel
+                {
+                    Id = b.Id,
+                    UserId = b.UserId,
+                    UserName = b.UserName,
+                    WorkshopId = b.WorkshopId,
+                    WorkshopName = b.WorkshopName,
+                    WorkshopScheduleId = b.WorkshopScheduleId,
+                    Status = b.Status,
+                    StatusText = _enumService.GetEnumDisplayName<BookingStatus>(b.Status),
+                    BookingType = b.BookingType,
+                    BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(b.BookingType),
+                    BookingDate = b.BookingDate,
+                    StartDate = b.StartDate,
+                    EndDate = b.EndDate,
+                    PaymentLinkId = b.PaymentLinkId,
+                    PromotionId = b.PromotionId,
+                    CancelledAt = b.CancelledAt,
+                    OriginalPrice = b.OriginalPrice,
+                    DiscountAmount = b.DiscountAmount,
+                    FinalPrice = b.FinalPrice,
+                })
+                .ToList();
+
+            var tourStatistic = await query
+                .Select(t => new TourStatisticDto
+                {
+                    // TourId = t.Id,
+                    // TourName = t.Name,
+                    // TourStatus = t.Status.ToString(),
+                    TotalBookings = t.Bookings.Count,
+                    PendingBookings = t.Bookings.Count(b => b.Status == BookingStatus.Pending),
+                    ConfirmedBookings = t.Bookings.Count(b => b.Status == BookingStatus.Confirmed),
+                    CancelledBookings = t.Bookings.Count(b => b.Status == BookingStatus.Cancelled),
+                    ExpiredBookings = t.Bookings.Count(b => b.Status == BookingStatus.Expired),
+                    CancelledByProviderBookings = t.Bookings.Count(b => b.Status == BookingStatus.CancelledByProvider),
+                    CompletedBookings = t.Bookings.Count(b => b.Status == BookingStatus.Completed),
+                    CompletionRate = t.Bookings.Any() ? (t.Bookings.Count(b => b.Status == BookingStatus.Completed) * 100.0 / t.Bookings.Count) : 0,
+                    TotalRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed)
+                        .Sum(b => b.FinalPrice),
+                    ConfirmedRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Confirmed)
+                        .Sum(b => b.FinalPrice),
+                    CompletedRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Completed)
+                        .Sum(b => b.FinalPrice),
+                    LostRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Cancelled ||
+                                    b.Status == BookingStatus.Expired ||
+                                    b.Status == BookingStatus.CancelledByProvider)
+                        .Sum(b => b.FinalPrice),
+                    Bookings = bookings,
+                })
+                .FirstOrDefaultAsync();
+
+            if (tourStatistic == null)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("Tour");
+            }
+
+            return tourStatistic;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<TourStatisticDto> GetWorkshopScheduleBookingStatisticAsync(Guid workshopScheduleId)
+    {
+        try
+        {
+            var isAdminOrModerator = _userContextService.HasAnyRoleOrAnonymous(AppRole.ADMIN, AppRole.MODERATOR);
+
+            if (!isAdminOrModerator)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
+            var query = _unitOfWork.WorkshopRepository.ActiveEntities
+                .Include(t => t.Bookings)
+                    .ThenInclude(b => b.User)
+                .Include(t => t.WorkshopSchedules)
+                .Where(t => t.WorkshopSchedules.Any(ts => ts.Id == workshopScheduleId));
+
+            var bookingEntities = await _unitOfWork.BookingRepository.ActiveEntities
+                .Where(b => b.WorkshopScheduleId == workshopScheduleId)
+                .Select(b => new
+                {
+                    b.Id,
+                    b.UserId,
+                    UserName = b.User != null ? b.User.FullName : string.Empty,
+                    b.WorkshopId,
+                    WorkshopName = b.Workshop != null ? b.Workshop.Name : string.Empty,
+                    b.WorkshopScheduleId,
+                    b.Status,
+                    b.BookingType,
+                    b.BookingDate,
+                    b.StartDate,
+                    b.EndDate,
+                    b.PaymentLinkId,
+                    b.CancelledAt,
+                    b.PromotionId,
+                    b.OriginalPrice,
+                    b.DiscountAmount,
+                    b.FinalPrice
+                })
+                .OrderBy(b => b.BookingDate)
+                .ToListAsync();
+
+            var bookings = bookingEntities
+                .Select(b => new BookingDataModel
+                {
+                    Id = b.Id,
+                    UserId = b.UserId,
+                    UserName = b.UserName,
+                    WorkshopId = b.WorkshopId,
+                    WorkshopName = b.WorkshopName,
+                    WorkshopScheduleId = b.WorkshopScheduleId,
+                    Status = b.Status,
+                    StatusText = _enumService.GetEnumDisplayName<BookingStatus>(b.Status),
+                    BookingType = b.BookingType,
+                    BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(b.BookingType),
+                    BookingDate = b.BookingDate,
+                    StartDate = b.StartDate,
+                    EndDate = b.EndDate,
+                    PaymentLinkId = b.PaymentLinkId,
+                    PromotionId = b.PromotionId,
+                    CancelledAt = b.CancelledAt,
+                    OriginalPrice = b.OriginalPrice,
+                    DiscountAmount = b.DiscountAmount,
+                    FinalPrice = b.FinalPrice,
+                })
+                .ToList();
+
+            var tourStatistic = await query
+                .Select(t => new TourStatisticDto
+                {
+                    TotalBookings = t.Bookings.Count,
+                    PendingBookings = t.Bookings.Count(b => b.Status == BookingStatus.Pending),
+                    ConfirmedBookings = t.Bookings.Count(b => b.Status == BookingStatus.Confirmed),
+                    CancelledBookings = t.Bookings.Count(b => b.Status == BookingStatus.Cancelled),
+                    ExpiredBookings = t.Bookings.Count(b => b.Status == BookingStatus.Expired),
+                    CancelledByProviderBookings = t.Bookings.Count(b => b.Status == BookingStatus.CancelledByProvider),
+                    CompletedBookings = t.Bookings.Count(b => b.Status == BookingStatus.Completed),
+                    CompletionRate = t.Bookings.Any() ? (t.Bookings.Count(b => b.Status == BookingStatus.Completed) * 100.0 / t.Bookings.Count) : 0,
+                    TotalRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed)
+                        .Sum(b => b.FinalPrice),
+                    ConfirmedRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Confirmed)
+                        .Sum(b => b.FinalPrice),
+                    CompletedRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Completed)
+                        .Sum(b => b.FinalPrice),
+                    LostRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Cancelled ||
+                                    b.Status == BookingStatus.Expired ||
+                                    b.Status == BookingStatus.CancelledByProvider)
+                        .Sum(b => b.FinalPrice),
+                    Bookings = bookings,
+                })
+                .FirstOrDefaultAsync();
+
+            if (tourStatistic == null)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("Tour");
+            }
+
+            return tourStatistic;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<TourStatisticDto> GetTourGuideBookingStatisticAsync(Guid tourGuideId)
+    {
+        try
+        {
+            var isAdminOrModerator = _userContextService.HasAnyRoleOrAnonymous(AppRole.ADMIN, AppRole.MODERATOR);
+
+            if (!isAdminOrModerator)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
+            var query = _unitOfWork.TourGuideRepository.ActiveEntities
+                .Include(t => t.Bookings)
+                    .ThenInclude(b => b.User)
+                .Where(t => t.Id == tourGuideId);
+
+            var bookingEntities = await _unitOfWork.BookingRepository.ActiveEntities
+                .Where(b => b.TourGuideId == tourGuideId)
+                .Select(b => new
+                {
+                    b.Id,
+                    b.UserId,
+                    UserName = b.User != null ? b.User.FullName : string.Empty,
+                    b.TourGuideId,
+                    TourGuideName = b.TourGuide.User != null ? b.TourGuide.User.FullName : string.Empty,
+                    // b.WorkshopScheduleId,
+                    b.Status,
+                    b.BookingType,
+                    b.BookingDate,
+                    b.StartDate,
+                    b.EndDate,
+                    b.PaymentLinkId,
+                    b.CancelledAt,
+                    b.PromotionId,
+                    b.OriginalPrice,
+                    b.DiscountAmount,
+                    b.FinalPrice
+                })
+                .OrderBy(b => b.BookingDate)
+                .ToListAsync();
+
+            var bookings = bookingEntities
+                .Select(b => new BookingDataModel
+                {
+                    Id = b.Id,
+                    UserId = b.UserId,
+                    UserName = b.UserName,
+                    WorkshopId = b.TourGuideId,
+                    WorkshopName = b.TourGuideName,
+                    // WorkshopScheduleId = b.WorkshopScheduleId,
+                    Status = b.Status,
+                    StatusText = _enumService.GetEnumDisplayName<BookingStatus>(b.Status),
+                    BookingType = b.BookingType,
+                    BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(b.BookingType),
+                    BookingDate = b.BookingDate,
+                    StartDate = b.StartDate,
+                    EndDate = b.EndDate,
+                    PaymentLinkId = b.PaymentLinkId,
+                    PromotionId = b.PromotionId,
+                    CancelledAt = b.CancelledAt,
+                    OriginalPrice = b.OriginalPrice,
+                    DiscountAmount = b.DiscountAmount,
+                    FinalPrice = b.FinalPrice,
+                })
+                .ToList();
+
+            var tourStatistic = await query
+                .Select(t => new TourStatisticDto
+                {
+                    // TourId = t.Id,
+                    // TourName = t.Name,
+                    // TourStatus = t.Status.ToString(),
+                    TotalBookings = t.Bookings.Count,
+                    PendingBookings = t.Bookings.Count(b => b.Status == BookingStatus.Pending),
+                    ConfirmedBookings = t.Bookings.Count(b => b.Status == BookingStatus.Confirmed),
+                    CancelledBookings = t.Bookings.Count(b => b.Status == BookingStatus.Cancelled),
+                    ExpiredBookings = t.Bookings.Count(b => b.Status == BookingStatus.Expired),
+                    CancelledByProviderBookings = t.Bookings.Count(b => b.Status == BookingStatus.CancelledByProvider),
+                    CompletedBookings = t.Bookings.Count(b => b.Status == BookingStatus.Completed),
+                    CompletionRate = t.Bookings.Any() ? (t.Bookings.Count(b => b.Status == BookingStatus.Completed) * 100.0 / t.Bookings.Count) : 0,
+                    TotalRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed)
+                        .Sum(b => b.FinalPrice),
+                    ConfirmedRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Confirmed)
+                        .Sum(b => b.FinalPrice),
+                    CompletedRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Completed)
+                        .Sum(b => b.FinalPrice),
+                    LostRevenue = t.Bookings
+                        .Where(b => b.Status == BookingStatus.Cancelled ||
+                                    b.Status == BookingStatus.Expired ||
+                                    b.Status == BookingStatus.CancelledByProvider)
+                        .Sum(b => b.FinalPrice),
+                    Bookings = bookings,
+                })
+                .FirstOrDefaultAsync();
+
+            if (tourStatistic == null)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("Tour");
+            }
+
+            return tourStatistic;
         }
         catch (CustomException)
         {
