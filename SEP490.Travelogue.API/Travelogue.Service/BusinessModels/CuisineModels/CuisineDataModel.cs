@@ -2,7 +2,7 @@
 
 namespace Travelogue.Service.BusinessModels.CuisineModels;
 
-public class CuisineDataModel : BaseDataModel
+public class CuisineDataModel //: BaseDataModel
 {
     // public Guid CuisineId { get; set; }
     // public string Name { get; set; } = string.Empty;
@@ -17,5 +17,5 @@ public class CuisineDataModel : BaseDataModel
     public string? PhoneNumber { get; set; }
     public string? Email { get; set; }
     public string? Website { get; set; }
-    public List<MediaResponse> Medias { get; set; } = new List<MediaResponse>();
+    //public List<MediaResponse> Medias { get; set; } = new List<MediaResponse>();
 }

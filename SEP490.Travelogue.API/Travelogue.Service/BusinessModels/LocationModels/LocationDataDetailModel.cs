@@ -17,7 +17,7 @@ public class LocationDataDetailModel : BaseDataModel
     public double Rating { get; set; } = 0;
     public TimeSpan? OpenTime { get; set; }
     public TimeSpan? CloseTime { get; set; }
-    public string Category { get; set; }
+    public string? Category { get; set; }
     public Guid? DistrictId { get; set; }
     public string? DistrictName { get; set; }
     public List<MediaResponse> Medias { get; set; } = new List<MediaResponse>();

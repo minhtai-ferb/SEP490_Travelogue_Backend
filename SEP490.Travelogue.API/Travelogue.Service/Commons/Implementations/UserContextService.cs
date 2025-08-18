@@ -37,6 +37,71 @@ public class UserContextService : IUserContextService
         return currentUserId;
     }
 
+    public string? GetCurrentUserIdOrAnonymous()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
+        {
+            return null;
+        }
+
+        var user = httpContext.User;
+        if (user == null || user.Identity == null || !user.Identity.IsAuthenticated)
+        {
+            return null;
+        }
+
+        var currentUserId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+                            ?? user.FindFirstValue("sub");
+
+        return string.IsNullOrEmpty(currentUserId) ? null : currentUserId;
+    }
+
+    public Guid GetCurrentUserIdGuid()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
+        {
+            throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "Http context is null. Please Login.");
+        }
+
+        var user = httpContext.User;
+        if (user == null || user.Identity == null || !user.Identity.IsAuthenticated)
+        {
+            throw new CustomException(StatusCodes.Status401Unauthorized, ResponseCodeConstants.UNAUTHORIZED, ResponseMessages.LOGIN_REQUIRED);
+        }
+
+        var currentUserId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+                            ?? user.FindFirstValue("sub");
+
+        if (string.IsNullOrEmpty(currentUserId) || !Guid.TryParse(currentUserId, out var userGuid))
+        {
+            throw new CustomException(StatusCodes.Status401Unauthorized, ResponseCodeConstants.UNAUTHORIZED, "User ID claim is not found or invalid");
+        }
+
+        return userGuid;
+    }
+
+    public Guid GetCurrentUserIdGuidOrAnonymous()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
+        {
+            return Guid.Empty;
+        }
+
+        var user = httpContext.User;
+        if (user == null || user.Identity == null || !user.Identity.IsAuthenticated)
+        {
+            return Guid.Empty;
+        }
+
+        var currentUserId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+                            ?? user.FindFirstValue("sub");
+
+        return Guid.TryParse(currentUserId, out var userGuid) ? userGuid : Guid.Empty;
+    }
+
     public string? TryGetCurrentUserId()
     {
         var httpContext = _httpContextAccessor.HttpContext;

@@ -661,7 +661,7 @@ public class TourService : ITourService
                 scheduleDtos.Add(scheduleDto);
             }
 
-            return new TourDetailsResponseDto
+            var result = new TourDetailsResponseDto
             {
                 TourId = tour.Id,
                 Name = tour.Name,
@@ -686,6 +686,20 @@ public class TourService : ITourService
                 AverageRating = rating.AverageRating,
                 Medias = medias ?? new List<MediaResponse>()
             };
+
+            if (dayDetails.Any())
+            {
+                var firstDay = dayDetails.First();
+                var lastDay = dayDetails.Last();
+
+                if (firstDay.Activities.Any())
+                    result.StartLocation = firstDay.Activities.First();
+
+                if (lastDay.Activities.Any())
+                    result.EndLocation = lastDay.Activities.Last();
+            }
+
+            return result;
         }
         catch (CustomException)
         {
@@ -714,10 +728,10 @@ public class TourService : ITourService
                 .FirstOrDefaultAsync(t => t.Id == tourId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Tour");
 
-            if (tour.Status == TourStatus.Draft && !_userContextService.HasAnyRole(AppRole.MODERATOR, AppRole.ADMIN))
-            {
-                throw CustomExceptionFactory.CreateBadRequestError("Tour đang ở trạng thái nháp, không thể xem chi tiết.");
-            }
+            // if (tour.Status == TourStatus.Draft && !_userContextService.HasAnyRoleOrAnonymous(AppRole.MODERATOR, AppRole.ADMIN))
+            // {
+            //     throw CustomExceptionFactory.CreateBadRequestError("Tour đang ở trạng thái nháp, không thể xem chi tiết.");
+            // }
 
             var activeSchedules = tour.TourSchedules.Where(s => !s.IsDeleted).ToList();
 
@@ -1988,10 +2002,15 @@ public class TourService : ITourService
                 activities.Add(activity);
             }
 
+            var orderedActivities = activities
+                .OrderBy(a => a.StartTime ?? TimeSpan.Zero)
+                .ThenBy(a => a.DayOrder)
+                .ToList();
+
             dayDetails.Add(new TourDayDetail
             {
                 DayNumber = group.Key,
-                Activities = activities
+                Activities = orderedActivities
             });
         }
 

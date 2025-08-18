@@ -27,6 +27,10 @@ public class TourDetailsResponseDto
     public List<TourDayDetail> Days { get; set; } = new List<TourDayDetail>();
     public double AverageRating { get; set; }
     public int TotalReviews { get; set; }
+
+    public TourActivity? StartLocation { get; set; }
+    public TourActivity? EndLocation { get; set; }
+
     public List<ReviewResponseDto> Reviews { get; set; } = new List<ReviewResponseDto>();
     public List<MediaResponse> Medias { get; set; } = new List<MediaResponse>();
 }

@@ -1269,12 +1269,22 @@ public class UserService : IUserService
             _unitOfWork.TourGuideRequestRepository.Update(request);
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);
-
-            await _emailService.SendEmailAsync(
-                new[] { user.Email },
-                $"Nâng cấp role thành công Tour guide",
-                $"Tour guide"
-            );
+            if (model.Status == TourGuideRequestStatus.Rejected)
+            {
+                await _emailService.SendEmailAsync(
+                    new[] { user.Email },
+                    $"Yêu cầu nâng cấp tour guide của bạn đã bị từ chối",
+                    $"Yêu cầu nâng cấp tour guide của bạn đã bị từ chối"
+                );
+            }
+            else if (model.Status == TourGuideRequestStatus.Approved)
+            {
+                await _emailService.SendEmailAsync(
+                    new[] { user.Email },
+                    $"Nâng cấp role thành công Tour guide",
+                    $"Tour guide"
+                );
+            }
 
             var response = MapToTourGuideRequestResponseDto(request, user);
             response.Email = user.Email;

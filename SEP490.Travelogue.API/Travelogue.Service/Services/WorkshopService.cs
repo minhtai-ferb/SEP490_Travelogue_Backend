@@ -445,73 +445,39 @@ public class WorkshopService : IWorkshopService
         };
     }
 
-    public async Task<WorkshopDetailsResponseDto> GetWorkshopDetailsAsync(Guid workshopId)
-    {
-        var workshop = await _unitOfWork.WorkshopRepository
-            .ActiveEntities
-            .Include(w => w.CraftVillage)
-                .ThenInclude(w => w.Location)
-            .Include(w => w.WorkshopActivities)
-            .Include(w => w.WorkshopSchedules)
-            .FirstOrDefaultAsync(w => w.Id == workshopId)
-            ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
-
-        if (workshop.Status == WorkshopStatus.Draft || workshop.Status == WorkshopStatus.Pending)
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-            var checkRoleCraftVillageOwner = _userContextService.HasRole(AppRole.CRAFT_VILLAGE_OWNER);
-            if (!checkRoleCraftVillageOwner)
-                throw CustomExceptionFactory.CreateForbiddenError();
-
-            var checkRoleModerator = _userContextService.HasRole(AppRole.MODERATOR);
-            if (!checkRoleModerator)
-                throw CustomExceptionFactory.CreateForbiddenError();
-        }
-
-        var dayDetails = BuildDayDetails(workshop);
-
-        return new WorkshopDetailsResponseDto
-        {
-            WorkshopId = workshop.Id,
-            Name = workshop.Name,
-            Description = workshop.Description,
-            Content = workshop.Content,
-            CraftVillageId = workshop.CraftVillageId,
-            CraftVillageName = workshop.CraftVillage.Location.Name,
-            Status = workshop.Status,
-            StatusText = _enumService.GetEnumDisplayName<WorkshopStatus>(workshop.Status) ?? string.Empty,
-            // Activities = workshop.WorkshopActivities.Select(a => new ActivityResponseDto
-            // {
-            //     ActivityId = a.Id,
-            //     Activity = a.Activity,
-            //     Description = a.Description,
-            //     StartTime = a.StartTime,
-            //     EndTime = a.EndTime,
-            //     Notes = a.Notes,
-            //     DayOrder = a.DayOrder
-            // }).ToList(),
-            Schedules = workshop.WorkshopSchedules.Select(s => new ScheduleResponseDto
-            {
-                ScheduleId = s.Id,
-                StartTime = s.StartTime,
-                EndTime = s.EndTime,
-                MaxParticipant = s.MaxParticipant,
-                CurrentBooked = s.CurrentBooked,
-                AdultPrice = s.AdultPrice,
-                ChildrenPrice = s.ChildrenPrice,
-                Notes = s.Notes
-            }).ToList(),
-            Days = dayDetails
-        };
-    }
-
     public async Task<WorkshopDetailsResponseDto> GetWorkshopDetailsAsync(Guid workshopId, Guid? scheduleId = null)
     {
         try
         {
-            var workshop = await _unitOfWork.WorkshopRepository.ActiveEntities
+            var isAdminOrModerator = _userContextService.HasAnyRoleOrAnonymous(AppRole.ADMIN, AppRole.MODERATOR);
+            var currentUserId = _userContextService.GetCurrentUserIdGuidOrAnonymous();
+
+            var query = _unitOfWork.WorkshopRepository.ActiveEntities
+                .Include(ws => ws.CraftVillage)
                 .Include(ws => ws.WorkshopActivities)
-                .Where(w => w.Id == workshopId)
+                .Where(w => w.Id == workshopId);
+
+            if (!isAdminOrModerator)
+            {
+                query = query.Where(w =>
+                    // Owner can access Draft, Pending, Rejected
+                    (w.CraftVillage.OwnerId == currentUserId && currentUserId != Guid.Empty)
+                    ||
+                    // Everyone can access Approved
+                    w.Status == WorkshopStatus.Approved
+                );
+            }
+            else
+            {
+                // Admins/Moderators can access Pending, Rejected, and Approved
+                query = query.Where(w =>
+                    w.Status == WorkshopStatus.Pending ||
+                    w.Status == WorkshopStatus.Rejected ||
+                    w.Status == WorkshopStatus.Approved
+                );
+            }
+
+            var workshop = await query
                 .Select(w => new
                 {
                     Workshop = w,
