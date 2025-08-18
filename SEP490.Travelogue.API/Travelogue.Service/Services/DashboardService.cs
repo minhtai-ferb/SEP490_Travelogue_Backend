@@ -535,6 +535,107 @@ public class DashboardService : IDashboardService
         }
     }
 
+    public async Task<List<BookingDataModel>> GetUserBookingsAsync(BookingFilterDto filter)
+    {
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            var isUser = _userContextService.HasRole(AppRole.USER);
+            if (!isUser)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
+            IQueryable<Booking> query = _unitOfWork.BookingRepository
+                .ActiveEntities
+                .Where(b => b.UserId == currentUserId)
+                .Include(b => b.TourGuide)
+                    .ThenInclude(tg => tg.User)
+                .Include(b => b.Tour)
+                .Include(b => b.TourSchedule)
+                .Include(b => b.TripPlan)
+                .Include(b => b.Workshop)
+                .Include(b => b.WorkshopSchedule)
+                .Include(b => b.Promotion);
+
+            // status
+            if (filter.Status.HasValue)
+            {
+                query = query.Where(b => b.Status == filter.Status.Value);
+            }
+
+            // bookng type
+            if (filter.BookingType.HasValue)
+            {
+                query = query.Where(b => b.BookingType == filter.BookingType.Value);
+            }
+
+            // ngày tháng
+            if (filter.StartDate.HasValue && filter.EndDate.HasValue)
+            {
+                if (filter.StartDate > filter.EndDate)
+                {
+                    throw CustomExceptionFactory.CreateBadRequestError("Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.");
+                }
+                query = query.Where(b => b.BookingDate >= filter.StartDate.Value && b.BookingDate <= filter.EndDate.Value);
+            }
+            else if (filter.StartDate.HasValue)
+            {
+                query = query.Where(b => b.BookingDate >= filter.StartDate.Value);
+            }
+            else if (filter.EndDate.HasValue)
+            {
+                query = query.Where(b => b.BookingDate <= filter.EndDate.Value);
+            }
+
+            var bookings = await query
+                .OrderBy(b => b.BookingDate)
+                .ToListAsync();
+
+            var result = bookings.Select(b => new BookingDataModel
+            {
+                Id = b.Id,
+                UserId = b.UserId,
+                UserName = b.User?.FullName ?? string.Empty,
+                TourId = b.TourId,
+                TourName = b.Tour?.Name ?? string.Empty,
+                TourScheduleId = b.TourScheduleId,
+                DepartureDate = b.TourSchedule?.DepartureDate,
+                TourGuideId = b.TourGuideId,
+                TourGuideName = b.TourGuide?.User?.FullName ?? string.Empty,
+                TripPlanId = b.TripPlanId,
+                TripPlanName = b.TripPlan?.Name ?? string.Empty,
+                WorkshopId = b.WorkshopId,
+                WorkshopName = b.Workshop?.Name ?? string.Empty,
+                WorkshopScheduleId = b.WorkshopScheduleId,
+                PaymentLinkId = b.PaymentLinkId,
+                Status = b.Status,
+                StatusText = _enumService.GetEnumDisplayName<BookingStatus>(b.Status),
+                BookingType = b.BookingType,
+                BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(b.BookingType),
+                BookingDate = b.BookingDate,
+                StartDate = b.StartDate,
+                EndDate = b.EndDate,
+                CancelledAt = b.CancelledAt,
+                PromotionId = b.PromotionId,
+                OriginalPrice = b.OriginalPrice,
+                DiscountAmount = b.DiscountAmount,
+                FinalPrice = b.FinalPrice
+            }).ToList();
+
+            return result;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
     private async Task<decimal> GetBookingCommissionPercentAsync()
     {
         try

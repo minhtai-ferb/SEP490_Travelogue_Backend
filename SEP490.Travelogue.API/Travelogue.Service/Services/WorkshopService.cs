@@ -21,7 +21,7 @@ public interface IWorkshopService
     Task<WorkshopResponseDto> CreateWorkshopAsync(CreateWorkshopDto dto);
     Task<WorkshopResponseDto> UpdateWorkshopAsync(Guid workshopId, UpdateWorkshopDto dto);
     Task<WorkshopResponseDto> SubmitWorkshopForReviewAsync(Guid workshopId, CancellationToken cancellationToken);
-    Task<WorkshopResponseDto> ConfirmWorkshopAsync(Guid workshopId, ConfirmWorkshopDto dto);
+    // Task<WorkshopResponseDto> ConfirmWorkshopAsync(Guid workshopId, ConfirmWorkshopDto dto);
     Task DeleteWorkshopAsync(Guid workshopId);
     // Task<WorkshopDetailsResponseDto> GetWorkshopDetailsAsync(Guid workshopId);
     Task<WorkshopDetailsResponseDto> GetWorkshopDetailsAsync(Guid workshopId, Guid? scheduleId = null);
@@ -587,6 +587,74 @@ public class WorkshopService : IWorkshopService
         }
         catch (Exception ex)
         {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<WorkshopResponseDto> ApproveWorkshopAsync(Guid workshopId, CancellationToken cancellationToken)
+    {
+        using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentTime = _timeService.SystemTimeNow;
+            var checkRole = _userContextService.HasAnyRole(AppRole.CRAFT_VILLAGE_OWNER);
+            if (!checkRole)
+                throw CustomExceptionFactory.CreateForbiddenError();
+
+            var workshop = await _unitOfWork.WorkshopRepository
+                .ActiveEntities
+                .Include(ws => ws.CraftVillage)
+                    .ThenInclude(cv => cv.Owner)
+                .FirstOrDefaultAsync(w => w.Id == workshopId, cancellationToken);
+            if (workshop == null)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("Workshop not found or not owned by user.");
+            }
+
+            if (workshop.Status != WorkshopStatus.Draft)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Workshop is not in Draft status.");
+            }
+
+            workshop.Status = WorkshopStatus.Pending;
+            workshop.LastUpdatedBy = currentUserId;
+            workshop.LastUpdatedTime = currentTime;
+            _unitOfWork.WorkshopRepository.Update(workshop);
+
+            var ownerEmail = workshop.CraftVillage.Owner.Email;
+            if (ownerEmail == null)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("No user found to notify.");
+            }
+            await _emailService.SendEmailAsync(
+               new[] { ownerEmail },
+                "Cập nhật trạng thái workshop",
+                "Cập nhật trạng thái workshop"
+            );
+
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(cancellationToken);
+
+            return new WorkshopResponseDto
+            {
+                Id = workshop.Id,
+                Name = workshop.Name,
+                Description = workshop.Description,
+                Content = workshop.Content,
+                Status = workshop.Status,
+                StatusText = _enumService.GetEnumDisplayName<WorkshopStatus>(workshop.Status),
+                CraftVillageId = workshop.CraftVillageId
+            };
+        }
+        catch (CustomException)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
