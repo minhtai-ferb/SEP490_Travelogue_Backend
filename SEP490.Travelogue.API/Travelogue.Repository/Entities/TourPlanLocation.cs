@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Travelogue.Repository.Bases.BaseEntities;
+using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Repository.Entities;
 
@@ -10,6 +11,8 @@ public sealed class TourPlanLocation : BaseEntity
 
     [Required]
     public Guid LocationId { get; set; }
+
+    public ActivityType ActivityType { get; set; } = ActivityType.Sightseeing;
 
     [Required]
     public int DayOrder { get; set; }
