@@ -182,27 +182,35 @@ public class DashboardService : IDashboardService
 
             var filteredBookings = _unitOfWork.BookingRepository
                 .ActiveEntities
-                .Where(b => b.BookingDate >= adjustedFromDate
-                    && b.BookingDate <= adjustedToDate
-                    && b.Status == BookingStatus.Confirmed);
+                .Where(b =>
+                    b.StartDate >= adjustedFromDate &&
+                    b.StartDate <= adjustedToDate &&
+                    (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed)
+                );
 
             var commissionRate = await GetBookingCommissionPercentAsync();
 
             var groupedByDate = filteredBookings
-                .GroupBy(b => b.BookingDate.Date)
+                .GroupBy(b => b.StartDate.Date)
                 .Select(g => new RevenueDataItem
                 {
                     Date = g.Key,
                     GrossRevenue = g.Sum(b => b.FinalPrice),
-                    Commission = g.Sum(b => b.BookingType == BookingType.TourGuide || b.BookingType == BookingType.Workshop ? b.FinalPrice * commissionRate : 0m),
-                    NetRevenue = g.Sum(b => b.BookingType == BookingType.TourGuide || b.BookingType == BookingType.Workshop ? b.FinalPrice * (1 - commissionRate) : b.FinalPrice),
-                    Revenue = g.Sum(b => b.FinalPrice)
+                    Commission = g.Sum(b =>
+                        (b.BookingType == BookingType.TourGuide || b.BookingType == BookingType.Workshop)
+                            ? b.FinalPrice * commissionRate
+                            : 0m),
+                    NetRevenue = g.Sum(b =>
+                        b.BookingType == BookingType.Tour
+                            ? b.FinalPrice
+                            : b.FinalPrice * commissionRate)
                 });
 
             var revenueData = await groupedByDate.OrderBy(r => r.Date).ToListAsync();
 
             var totalGrossRevenue = revenueData.Sum(r => r.GrossRevenue);
             var totalNetRevenue = revenueData.Sum(r => r.NetRevenue);
+            var totalCommission = revenueData.Sum(r => r.Commission);
 
             var allDates = Enumerable.Range(0, (toDate.Date - fromDate.Date).Days + 1)
                 .Select(d => fromDate.Date.AddDays(d))
@@ -216,8 +224,8 @@ public class DashboardService : IDashboardService
                     {
                         Date = date,
                         GrossRevenue = data.FirstOrDefault()?.GrossRevenue ?? 0m,
-                        NetRevenue = data.FirstOrDefault()?.NetRevenue ?? 0m,
-                        Revenue = data.FirstOrDefault()?.Revenue ?? 0m
+                        Commission = data.FirstOrDefault()?.Commission ?? 0m,
+                        NetRevenue = data.FirstOrDefault()?.NetRevenue ?? 0m
                     })
                 .OrderBy(r => r.Date)
                 .ToList();
@@ -226,9 +234,10 @@ public class DashboardService : IDashboardService
             {
                 FromDate = fromDate,
                 ToDate = toDate,
-                TotalRevenue = totalGrossRevenue,
                 GrossRevenue = totalGrossRevenue,
                 NetRevenue = totalNetRevenue,
+                TotalRevenue = totalGrossRevenue,
+                Commission = totalCommission,
                 RevenueDataItem = completeRevenueData
             };
         }
