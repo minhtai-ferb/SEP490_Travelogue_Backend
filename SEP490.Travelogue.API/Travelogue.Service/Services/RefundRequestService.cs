@@ -139,7 +139,7 @@ public class RefundRequestService : IRefundRequestService
                 var refundRequest = await _unitOfWork.RefundRequestRepository
                     .ActiveEntities
                     .Include(r => r.User)
-                    .ThenInclude(u => u.Wallet)
+                        .ThenInclude(u => u.Wallet)
                     .FirstOrDefaultAsync(r => r.Id == refundRequestId)
                     ?? throw CustomExceptionFactory.CreateNotFoundError("Refund Request");
 

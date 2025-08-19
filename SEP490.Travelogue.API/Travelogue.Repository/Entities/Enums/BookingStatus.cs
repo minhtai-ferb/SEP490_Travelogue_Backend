@@ -4,10 +4,10 @@ namespace Travelogue.Repository.Entities.Enums;
 
 public enum BookingStatus
 {
-    [Display(Name = "Đang chờ xác nhận")]
+    [Display(Name = "Đang chờ thanh toán")]
     Pending = 0,
 
-    [Display(Name = "Đã xác nhận")]
+    [Display(Name = "Đã thanh toán")]
     Confirmed = 1,
 
     [Display(Name = "Bị hủy")]

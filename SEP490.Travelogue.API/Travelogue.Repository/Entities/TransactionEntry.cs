@@ -23,6 +23,9 @@ public sealed class TransactionEntry : BaseEntity
     [EnumDataType(typeof(TransactionType))]
     public TransactionDirection TransactionDirection { get; set; }
 
+    public string? Reason { get; set; }
+    public string? Method { get; set; }
+
     // Navigation properties
     [ForeignKey("WalletId")]
     public Wallet Wallet { get; set; }

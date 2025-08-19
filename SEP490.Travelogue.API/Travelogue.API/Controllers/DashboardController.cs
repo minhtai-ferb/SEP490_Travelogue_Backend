@@ -26,7 +26,7 @@ public class DashboardController : ControllerBase
     // }
 
     [HttpGet("tour-statistics")]
-    public async Task<IActionResult> GetTourStatistics(int month, int year, int topCount, BookingStatus status)
+    public async Task<IActionResult> GetTourStatistics(int month, int year, int topCount, BookingStatus? status)
     {
         var result = await _dashboardService.GetTopToursByMonthAsync(month, year, topCount, status);
         return Ok(ResponseModel<object>.OkResponseModel(
@@ -35,10 +35,20 @@ public class DashboardController : ControllerBase
         ));
     }
 
-    [HttpGet("revenue-statistics")]
-    public async Task<IActionResult> GetRevenueStatisticsAsync([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
+    [HttpGet("system-revenue-statistics")]
+    public async Task<IActionResult> GetSystemRevenueStatisticsAsync([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
     {
-        var result = await _dashboardService.GetRevenueStatisticsAsync(fromDate, toDate);
+        var result = await _dashboardService.GetSystemRevenueStatisticsAsync(fromDate, toDate);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+        ));
+    }
+
+    [HttpGet("admin-revenue-statistics")]
+    public async Task<IActionResult> GetAdminRevenueStatisticsAsync([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
+    {
+        var result = await _dashboardService.GetAdminRevenueStatisticsAsync(fromDate, toDate);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)

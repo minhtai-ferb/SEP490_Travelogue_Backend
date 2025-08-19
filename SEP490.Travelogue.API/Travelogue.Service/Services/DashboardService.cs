@@ -15,7 +15,9 @@ namespace Travelogue.Service.Services;
 public interface IDashboardService
 {
     Task<TopTourResponseDto> GetTopToursByMonthAsync(int month, int year, int topCount, BookingStatus? status);
-    Task<RevenueStatisticResponse> GetRevenueStatisticsAsync(DateTime fromDate, DateTime toDate);
+    // Task<RevenueStatisticResponse> GetSystemRevenueStatisticsAsync(DateTime fromDate, DateTime toDate);
+    Task<RevenueStatisticDto> GetSystemRevenueStatisticsAsync(DateTime fromDate, DateTime toDate);
+    Task<AdminRevenueDataDto> GetAdminRevenueStatisticsAsync(DateTime fromDate, DateTime toDate);
     Task<BookingStatisticResponse> GetBookingStatisticsAsync(DateTime fromDate, DateTime toDate);
     Task<PagedResult<TourBookingItem>> GetTourBookingsAsync(
         Guid tourId,
@@ -173,44 +175,128 @@ public class DashboardService : IDashboardService
     //     }
     // }
 
-    public async Task<RevenueStatisticResponse> GetRevenueStatisticsAsync(DateTime fromDate, DateTime toDate)
+    // public async Task<RevenueStatisticResponse> GetRevenueStatisticsAsync(DateTime fromDate, DateTime toDate)
+    // {
+    //     try
+    //     {
+    //         var adjustedToDate = toDate.Date.AddDays(1).AddTicks(-1);
+    //         var adjustedFromDate = fromDate.Date;
+
+    //         var filteredBookings = _unitOfWork.BookingRepository
+    //             .ActiveEntities
+    //             .Where(b =>
+    //                 b.StartDate >= adjustedFromDate &&
+    //                 b.StartDate <= adjustedToDate &&
+    //                 (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed)
+    //             );
+
+    //         var commissionRate = await GetBookingCommissionPercentAsync();
+
+    //         var groupedByDate = filteredBookings
+    //             .GroupBy(b => b.StartDate.Date)
+    //             .Select(g => new RevenueDataItem
+    //             {
+    //                 Date = g.Key,
+    //                 GrossRevenue = g.Sum(b => b.FinalPrice),
+    //                 Commission = g.Sum(b =>
+    //                     (b.BookingType == BookingType.TourGuide || b.BookingType == BookingType.Workshop)
+    //                         ? b.FinalPrice * commissionRate
+    //                         : 0m),
+    //                 NetRevenue = g.Sum(b =>
+    //                     b.BookingType == BookingType.Tour
+    //                         ? b.FinalPrice
+    //                         : b.FinalPrice * commissionRate)
+    //             });
+
+    //         var revenueData = await groupedByDate.OrderBy(r => r.Date).ToListAsync();
+
+    //         var totalGrossRevenue = revenueData.Sum(r => r.GrossRevenue);
+    //         var totalNetRevenue = revenueData.Sum(r => r.NetRevenue);
+    //         var totalCommission = revenueData.Sum(r => r.Commission);
+
+    //         var allDates = Enumerable.Range(0, (toDate.Date - fromDate.Date).Days + 1)
+    //             .Select(d => fromDate.Date.AddDays(d))
+    //             .ToList();
+
+    //         var completeRevenueData = allDates
+    //             .GroupJoin(revenueData,
+    //                 date => date,
+    //                 data => data.Date,
+    //                 (date, data) => new RevenueDataItem
+    //                 {
+    //                     Date = date,
+    //                     GrossRevenue = data.FirstOrDefault()?.GrossRevenue ?? 0m,
+    //                     Commission = data.FirstOrDefault()?.Commission ?? 0m,
+    //                     NetRevenue = data.FirstOrDefault()?.NetRevenue ?? 0m
+    //                 })
+    //             .OrderBy(r => r.Date)
+    //             .ToList();
+
+    //         return new RevenueStatisticResponse
+    //         {
+    //             FromDate = fromDate,
+    //             ToDate = toDate,
+    //             GrossRevenue = totalGrossRevenue,
+    //             NetRevenue = totalNetRevenue,
+    //             TotalRevenue = totalGrossRevenue,
+    //             Commission = totalCommission,
+    //             RevenueDataItem = completeRevenueData
+    //         };
+    //     }
+    //     catch (CustomException)
+    //     {
+    //         throw;
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+    //     }
+    // }
+
+    public async Task<RevenueStatisticDto> GetSystemRevenueStatisticsAsync(DateTime fromDate, DateTime toDate)
     {
         try
         {
             var adjustedToDate = toDate.Date.AddDays(1).AddTicks(-1);
             var adjustedFromDate = fromDate.Date;
 
+            var result = new RevenueStatisticDto();
+
             var filteredBookings = _unitOfWork.BookingRepository
                 .ActiveEntities
                 .Where(b =>
                     b.StartDate >= adjustedFromDate &&
-                    b.StartDate <= adjustedToDate &&
-                    (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed)
+                    b.StartDate <= adjustedToDate
+                // &&
+                // (b.Status == BookingStatus.Completed)
                 );
 
-            var commissionRate = await GetBookingCommissionPercentAsync();
+            var commissionRate = (await GetBookingCommissionPercentAsync()) / 100;
 
-            var groupedByDate = filteredBookings
+            var groupedByDateGross = filteredBookings
+                .Where(b => b.Status == BookingStatus.Confirmed)
                 .GroupBy(b => b.StartDate.Date)
-                .Select(g => new RevenueDataItem
+                .Select(g => new
                 {
                     Date = g.Key,
-                    GrossRevenue = g.Sum(b => b.FinalPrice),
-                    Commission = g.Sum(b =>
-                        (b.BookingType == BookingType.TourGuide || b.BookingType == BookingType.Workshop)
-                            ? b.FinalPrice * commissionRate
-                            : 0m),
-                    NetRevenue = g.Sum(b =>
-                        b.BookingType == BookingType.Tour
-                            ? b.FinalPrice
-                            : b.FinalPrice * commissionRate)
+                    Tour = g.Where(b => b.BookingType == BookingType.Tour).Sum(b => b.FinalPrice),
+                    BookingTourGuide = g.Where(b => b.BookingType == BookingType.TourGuide).Sum(b => b.FinalPrice),
+                    BookingWorkshop = g.Where(b => b.BookingType == BookingType.Workshop).Sum(b => b.FinalPrice),
                 });
 
-            var revenueData = await groupedByDate.OrderBy(r => r.Date).ToListAsync();
+            var grossRevenue = new RevenueDetailDto();
+            var revenueData = await groupedByDateGross.OrderBy(r => r.Date).ToListAsync();
 
-            var totalGrossRevenue = revenueData.Sum(r => r.GrossRevenue);
-            var totalNetRevenue = revenueData.Sum(r => r.NetRevenue);
-            var totalCommission = revenueData.Sum(r => r.Commission);
+            var tourGrossRevenue = revenueData.Sum(r => r.Tour);
+            var tourGuideGrossRevenue = revenueData.Sum(r => r.BookingTourGuide);
+            var tourWorkshopRevenue = revenueData.Sum(r => r.BookingWorkshop);
+
+            var revenueByCategoryDto = new RevenueByCategoryDto
+            {
+                Tour = tourGrossRevenue,
+                BookingTourGuide = tourGuideGrossRevenue,
+                BookingWorkshop = tourWorkshopRevenue,
+            };
 
             var allDates = Enumerable.Range(0, (toDate.Date - fromDate.Date).Days + 1)
                 .Select(d => fromDate.Date.AddDays(d))
@@ -220,26 +306,240 @@ public class DashboardService : IDashboardService
                 .GroupJoin(revenueData,
                     date => date,
                     data => data.Date,
-                    (date, data) => new RevenueDataItem
+                    (date, data) => new DailyRevenueStatDto
                     {
                         Date = date,
-                        GrossRevenue = data.FirstOrDefault()?.GrossRevenue ?? 0m,
-                        Commission = data.FirstOrDefault()?.Commission ?? 0m,
-                        NetRevenue = data.FirstOrDefault()?.NetRevenue ?? 0m
+                        Total = data.FirstOrDefault()?.Tour ?? 0m,
+                        Tour = data.FirstOrDefault()?.Tour ?? 0m,
+                        BookingTourGuide = data.FirstOrDefault()?.BookingTourGuide ?? 0m,
+                        BookingWorkshop = data.FirstOrDefault()?.BookingWorkshop ?? 0m
                     })
                 .OrderBy(r => r.Date)
                 .ToList();
 
-            return new RevenueStatisticResponse
+            grossRevenue.Total = revenueByCategoryDto.Tour + revenueByCategoryDto.BookingTourGuide + revenueByCategoryDto.BookingWorkshop;
+            grossRevenue.ByCategory = revenueByCategoryDto;
+            grossRevenue.DailyStats = completeRevenueData;
+
+            result.GrossRevenue = grossRevenue;
+
+            // --------------------------------------------------
+
+            var groupedByDateNet = filteredBookings
+                .Where(b => b.Status == BookingStatus.Completed)
+                .GroupBy(b => b.StartDate.Date)
+                .Select(g => new
+                {
+                    Date = g.Key,
+                    Tour = g.Where(b => b.BookingType == BookingType.Tour).Sum(b => b.FinalPrice),
+                    BookingTourGuide = g.Where(b => b.BookingType == BookingType.TourGuide).Sum(b => b.FinalPrice),
+                    BookingWorkshop = g.Where(b => b.BookingType == BookingType.Workshop).Sum(b => b.FinalPrice),
+
+                    /* 
+                    // Commission = g.Sum(b =>
+                    //     (b.BookingType == BookingType.TourGuide || b.BookingType == BookingType.Workshop)
+                    //         ? b.FinalPrice * commissionRate
+                    //         : 0m),
+                    // NetRevenue = g.Sum(b =>
+                    //     b.BookingType == BookingType.Tour
+                    //         ? b.FinalPrice
+                    //         : b.FinalPrice * commissionRate)
+                    */
+                });
+
+            var netRevenue = new RevenueDetailDto();
+            var revenueDataNet = await groupedByDateNet.OrderBy(r => r.Date).ToListAsync();
+
+            var tourNetRevenue = revenueData.Sum(r => r.Tour);
+            var tourGuideNetRevenue = revenueData.Sum(r => r.BookingTourGuide);
+            var tourWorkshopNetRevenue = revenueData.Sum(r => r.BookingWorkshop);
+
+            var netRevenueByCategoryDto = new RevenueByCategoryDto
             {
-                FromDate = fromDate,
-                ToDate = toDate,
-                GrossRevenue = totalGrossRevenue,
-                NetRevenue = totalNetRevenue,
-                TotalRevenue = totalGrossRevenue,
-                Commission = totalCommission,
-                RevenueDataItem = completeRevenueData
+                Tour = tourGrossRevenue,
+                BookingTourGuide = tourGuideGrossRevenue,
+                BookingWorkshop = tourWorkshopRevenue,
             };
+
+            // var totalNetRevenue = revenueData.Sum(r => r.NetRevenue);
+            // var totalCommission = revenueData.Sum(r => r.Commission);
+
+            var allDatesNet = Enumerable.Range(0, (toDate.Date - fromDate.Date).Days + 1)
+                .Select(d => fromDate.Date.AddDays(d))
+                .ToList();
+
+            var dailyNetRevenueStatDto = allDates
+                .GroupJoin(revenueData,
+                    date => date,
+                    data => data.Date,
+                    (date, data) => new DailyRevenueStatDto
+                    {
+                        Date = date,
+                        Total = data.FirstOrDefault()?.Tour ?? 0m,
+                        Tour = data.FirstOrDefault()?.Tour ?? 0m,
+                        BookingTourGuide = data.FirstOrDefault()?.BookingTourGuide ?? 0m,
+                        BookingWorkshop = data.FirstOrDefault()?.BookingWorkshop ?? 0m
+                    })
+                .OrderBy(r => r.Date)
+                .ToList();
+
+            netRevenue.Total = revenueByCategoryDto.Tour + revenueByCategoryDto.BookingTourGuide + revenueByCategoryDto.BookingWorkshop;
+            netRevenue.ByCategory = revenueByCategoryDto;
+            netRevenue.DailyStats = completeRevenueData;
+
+            result.NetRevenue = netRevenue;
+            return result;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<AdminRevenueDataDto> GetAdminRevenueStatisticsAsync(DateTime fromDate, DateTime toDate)
+    {
+        try
+        {
+            var adjustedToDate = toDate.Date.AddDays(1).AddTicks(-1);
+            var adjustedFromDate = fromDate.Date;
+
+            var result = new AdminRevenueDataDto();
+
+            var filteredBookings = _unitOfWork.BookingRepository
+                .ActiveEntities
+                .Where(b =>
+                    b.StartDate >= adjustedFromDate &&
+                    b.StartDate <= adjustedToDate
+                // &&
+                // (b.Status == BookingStatus.Confirmed)
+                );
+
+            var countTemp = filteredBookings.Count();
+
+            var commissionRate = (await GetBookingCommissionPercentAsync()) / 100;
+
+            // --------------------------------
+
+            var groupedByDateGross = filteredBookings
+                .Where(b => b.Status == BookingStatus.Confirmed)
+                .GroupBy(b => b.StartDate.Date)
+                .Select(g => new
+                {
+                    Date = g.Key,
+                    Tour = g.Where(b => b.BookingType == BookingType.Tour).Sum(b => b.FinalPrice),
+                    BookingTourGuide = g.Where(b => b.BookingType == BookingType.TourGuide).Sum(b => b.FinalPrice * commissionRate),
+                    BookingWorkshop = g.Where(b => b.BookingType == BookingType.Workshop).Sum(b => b.FinalPrice * commissionRate),
+                });
+
+            var grossRevenue = new AdminRevenueDto();
+            var revenueData = await groupedByDateGross.OrderBy(r => r.Date).ToListAsync();
+
+            var tourGrossRevenue = revenueData.Sum(r => r.Tour);
+            var tourGuideGrossRevenue = revenueData.Sum(r => r.BookingTourGuide);
+            var tourWorkshopRevenue = revenueData.Sum(r => r.BookingWorkshop);
+
+            var revenueByCategoryDto = new AdminRevenueByCategoryDto
+            {
+                Tour = tourGrossRevenue,
+                CommissionTourGuide = tourGuideGrossRevenue,
+                CommissionWorkshop = tourWorkshopRevenue,
+            };
+
+            var allDates = Enumerable.Range(0, (toDate.Date - fromDate.Date).Days + 1)
+                .Select(d => fromDate.Date.AddDays(d))
+                .ToList();
+
+            var completeRevenueData = allDates
+                .GroupJoin(revenueData,
+                    date => date,
+                    data => data.Date,
+                    (date, data) => new AdminDailyStatDto
+                    {
+                        Date = date,
+                        Total = data.FirstOrDefault()?.Tour ?? 0m,
+                        Tour = data.FirstOrDefault()?.Tour ?? 0m,
+                        CommissionTourGuide = data.FirstOrDefault()?.BookingTourGuide ?? 0m,
+                        CommissionWorkshop = data.FirstOrDefault()?.BookingWorkshop ?? 0m
+                    })
+                .OrderBy(r => r.Date)
+                .ToList();
+
+            grossRevenue.Total = revenueByCategoryDto.Tour + revenueByCategoryDto.CommissionTourGuide + revenueByCategoryDto.CommissionWorkshop;
+            grossRevenue.ByCategory = revenueByCategoryDto;
+            grossRevenue.DailyStats = completeRevenueData;
+
+            result.GrossRevenue = grossRevenue;
+
+            // --------------------------------------------------
+
+            var groupedByDateNet = filteredBookings
+                .Where(b => b.Status == BookingStatus.Completed)
+                .GroupBy(b => b.StartDate.Date)
+                .Select(g => new
+                {
+                    Date = g.Key,
+                    Tour = g.Where(b => b.BookingType == BookingType.Tour).Sum(b => b.FinalPrice),
+                    BookingTourGuide = g.Where(b => b.BookingType == BookingType.TourGuide).Sum(b => b.FinalPrice * commissionRate),
+                    BookingWorkshop = g.Where(b => b.BookingType == BookingType.Workshop).Sum(b => b.FinalPrice * commissionRate),
+
+                    /* 
+                    // Commission = g.Sum(b =>
+                    //     (b.BookingType == BookingType.TourGuide || b.BookingType == BookingType.Workshop)
+                    //         ? b.FinalPrice * commissionRate
+                    //         : 0m),
+                    // NetRevenue = g.Sum(b =>
+                    //     b.BookingType == BookingType.Tour
+                    //         ? b.FinalPrice
+                    //         : b.FinalPrice * commissionRate)
+                    */
+                });
+
+            var netRevenue = new AdminRevenueDto();
+            var revenueDataNet = await groupedByDateNet.OrderBy(r => r.Date).ToListAsync();
+
+            var tourNetRevenue = revenueData.Sum(r => r.Tour);
+            var tourGuideNetRevenue = revenueData.Sum(r => r.BookingTourGuide);
+            var tourWorkshopNetRevenue = revenueData.Sum(r => r.BookingWorkshop);
+
+            var netRevenueByCategoryDto = new AdminRevenueByCategoryDto
+            {
+                Tour = tourGrossRevenue,
+                CommissionTourGuide = tourGuideGrossRevenue,
+                CommissionWorkshop = tourWorkshopRevenue,
+            };
+
+            // var totalNetRevenue = revenueData.Sum(r => r.NetRevenue);
+            // var totalCommission = revenueData.Sum(r => r.Commission);
+
+            var allDatesNet = Enumerable.Range(0, (toDate.Date - fromDate.Date).Days + 1)
+                .Select(d => fromDate.Date.AddDays(d))
+                .ToList();
+
+            var dailyNetRevenueStatDto = allDates
+                .GroupJoin(revenueData,
+                    date => date,
+                    data => data.Date,
+                    (date, data) => new DailyRevenueStatDto
+                    {
+                        Date = date,
+                        Total = data.FirstOrDefault()?.Tour ?? 0m,
+                        Tour = data.FirstOrDefault()?.Tour ?? 0m,
+                        BookingTourGuide = data.FirstOrDefault()?.BookingTourGuide ?? 0m,
+                        BookingWorkshop = data.FirstOrDefault()?.BookingWorkshop ?? 0m
+                    })
+                .OrderBy(r => r.Date)
+                .ToList();
+
+            netRevenue.Total = revenueByCategoryDto.Tour + revenueByCategoryDto.CommissionTourGuide + revenueByCategoryDto.CommissionWorkshop;
+            netRevenue.ByCategory = revenueByCategoryDto;
+            netRevenue.DailyStats = completeRevenueData;
+
+            result.NetRevenue = netRevenue;
+            return result;
         }
         catch (CustomException)
         {
@@ -586,7 +886,23 @@ public class DashboardService : IDashboardService
                     b.PromotionId,
                     b.OriginalPrice,
                     b.DiscountAmount,
-                    b.FinalPrice
+                    b.FinalPrice,
+                    b.ContactName,
+                    b.ContactAddress,
+                    b.ContactEmail,
+                    b.ContactPhone,
+                    Participants = b.Participants.Select(p => new
+                    {
+                        p.Id,
+                        p.BookingId,
+                        p.Type,
+                        Quantity = 1,
+                        p.PricePerParticipant,
+                        p.FullName,
+                        p.Gender,
+                        GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                        p.DateOfBirth
+                    }).ToList()
                 })
                 .OrderBy(b => b.BookingDate)
                 .ToListAsync();
@@ -614,6 +930,22 @@ public class DashboardService : IDashboardService
                     OriginalPrice = b.OriginalPrice,
                     DiscountAmount = b.DiscountAmount,
                     FinalPrice = b.FinalPrice,
+                    ContactName = b.ContactName,
+                    ContactAddress = b.ContactAddress,
+                    ContactEmail = b.ContactEmail,
+                    ContactPhone = b.ContactPhone,
+                    Participants = b.Participants.Select(p => new BookingParticipantDataModel
+                    {
+                        Id = p.Id,
+                        BookingId = p.BookingId,
+                        Type = p.Type,
+                        Quantity = 1,
+                        PricePerParticipant = p.PricePerParticipant,
+                        FullName = p.FullName,
+                        Gender = p.Gender,
+                        GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                        DateOfBirth = p.DateOfBirth
+                    }).ToList()
                 })
                 .ToList();
 
@@ -704,7 +1036,23 @@ public class DashboardService : IDashboardService
                     b.PromotionId,
                     b.OriginalPrice,
                     b.DiscountAmount,
-                    b.FinalPrice
+                    b.FinalPrice,
+                    b.ContactName,
+                    b.ContactAddress,
+                    b.ContactEmail,
+                    b.ContactPhone,
+                    Participants = b.Participants.Select(p => new
+                    {
+                        p.Id,
+                        p.BookingId,
+                        p.Type,
+                        Quantity = 1,
+                        p.PricePerParticipant,
+                        p.FullName,
+                        p.Gender,
+                        GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                        p.DateOfBirth
+                    }).ToList()
                 })
                 .OrderBy(b => b.BookingDate)
                 .ToListAsync();
@@ -732,6 +1080,22 @@ public class DashboardService : IDashboardService
                     OriginalPrice = b.OriginalPrice,
                     DiscountAmount = b.DiscountAmount,
                     FinalPrice = b.FinalPrice,
+                    ContactName = b.ContactName,
+                    ContactAddress = b.ContactAddress,
+                    ContactEmail = b.ContactEmail,
+                    ContactPhone = b.ContactPhone,
+                    Participants = b.Participants.Select(p => new BookingParticipantDataModel
+                    {
+                        Id = p.Id,
+                        BookingId = p.BookingId,
+                        Type = p.Type,
+                        Quantity = 1,
+                        PricePerParticipant = p.PricePerParticipant,
+                        FullName = p.FullName,
+                        Gender = p.Gender,
+                        GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                        DateOfBirth = p.DateOfBirth
+                    }).ToList()
                 })
                 .ToList();
 
@@ -820,7 +1184,23 @@ public class DashboardService : IDashboardService
                     b.PromotionId,
                     b.OriginalPrice,
                     b.DiscountAmount,
-                    b.FinalPrice
+                    b.FinalPrice,
+                    b.ContactName,
+                    b.ContactAddress,
+                    b.ContactEmail,
+                    b.ContactPhone,
+                    Participants = b.Participants.Select(p => new
+                    {
+                        p.Id,
+                        p.BookingId,
+                        p.Type,
+                        Quantity = 1,
+                        p.PricePerParticipant,
+                        p.FullName,
+                        p.Gender,
+                        GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                        p.DateOfBirth
+                    }).ToList()
                 })
                 .OrderBy(b => b.BookingDate)
                 .ToListAsync();
@@ -847,6 +1227,22 @@ public class DashboardService : IDashboardService
                     OriginalPrice = b.OriginalPrice,
                     DiscountAmount = b.DiscountAmount,
                     FinalPrice = b.FinalPrice,
+                    ContactName = b.ContactName,
+                    ContactAddress = b.ContactAddress,
+                    ContactEmail = b.ContactEmail,
+                    ContactPhone = b.ContactPhone,
+                    Participants = b.Participants.Select(p => new BookingParticipantDataModel
+                    {
+                        Id = p.Id,
+                        BookingId = p.BookingId,
+                        Type = p.Type,
+                        Quantity = 1,
+                        PricePerParticipant = p.PricePerParticipant,
+                        FullName = p.FullName,
+                        Gender = p.Gender,
+                        GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                        DateOfBirth = p.DateOfBirth
+                    }).ToList()
                 })
                 .ToList();
 
@@ -936,7 +1332,23 @@ public class DashboardService : IDashboardService
                     b.PromotionId,
                     b.OriginalPrice,
                     b.DiscountAmount,
-                    b.FinalPrice
+                    b.FinalPrice,
+                    b.ContactName,
+                    b.ContactAddress,
+                    b.ContactEmail,
+                    b.ContactPhone,
+                    Participants = b.Participants.Select(p => new
+                    {
+                        p.Id,
+                        p.BookingId,
+                        p.Type,
+                        Quantity = 1,
+                        p.PricePerParticipant,
+                        p.FullName,
+                        p.Gender,
+                        GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                        p.DateOfBirth
+                    }).ToList()
                 })
                 .OrderBy(b => b.BookingDate)
                 .ToListAsync();
@@ -963,6 +1375,22 @@ public class DashboardService : IDashboardService
                     OriginalPrice = b.OriginalPrice,
                     DiscountAmount = b.DiscountAmount,
                     FinalPrice = b.FinalPrice,
+                    ContactName = b.ContactName,
+                    ContactAddress = b.ContactAddress,
+                    ContactEmail = b.ContactEmail,
+                    ContactPhone = b.ContactPhone,
+                    Participants = b.Participants.Select(p => new BookingParticipantDataModel
+                    {
+                        Id = p.Id,
+                        BookingId = p.BookingId,
+                        Type = p.Type,
+                        Quantity = 1,
+                        PricePerParticipant = p.PricePerParticipant,
+                        FullName = p.FullName,
+                        Gender = p.Gender,
+                        GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                        DateOfBirth = p.DateOfBirth
+                    }).ToList()
                 })
                 .ToList();
 
@@ -1048,7 +1476,23 @@ public class DashboardService : IDashboardService
                     b.PromotionId,
                     b.OriginalPrice,
                     b.DiscountAmount,
-                    b.FinalPrice
+                    b.FinalPrice,
+                    b.ContactName,
+                    b.ContactAddress,
+                    b.ContactEmail,
+                    b.ContactPhone,
+                    Participants = b.Participants.Select(p => new
+                    {
+                        p.Id,
+                        p.BookingId,
+                        p.Type,
+                        Quantity = 1,
+                        p.PricePerParticipant,
+                        p.FullName,
+                        p.Gender,
+                        GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                        p.DateOfBirth
+                    }).ToList()
                 })
                 .OrderBy(b => b.BookingDate)
                 .ToListAsync();
@@ -1075,6 +1519,22 @@ public class DashboardService : IDashboardService
                     OriginalPrice = b.OriginalPrice,
                     DiscountAmount = b.DiscountAmount,
                     FinalPrice = b.FinalPrice,
+                    ContactName = b.ContactName,
+                    ContactAddress = b.ContactAddress,
+                    ContactEmail = b.ContactEmail,
+                    ContactPhone = b.ContactPhone,
+                    Participants = b.Participants.Select(p => new BookingParticipantDataModel
+                    {
+                        Id = p.Id,
+                        BookingId = p.BookingId,
+                        Type = p.Type,
+                        Quantity = 1,
+                        PricePerParticipant = p.PricePerParticipant,
+                        FullName = p.FullName,
+                        Gender = p.Gender,
+                        GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                        DateOfBirth = p.DateOfBirth
+                    }).ToList()
                 })
                 .ToList();
 
