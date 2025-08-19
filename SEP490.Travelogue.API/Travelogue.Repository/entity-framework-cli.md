@@ -30,7 +30,9 @@ dotnet ef migrations add <MigrationName> --startup-project <StartupProjectPath>
 
 ```bash
 dotnet ef migrations add InitDb --startup-project ../Travelogue.API
-dotnet ef migrations add AddTourProps --startup-project ../Travelogue.API
+dotnet ef migrations add BookingParticipant --startup-project ../Travelogue.API
+dotnet ef migrations add BookingParticipant --startup-project ../Travelogue.API/Travelogue.API.csproj
+
 ```
 
 ---
@@ -45,6 +47,7 @@ dotnet ef database update --startup-project <StartupProjectPath>
 
 ```bash
 dotnet ef database update --startup-project ../Travelogue.API
+dotnet ef database update --startup-project ../Travelogue.API/Travelogue.API.csproj
 ```
 
 ---

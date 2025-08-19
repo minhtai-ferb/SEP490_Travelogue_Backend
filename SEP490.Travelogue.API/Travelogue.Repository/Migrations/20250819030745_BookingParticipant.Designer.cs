@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Travelogue.Repository.Data;
 
@@ -11,9 +12,11 @@ using Travelogue.Repository.Data;
 namespace Travelogue.Repository.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250819030745_BookingParticipant")]
+    partial class BookingParticipant
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2240,12 +2243,12 @@ namespace Travelogue.Repository.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("74326f7d-23af-48ec-b280-f57b853fab6e"),
-                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 19, 17, 11, 39, 366, DateTimeKind.Unspecified).AddTicks(8534), new TimeSpan(0, 7, 0, 0, 0)),
+                            Id = new Guid("31806833-46a8-4901-b0c3-d39a21440830"),
+                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 19, 10, 7, 40, 617, DateTimeKind.Unspecified).AddTicks(3446), new TimeSpan(0, 7, 0, 0, 0)),
                             IsActive = true,
                             IsDeleted = false,
                             Key = 1,
-                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 19, 17, 11, 39, 366, DateTimeKind.Unspecified).AddTicks(8616), new TimeSpan(0, 7, 0, 0, 0)),
+                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 19, 10, 7, 40, 617, DateTimeKind.Unspecified).AddTicks(3507), new TimeSpan(0, 7, 0, 0, 0)),
                             Unit = "%",
                             Value = "10"
                         });
@@ -2964,10 +2967,6 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_updated_time");
 
-                    b.Property<string>("Method")
-                        .HasColumnType("longtext")
-                        .HasColumnName("method");
-
                     b.Property<decimal?>("PaidAmount")
                         .HasColumnType("decimal(10,2)")
                         .HasColumnName("paid_amount");
@@ -2983,10 +2982,6 @@ namespace Travelogue.Repository.Migrations
                     b.Property<int?>("PaymentStatus")
                         .HasColumnType("int")
                         .HasColumnName("payment_status");
-
-                    b.Property<string>("Reason")
-                        .HasColumnType("longtext")
-                        .HasColumnName("reason");
 
                     b.Property<int>("Status")
                         .HasColumnType("int")

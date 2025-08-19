@@ -9,6 +9,7 @@ using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.BookingModels;
+using Travelogue.Service.Commons.Helpers;
 using Travelogue.Service.Commons.Interfaces;
 
 namespace Travelogue.Service.Services;
@@ -55,14 +56,23 @@ public class BookingService : IBookingService
 
     public async Task<BookingDataModel> CreateTourBookingAsync(CreateBookingTourDto dto, CancellationToken cancellationToken)
     {
-        if (dto.AdultCount <= 0)
+        if (dto.Participants == null || dto.Participants.Count == 0)
+            throw CustomExceptionFactory.CreateBadRequestError("Cần có ít nhất một hành khách tham gia.");
+
+        if (!dto.Participants.Any(p => p.Type == ParticipantType.Adult))
+            throw CustomExceptionFactory.CreateBadRequestError("Phải có ít nhất một người lớn đi kèm.");
+
+        foreach (var p in dto.Participants)
         {
-            throw CustomExceptionFactory.CreateBadRequestError(
-                dto.ChildrenCount > 0
-                    ? "Phải có ít nhất một người lớn đi kèm nếu có trẻ em."
-                    : "Cần có ít nhất một người lớn tham gia."
-            );
+            int age = AgeHelper.CalculateAge(p.DateOfBirth);
+
+            if (p.Type == ParticipantType.Child && !AgeHelper.IsChild(p.DateOfBirth))
+                throw CustomExceptionFactory.CreateBadRequestError($"{p.FullName} không nằm trong độ tuổi trẻ em ({AgeConstraints.MinChildAge}-{AgeConstraints.MaxChildAge}).");
+
+            if (p.Type == ParticipantType.Adult && !AgeHelper.IsAdult(p.DateOfBirth))
+                throw CustomExceptionFactory.CreateBadRequestError($"{p.FullName} không đủ tuổi người lớn (>= {AgeConstraints.MinAdultAge}).");
         }
+
         var currentUserId = _userContextService.GetCurrentUserId();
         var currentTime = _timeService.SystemTimeNow;
 
@@ -72,19 +82,27 @@ public class BookingService : IBookingService
             var tourSchedule = await _unitOfWork.TourScheduleRepository
                 .ActiveEntities
                 .Include(ts => ts.Tour)
-                .FirstOrDefaultAsync(ts => ts.Id == dto.ScheduledId && ts.TourId == dto.TourId)
+                .FirstOrDefaultAsync(ts => ts.Id == dto.ScheduledId && ts.TourId == dto.TourId, cancellationToken)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("tour hoặc tour schedule");
 
-            // còn chỗ kh
-            int totalParticipants = dto.AdultCount + dto.ChildrenCount;
+            int totalParticipants = dto.Participants.Count;
             if (tourSchedule.CurrentBooked + totalParticipants > tourSchedule.MaxParticipant)
                 throw CustomExceptionFactory.CreateBadRequestError("Tour không còn đủ số lượng chỗ bạn yêu cầu");
 
-            decimal adultPrice = tourSchedule.AdultPrice;
-            decimal childrenPrice = tourSchedule.ChildrenPrice;
-            decimal originalPrice = (adultPrice * dto.AdultCount) + (childrenPrice * dto.ChildrenCount);
+            // tính giá price
+            decimal originalPrice = 0;
+            foreach (var p in dto.Participants)
+            {
+                decimal price = p.Type switch
+                {
+                    ParticipantType.Adult => tourSchedule.AdultPrice,
+                    ParticipantType.Child => tourSchedule.ChildrenPrice,
+                    _ => 0
+                };
+                originalPrice += price;
+            }
 
-            // mã giảm giá
+            // khuyến mãi
             var (discountAmount, promotion) = await ValidateAndCalculateDiscountAsync(dto.PromotionCode, originalPrice, dto.TourId);
 
             decimal finalPrice = Math.Max(0, originalPrice - discountAmount);
@@ -102,40 +120,44 @@ public class BookingService : IBookingService
                 PromotionId = promotion?.Id,
                 OriginalPrice = originalPrice,
                 DiscountAmount = discountAmount,
-                FinalPrice = finalPrice
+                FinalPrice = finalPrice,
+
+                ContactName = dto.ContactName,
+                ContactEmail = dto.ContactEmail,
+                ContactPhone = dto.ContactPhone,
+                ContactAddress = dto.ContactAddress
             };
 
-            // Add participants
-            if (dto.AdultCount > 0)
+            foreach (var p in dto.Participants)
             {
+                decimal price = p.Type switch
+                {
+                    ParticipantType.Adult => tourSchedule.AdultPrice,
+                    ParticipantType.Child => tourSchedule.ChildrenPrice,
+                    _ => 0
+                };
+
                 booking.Participants.Add(new BookingParticipant
                 {
-                    Type = ParticipantType.Adult,
-                    Quantity = dto.AdultCount,
-                    PricePerParticipant = adultPrice
+                    Type = p.Type,
+                    FullName = p.FullName,
+                    Gender = p.Gender,
+                    DateOfBirth = p.DateOfBirth,
+                    PricePerParticipant = price
                 });
             }
 
-            if (dto.ChildrenCount > 0)
-            {
-                booking.Participants.Add(new BookingParticipant
-                {
-                    Type = ParticipantType.Child,
-                    Quantity = dto.ChildrenCount,
-                    PricePerParticipant = childrenPrice
-                });
-            }
 
             await _unitOfWork.BookingRepository.AddAsync(booking);
-
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync();
 
+            // load dữ liệu trả về
             var userName = _unitOfWork.UserRepository
-                    .ActiveEntities
-                    .Where(u => u.Id == booking.UserId)
-                    .Select(u => u.FullName)
-                    .FirstOrDefault();
+                .ActiveEntities
+                .Where(u => u.Id == booking.UserId)
+                .Select(u => u.FullName)
+                .FirstOrDefault();
 
             var tourName = _unitOfWork.TourRepository
                 .ActiveEntities
@@ -146,16 +168,14 @@ public class BookingService : IBookingService
             string? tourGuideName = null;
             if (booking.TourGuideId.HasValue)
             {
-                var tourGuide = _unitOfWork.TourGuideRepository
+                tourGuideName = _unitOfWork.TourGuideRepository
                     .ActiveEntities
-                    // .Include(tg => tg.User)
                     .Where(u => u.Id == booking.TourGuideId)
                     .Select(u => u.User.FullName)
                     .FirstOrDefault();
-                tourGuideName = tourGuide;
             }
 
-            var response = new BookingDataModel
+            return new BookingDataModel
             {
                 Id = booking.Id,
                 UserId = booking.UserId,
@@ -179,10 +199,24 @@ public class BookingService : IBookingService
                 PromotionId = booking.PromotionId,
                 OriginalPrice = booking.OriginalPrice,
                 DiscountAmount = booking.DiscountAmount,
-                FinalPrice = booking.FinalPrice
+                FinalPrice = booking.FinalPrice,
+                ContactName = booking.ContactName,
+                ContactAddress = booking.ContactAddress,
+                ContactEmail = booking.ContactEmail,
+                ContactPhone = booking.ContactPhone,
+                Participants = booking.Participants.Select(p => new BookingParticipantDataModel
+                {
+                    Id = p.Id,
+                    BookingId = p.BookingId,
+                    Type = p.Type,
+                    Quantity = 1,
+                    PricePerParticipant = p.PricePerParticipant,
+                    FullName = p.FullName,
+                    Gender = p.Gender,
+                    GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                    DateOfBirth = p.DateOfBirth
+                }).ToList()
             };
-
-            return response;
         }
         catch (CustomException)
         {
@@ -198,13 +232,21 @@ public class BookingService : IBookingService
 
     public async Task<BookingDataModel> CreateWorkshopBookingAsync(CreateBookingWorkshopDto dto, CancellationToken cancellationToken)
     {
-        if (dto.AdultCount <= 0)
+        if (dto.Participants == null || dto.Participants.Count == 0)
+            throw CustomExceptionFactory.CreateBadRequestError("Cần có ít nhất một hành khách tham gia.");
+
+        if (!dto.Participants.Any(p => p.Type == ParticipantType.Adult))
+            throw CustomExceptionFactory.CreateBadRequestError("Phải có ít nhất một người lớn đi kèm.");
+
+        foreach (var p in dto.Participants)
         {
-            throw CustomExceptionFactory.CreateBadRequestError(
-                dto.ChildrenCount > 0
-                    ? "Phải có ít nhất một người lớn đi kèm nếu có trẻ em."
-                    : "Cần có ít nhất một người lớn tham gia."
-            );
+            int age = AgeHelper.CalculateAge(p.DateOfBirth);
+
+            if (p.Type == ParticipantType.Child && !AgeHelper.IsChild(p.DateOfBirth))
+                throw CustomExceptionFactory.CreateBadRequestError($"{p.FullName} không nằm trong độ tuổi trẻ em ({AgeConstraints.MinChildAge}-{AgeConstraints.MaxChildAge}).");
+
+            if (p.Type == ParticipantType.Adult && !AgeHelper.IsAdult(p.DateOfBirth))
+                throw CustomExceptionFactory.CreateBadRequestError($"{p.FullName} không đủ tuổi người lớn (>= {AgeConstraints.MinAdultAge}).");
         }
 
         var currentUserId = _userContextService.GetCurrentUserId();
@@ -216,20 +258,29 @@ public class BookingService : IBookingService
             var workshopSchedule = await _unitOfWork.WorkshopScheduleRepository
                 .ActiveEntities
                 .Include(ws => ws.Workshop)
-                .FirstOrDefaultAsync(ws => ws.Id == dto.WorkshopScheduleId && ws.WorkshopId == dto.WorkshopId)
+                .FirstOrDefaultAsync(ws => ws.Id == dto.WorkshopScheduleId && ws.WorkshopId == dto.WorkshopId, cancellationToken)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("workshop hoặc workshop schedule");
 
-            // Check available slots
-            int totalParticipants = dto.AdultCount + dto.ChildrenCount;
+            // kiểm tra số lượng
+            int totalParticipants = dto.Participants.Count;
             if (workshopSchedule.CurrentBooked + totalParticipants > workshopSchedule.MaxParticipant)
                 throw CustomExceptionFactory.CreateBadRequestError("Workshop không còn đủ chỗ cho số lượng bạn yêu cầu.");
 
-            decimal adultPrice = workshopSchedule.AdultPrice;
-            decimal childrenPrice = workshopSchedule.ChildrenPrice;
-            decimal originalPrice = (adultPrice * dto.AdultCount) + (childrenPrice * dto.ChildrenCount);
+            // tính giá
+            decimal originalPrice = 0;
+            foreach (var p in dto.Participants)
+            {
+                decimal price = p.Type switch
+                {
+                    ParticipantType.Adult => workshopSchedule.AdultPrice,
+                    ParticipantType.Child => workshopSchedule.ChildrenPrice,
+                    _ => 0
+                };
+                originalPrice += price;
+            }
 
+            // khuyến mãi
             var (discountAmount, promotion) = await ValidateAndCalculateDiscountAsync(dto.PromotionCode, originalPrice, dto.WorkshopId);
-
             decimal finalPrice = Math.Max(0, originalPrice - discountAmount);
 
             var booking = new Booking
@@ -245,73 +296,52 @@ public class BookingService : IBookingService
                 PromotionId = promotion?.Id,
                 OriginalPrice = originalPrice,
                 DiscountAmount = discountAmount,
-                FinalPrice = finalPrice
+                FinalPrice = finalPrice,
+                ContactName = dto.ContactName,
+                ContactEmail = dto.ContactEmail,
+                ContactPhone = dto.ContactPhone,
+                ContactAddress = dto.ContactAddress
             };
 
-            // Add participants
-            if (dto.AdultCount > 0)
+            // Add participants chi tiết
+            foreach (var p in dto.Participants)
             {
+                decimal price = p.Type switch
+                {
+                    ParticipantType.Adult => workshopSchedule.AdultPrice,
+                    ParticipantType.Child => workshopSchedule.ChildrenPrice,
+                    _ => 0
+                };
+
                 booking.Participants.Add(new BookingParticipant
                 {
-                    Type = ParticipantType.Adult,
-                    Quantity = dto.AdultCount,
-                    PricePerParticipant = adultPrice
+                    Type = p.Type,
+                    FullName = p.FullName,
+                    Gender = p.Gender,
+                    DateOfBirth = p.DateOfBirth,
+                    PricePerParticipant = price
                 });
             }
-
-            if (dto.ChildrenCount > 0)
-            {
-                booking.Participants.Add(new BookingParticipant
-                {
-                    Type = ParticipantType.Child,
-                    Quantity = dto.ChildrenCount,
-                    PricePerParticipant = childrenPrice
-                });
-            }
-
-            // workshopSchedule.CurrentBooked += totalParticipants;
 
             await _unitOfWork.BookingRepository.AddAsync(booking);
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync();
 
             var userName = _unitOfWork.UserRepository
-                    .ActiveEntities
-                    .Where(u => u.Id == booking.UserId)
-                    .Select(u => u.FullName)
-                    .FirstOrDefault();
-
-            var tourName = _unitOfWork.TourRepository
                 .ActiveEntities
-                .Where(u => u.Id == booking.TourId)
-                .Select(u => u.Name)
+                .Where(u => u.Id == booking.UserId)
+                .Select(u => u.FullName)
                 .FirstOrDefault();
 
-            string? tourGuideName = null;
-            if (booking.TourGuideId.HasValue)
-            {
-                var tourGuide = _unitOfWork.TourGuideRepository
-                    .ActiveEntities
-                    // .Include(tg => tg.User)
-                    .Where(u => u.Id == booking.TourGuideId)
-                    .Select(u => u.User.FullName)
-                    .FirstOrDefault();
-                tourGuideName = tourGuide;
-            }
+            string workshopName = workshopSchedule.Workshop?.Name ?? string.Empty;
 
-            var response = new BookingDataModel
+            return new BookingDataModel
             {
                 Id = booking.Id,
                 UserId = booking.UserId,
                 UserName = userName,
-                TourId = booking.TourId,
-                TourName = tourName,
-                TourScheduleId = booking.TourScheduleId,
-                DepartureDate = booking.TourSchedule?.DepartureDate,
-                TourGuideId = booking.TourGuideId,
-                TourGuideName = tourGuideName,
                 WorkshopId = booking.WorkshopId,
-                WorkshopName = workshopSchedule?.Workshop?.Name ?? string.Empty,
+                WorkshopName = workshopName,
                 WorkshopScheduleId = booking.WorkshopScheduleId,
                 PaymentLinkId = booking.PaymentLinkId,
                 Status = booking.Status,
@@ -325,10 +355,24 @@ public class BookingService : IBookingService
                 PromotionId = booking.PromotionId,
                 OriginalPrice = booking.OriginalPrice,
                 DiscountAmount = booking.DiscountAmount,
-                FinalPrice = booking.FinalPrice
+                FinalPrice = booking.FinalPrice,
+                ContactName = booking.ContactName,
+                ContactAddress = booking.ContactAddress,
+                ContactEmail = booking.ContactEmail,
+                ContactPhone = booking.ContactPhone,
+                Participants = booking.Participants.Select(p => new BookingParticipantDataModel
+                {
+                    Id = p.Id,
+                    BookingId = p.BookingId,
+                    Type = p.Type,
+                    Quantity = 1,
+                    PricePerParticipant = p.PricePerParticipant,
+                    FullName = p.FullName,
+                    Gender = p.Gender,
+                    GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                    DateOfBirth = p.DateOfBirth
+                }).ToList()
             };
-
-            return response;
         }
         catch (CustomException)
         {
@@ -344,13 +388,21 @@ public class BookingService : IBookingService
 
     public async Task<BookingDataModel> CreateTourGuideBookingAsync(CreateBookingTourGuideDto dto, CancellationToken cancellationToken)
     {
-        if (dto.AdultCount <= 0)
+        if (dto.Participants == null || dto.Participants.Count == 0)
+            throw CustomExceptionFactory.CreateBadRequestError("Cần có ít nhất một hành khách tham gia.");
+
+        if (!dto.Participants.Any(p => p.Type == ParticipantType.Adult))
+            throw CustomExceptionFactory.CreateBadRequestError("Phải có ít nhất một người lớn đi kèm.");
+
+        foreach (var p in dto.Participants)
         {
-            throw CustomExceptionFactory.CreateBadRequestError(
-                dto.ChildrenCount > 0
-                    ? "Phải có ít nhất một người lớn đi kèm nếu có trẻ em."
-                    : "Cần có ít nhất một người lớn tham gia."
-            );
+            int age = AgeHelper.CalculateAge(p.DateOfBirth);
+
+            if (p.Type == ParticipantType.Child && !AgeHelper.IsChild(p.DateOfBirth))
+                throw CustomExceptionFactory.CreateBadRequestError($"{p.FullName} không nằm trong độ tuổi trẻ em ({AgeConstraints.MinChildAge}-{AgeConstraints.MaxChildAge}).");
+
+            if (p.Type == ParticipantType.Adult && !AgeHelper.IsAdult(p.DateOfBirth))
+                throw CustomExceptionFactory.CreateBadRequestError($"{p.FullName} không đủ tuổi người lớn (>= {AgeConstraints.MinAdultAge}).");
         }
 
         if (dto.StartDate > dto.EndDate)
@@ -382,7 +434,7 @@ public class BookingService : IBookingService
                 .ActiveEntities
                 .Include(g => g.TourGuideSchedules)
                 .FirstOrDefaultAsync(g => g.Id == dto.TourGuideId)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("hướng dẫn viên");
+                ?? throw CustomExceptionFactory.CreateNotFoundError("tour guide");
 
             var numberOfDays = (dto.EndDate.Date - dto.StartDate.Date).Days + 1;
 
@@ -399,14 +451,10 @@ public class BookingService : IBookingService
                 throw CustomExceptionFactory.CreateBadRequestError("Hướng dẫn viên đã có lịch vào một hoặc nhiều ngày trong khoảng thời gian được chọn.");
             }
 
-            // Tính giá
+            // tính giá
             decimal tourGuideDailyPrice = tourGuide?.Price ?? 0;
             decimal originalPrice = tourGuideDailyPrice * numberOfDays;
             decimal finalPrice = originalPrice;
-
-            // var (discountAmount, promotion) = await ValidateAndCalculateDiscountAsync(dto.PromotionCode, originalPrice, tourGuide?.Id);
-
-            // decimal finalPrice = Math.Max(0, originalPrice - discountAmount);
 
             var booking = new Booking
             {
@@ -418,27 +466,26 @@ public class BookingService : IBookingService
                 BookingDate = currentTime,
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
-                // PromotionId = promotion?.Id,
                 OriginalPrice = originalPrice,
                 DiscountAmount = 0,
-                FinalPrice = originalPrice
+                FinalPrice = originalPrice,
+                ContactName = dto.ContactName,
+                ContactEmail = dto.ContactEmail,
+                ContactPhone = dto.ContactPhone,
+                ContactAddress = dto.ContactAddress
             };
 
-            // Thêm participant
-            booking.Participants.Add(new BookingParticipant
+            // Add participants chi tiết
+            foreach (var p in dto.Participants)
             {
-                Type = ParticipantType.Adult,
-                Quantity = dto.AdultCount,
-                PricePerParticipant = 0
-            });
 
-            if (dto.ChildrenCount > 0)
-            {
                 booking.Participants.Add(new BookingParticipant
                 {
-                    Type = ParticipantType.Child,
-                    Quantity = dto.ChildrenCount,
-                    PricePerParticipant = 0
+                    Type = ParticipantType.Adult,
+                    FullName = p.FullName,
+                    Gender = p.Gender,
+                    DateOfBirth = p.DateOfBirth,
+                    PricePerParticipant = tourGuide.Price
                 });
             }
 
@@ -447,26 +494,28 @@ public class BookingService : IBookingService
             await transaction.CommitAsync();
 
             var userName = _unitOfWork.UserRepository
-                    .ActiveEntities
-                    .Where(u => u.Id == booking.UserId)
-                    .Select(u => u.FullName)
-                    .FirstOrDefault();
+                .ActiveEntities
+                .Where(u => u.Id == booking.UserId)
+                .Select(u => u.FullName)
+                .FirstOrDefault();
 
             var tourGuideName = await _unitOfWork.UserRepository
                 .ActiveEntities
                 .Where(u => u.Id == tourGuide.UserId)
                 .Select(u => u.FullName)
                 .FirstOrDefaultAsync(cancellationToken)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("người dùng");
+                ?? throw CustomExceptionFactory.CreateNotFoundError("user name");
 
             return new BookingDataModel
             {
                 Id = booking.Id,
                 UserId = booking.UserId,
                 UserName = userName,
-                TripPlanId = booking.TourId,
                 TourGuideId = booking.TourGuideId,
+                TripPlanId = booking.TripPlanId,
                 TourGuideName = tourGuideName,
+                WorkshopScheduleId = booking.WorkshopScheduleId,
+                PaymentLinkId = booking.PaymentLinkId,
                 Status = booking.Status,
                 StatusText = _enumService.GetEnumDisplayName<BookingStatus>(booking.Status),
                 BookingType = booking.BookingType,
@@ -478,7 +527,23 @@ public class BookingService : IBookingService
                 PromotionId = booking.PromotionId,
                 OriginalPrice = booking.OriginalPrice,
                 DiscountAmount = booking.DiscountAmount,
-                FinalPrice = booking.FinalPrice
+                FinalPrice = booking.FinalPrice,
+                ContactName = booking.ContactName,
+                ContactAddress = booking.ContactAddress,
+                ContactEmail = booking.ContactEmail,
+                ContactPhone = booking.ContactPhone,
+                Participants = booking.Participants.Select(p => new BookingParticipantDataModel
+                {
+                    Id = p.Id,
+                    BookingId = p.BookingId,
+                    Type = p.Type,
+                    Quantity = 1,
+                    PricePerParticipant = p.PricePerParticipant,
+                    FullName = p.FullName,
+                    Gender = p.Gender,
+                    GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                    DateOfBirth = p.DateOfBirth
+                }).ToList()
             };
         }
         catch (CustomException)
@@ -512,7 +577,7 @@ public class BookingService : IBookingService
                     .ThenInclude(tg => tg!.User)
                 .Include(b => b.Participants)
                 .FirstOrDefaultAsync(b => b.Id == bookingId && b.UserId == currentUserIdGuid, cancellationToken)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Booking not found or user not authorized.");
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Booking");
 
             if (booking.Status != BookingStatus.Pending)
                 throw CustomExceptionFactory.CreateBadRequestError("Booking is not in a pending state.");
@@ -524,7 +589,6 @@ public class BookingService : IBookingService
             if (totalAmount <= 0)
                 throw CustomExceptionFactory.CreateBadRequestError("Total amount must be greater than zero.");
 
-            // Calculate participant counts
             int adultCount = booking.Participants
                 .Where(p => p.Type == ParticipantType.Adult)
                 .Sum(p => p.Quantity);
@@ -532,10 +596,8 @@ public class BookingService : IBookingService
                 .Where(p => p.Type == ParticipantType.Child)
                 .Sum(p => p.Quantity);
 
-            // Generate order code
             long orderCode = long.Parse(currentTime.ToString("yyyyMMddHHmmss"));
 
-            // Prepare payment description
             string tourDescription = booking.TourScheduleId.HasValue
                 ? $"Tour: {booking.Tour?.Name ?? "Custom Tour"} (Run: {booking.TourSchedule?.DepartureDate:yyyy-MM-dd}, Adults: {adultCount}, Children: {childCount})"
                 : $"Custom Tour with {booking.TourGuide?.User.FullName ?? "Unknown Guide"} (Adults: {adultCount}, Children: {childCount})";
@@ -898,17 +960,68 @@ public class BookingService : IBookingService
                 throw CustomExceptionFactory.CreateForbiddenError();
             }
 
-            IQueryable<Booking> query = _unitOfWork.BookingRepository
+            var query = _unitOfWork.BookingRepository
                 .ActiveEntities
                 .Where(b => b.UserId == currentUserId)
-                .Include(b => b.TourGuide)
-                    .ThenInclude(tg => tg.User)
-                .Include(b => b.Tour)
-                .Include(b => b.TourSchedule)
-                .Include(b => b.TripPlan)
-                .Include(b => b.Workshop)
-                .Include(b => b.WorkshopSchedule)
-                .Include(b => b.Promotion);
+                .Select(b => new
+                {
+                    b.Id,
+                    b.UserId,
+                    b.TourId,
+                    b.TourScheduleId,
+                    b.TourGuideId,
+                    b.TripPlanId,
+                    b.WorkshopId,
+                    b.WorkshopScheduleId,
+                    b.PaymentLinkId,
+                    b.PromotionId,
+                    b.Status,
+                    b.BookingType,
+                    b.BookingDate,
+                    b.StartDate,
+                    b.EndDate,
+                    b.CancelledAt,
+                    b.OriginalPrice,
+                    b.DiscountAmount,
+                    b.FinalPrice,
+                    b.ContactName,
+                    b.ContactAddress,
+                    b.ContactEmail,
+                    b.ContactPhone,
+
+                    // Extra fields lấy trực tiếp
+                    UserName = b.User != null ? b.User.FullName : string.Empty,
+                    TourName = b.Tour != null ? b.Tour.Name : string.Empty,
+                    DepartureDate = b.TourSchedule != null
+                        ? (DateTime?)b.TourSchedule.DepartureDate
+                        : null,
+                    TourGuideName = b.TourGuide != null && b.TourGuide.User != null ? b.TourGuide.User.FullName : string.Empty,
+                    TripPlanName = b.TripPlan != null ? b.TripPlan.Name : string.Empty,
+                    WorkshopName = b.Workshop != null ? b.Workshop.Name : string.Empty,
+                    PromotionCode = b.Promotion != null ? b.Promotion.PromotionCode : string.Empty,
+                    // PromotionDescription = b.Promotion != null ? b.Promotion.Description : string.Empty,
+
+                    Participants = b.Participants.Select(p => new
+                    {
+                        p.Id,
+                        p.BookingId,
+                        p.Type,
+                        Quantity = 1,
+                        p.PricePerParticipant,
+                        p.FullName,
+                        p.Gender,
+                        GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                        p.DateOfBirth
+                    }).ToList()
+                });
+            // .Include(b => b.TourGuide)
+            //     .ThenInclude(tg => tg.User)
+            // .Include(b => b.Tour)
+            // .Include(b => b.TourSchedule)
+            // .Include(b => b.TripPlan)
+            // .Include(b => b.Workshop)
+            // .Include(b => b.WorkshopSchedule)
+            // .Include(b => b.Promotion);
 
             // status
             if (filter.Status.HasValue)
@@ -948,17 +1061,23 @@ public class BookingService : IBookingService
             {
                 Id = b.Id,
                 UserId = b.UserId,
-                UserName = b.User?.FullName ?? string.Empty,
+                // UserName = b.User?.FullName ?? string.Empty,
+                UserName = b.UserName,
                 TourId = b.TourId,
-                TourName = b.Tour?.Name ?? string.Empty,
+                // TourName = b.Tour?.Name ?? string.Empty,
+                TourName = b.TourName,
                 TourScheduleId = b.TourScheduleId,
-                DepartureDate = b.TourSchedule?.DepartureDate,
+                // DepartureDate = b.TourSchedule?.DepartureDate,
+                DepartureDate = b.DepartureDate,
                 TourGuideId = b.TourGuideId,
-                TourGuideName = b.TourGuide?.User?.FullName ?? string.Empty,
+                // TourGuideName = b.TourGuide?.User?.FullName ?? string.Empty,
+                TourGuideName = b.TourGuideName,
                 TripPlanId = b.TripPlanId,
-                TripPlanName = b.TripPlan?.Name ?? string.Empty,
+                // TripPlanName = b.TripPlan?.Name ?? string.Empty,
+                TripPlanName = b.TripPlanName,
                 WorkshopId = b.WorkshopId,
-                WorkshopName = b.Workshop?.Name ?? string.Empty,
+                // WorkshopName = b.Workshop?.Name ?? string.Empty,
+                WorkshopName = b.WorkshopName,
                 WorkshopScheduleId = b.WorkshopScheduleId,
                 PaymentLinkId = b.PaymentLinkId,
                 Status = b.Status,
@@ -972,7 +1091,23 @@ public class BookingService : IBookingService
                 PromotionId = b.PromotionId,
                 OriginalPrice = b.OriginalPrice,
                 DiscountAmount = b.DiscountAmount,
-                FinalPrice = b.FinalPrice
+                FinalPrice = b.FinalPrice,
+                ContactName = b.ContactName,
+                ContactAddress = b.ContactAddress,
+                ContactEmail = b.ContactEmail,
+                ContactPhone = b.ContactPhone,
+                Participants = b.Participants.Select(p => new BookingParticipantDataModel
+                {
+                    Id = p.Id,
+                    BookingId = p.BookingId,
+                    Type = p.Type,
+                    Quantity = 1,
+                    PricePerParticipant = p.PricePerParticipant,
+                    FullName = p.FullName,
+                    Gender = p.Gender,
+                    GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                    DateOfBirth = p.DateOfBirth
+                }).ToList()
             }).ToList();
 
             return result;
@@ -1068,16 +1203,60 @@ public class BookingService : IBookingService
                 throw CustomExceptionFactory.CreateForbiddenError();
             }
 
-            IQueryable<Booking> query = _unitOfWork.BookingRepository
+            var query = _unitOfWork.BookingRepository
                 .ActiveEntities
-                .Include(b => b.TourGuide)
-                    .ThenInclude(tg => tg.User)
-                .Include(b => b.Tour)
-                .Include(b => b.TourSchedule)
-                .Include(b => b.TripPlan)
-                .Include(b => b.Workshop)
-                .Include(b => b.WorkshopSchedule)
-                .Include(b => b.Promotion);
+                .Where(b => b.UserId == currentUserId)
+                .Select(b => new
+                {
+                    b.Id,
+                    b.UserId,
+                    b.TourId,
+                    b.TourScheduleId,
+                    b.TourGuideId,
+                    b.TripPlanId,
+                    b.WorkshopId,
+                    b.WorkshopScheduleId,
+                    b.PaymentLinkId,
+                    b.PromotionId,
+                    b.Status,
+                    b.BookingType,
+                    b.BookingDate,
+                    b.StartDate,
+                    b.EndDate,
+                    b.CancelledAt,
+                    b.OriginalPrice,
+                    b.DiscountAmount,
+                    b.FinalPrice,
+                    b.ContactName,
+                    b.ContactAddress,
+                    b.ContactEmail,
+                    b.ContactPhone,
+
+                    // Extra fields lấy trực tiếp
+                    UserName = b.User != null ? b.User.FullName : string.Empty,
+                    TourName = b.Tour != null ? b.Tour.Name : string.Empty,
+                    DepartureDate = b.TourSchedule != null
+                        ? (DateTime?)b.TourSchedule.DepartureDate
+                        : null,
+                    TourGuideName = b.TourGuide != null && b.TourGuide.User != null ? b.TourGuide.User.FullName : string.Empty,
+                    TripPlanName = b.TripPlan != null ? b.TripPlan.Name : string.Empty,
+                    WorkshopName = b.Workshop != null ? b.Workshop.Name : string.Empty,
+                    PromotionCode = b.Promotion != null ? b.Promotion.PromotionCode : string.Empty,
+                    // PromotionDescription = b.Promotion != null ? b.Promotion.Description : string.Empty,
+
+                    Participants = b.Participants.Select(p => new
+                    {
+                        p.Id,
+                        p.BookingId,
+                        p.Type,
+                        Quantity = 1,
+                        p.PricePerParticipant,
+                        p.FullName,
+                        p.Gender,
+                        GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                        p.DateOfBirth
+                    }).ToList()
+                });
 
             // status
             if (filter.Status.HasValue)
@@ -1117,16 +1296,23 @@ public class BookingService : IBookingService
             {
                 Id = b.Id,
                 UserId = b.UserId,
-                UserName = b.User?.FullName ?? string.Empty,
+                // UserName = b.User?.FullName ?? string.Empty,
+                UserName = b.UserName,
                 TourId = b.TourId,
-                TourName = b.Tour?.Name ?? string.Empty,
+                // TourName = b.Tour?.Name ?? string.Empty,
+                TourName = b.TourName,
                 TourScheduleId = b.TourScheduleId,
-                DepartureDate = b.TourSchedule?.DepartureDate,
+                // DepartureDate = b.TourSchedule?.DepartureDate,
+                DepartureDate = b.DepartureDate,
                 TourGuideId = b.TourGuideId,
-                TourGuideName = b.TourGuide?.User?.FullName ?? string.Empty,
-                TripPlanName = b.TripPlan?.Name ?? string.Empty,
+                // TourGuideName = b.TourGuide?.User?.FullName ?? string.Empty,
+                TourGuideName = b.TourGuideName,
+                TripPlanId = b.TripPlanId,
+                // TripPlanName = b.TripPlan?.Name ?? string.Empty,
+                TripPlanName = b.TripPlanName,
                 WorkshopId = b.WorkshopId,
-                WorkshopName = b.Workshop?.Name ?? string.Empty,
+                // WorkshopName = b.Workshop?.Name ?? string.Empty,
+                WorkshopName = b.WorkshopName,
                 WorkshopScheduleId = b.WorkshopScheduleId,
                 PaymentLinkId = b.PaymentLinkId,
                 Status = b.Status,
@@ -1140,7 +1326,23 @@ public class BookingService : IBookingService
                 PromotionId = b.PromotionId,
                 OriginalPrice = b.OriginalPrice,
                 DiscountAmount = b.DiscountAmount,
-                FinalPrice = b.FinalPrice
+                FinalPrice = b.FinalPrice,
+                ContactName = b.ContactName,
+                ContactAddress = b.ContactAddress,
+                ContactEmail = b.ContactEmail,
+                ContactPhone = b.ContactPhone,
+                Participants = b.Participants.Select(p => new BookingParticipantDataModel
+                {
+                    Id = p.Id,
+                    BookingId = p.BookingId,
+                    Type = p.Type,
+                    Quantity = 1,
+                    PricePerParticipant = p.PricePerParticipant,
+                    FullName = p.FullName,
+                    Gender = p.Gender,
+                    GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                    DateOfBirth = p.DateOfBirth
+                }).ToList()
             }).ToList();
 
             return result;
@@ -1167,16 +1369,60 @@ public class BookingService : IBookingService
                 throw CustomExceptionFactory.CreateForbiddenError();
             }
 
-            IQueryable<Booking> query = _unitOfWork.BookingRepository
+            var query = _unitOfWork.BookingRepository
                 .ActiveEntities
-                .Include(b => b.TourGuide)
-                    .ThenInclude(tg => tg != null ? tg.User : null)
-                .Include(b => b.Tour)
-                .Include(b => b.TourSchedule)
-                .Include(b => b.TripPlan)
-                .Include(b => b.Workshop)
-                .Include(b => b.WorkshopSchedule)
-                .Include(b => b.Promotion);
+                .Where(b => b.UserId == currentUserId)
+                .Select(b => new
+                {
+                    b.Id,
+                    b.UserId,
+                    b.TourId,
+                    b.TourScheduleId,
+                    b.TourGuideId,
+                    b.TripPlanId,
+                    b.WorkshopId,
+                    b.WorkshopScheduleId,
+                    b.PaymentLinkId,
+                    b.PromotionId,
+                    b.Status,
+                    b.BookingType,
+                    b.BookingDate,
+                    b.StartDate,
+                    b.EndDate,
+                    b.CancelledAt,
+                    b.OriginalPrice,
+                    b.DiscountAmount,
+                    b.FinalPrice,
+                    b.ContactName,
+                    b.ContactAddress,
+                    b.ContactEmail,
+                    b.ContactPhone,
+
+                    // Extra fields lấy trực tiếp
+                    UserName = b.User != null ? b.User.FullName : string.Empty,
+                    TourName = b.Tour != null ? b.Tour.Name : string.Empty,
+                    DepartureDate = b.TourSchedule != null
+                        ? (DateTime?)b.TourSchedule.DepartureDate
+                        : null,
+                    TourGuideName = b.TourGuide != null && b.TourGuide.User != null ? b.TourGuide.User.FullName : string.Empty,
+                    TripPlanName = b.TripPlan != null ? b.TripPlan.Name : string.Empty,
+                    WorkshopName = b.Workshop != null ? b.Workshop.Name : string.Empty,
+                    PromotionCode = b.Promotion != null ? b.Promotion.PromotionCode : string.Empty,
+                    // PromotionDescription = b.Promotion != null ? b.Promotion.Description : string.Empty,
+
+                    Participants = b.Participants.Select(p => new
+                    {
+                        p.Id,
+                        p.BookingId,
+                        p.Type,
+                        Quantity = 1,
+                        p.PricePerParticipant,
+                        p.FullName,
+                        p.Gender,
+                        GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                        p.DateOfBirth
+                    }).ToList()
+                });
 
             if (filter.Status.HasValue)
             {
@@ -1219,72 +1465,58 @@ public class BookingService : IBookingService
 
             var result = new List<BookingDataModel>();
 
-            foreach (var b in bookings)
+            result = bookings.Select(b => new BookingDataModel
             {
-                var userName = _unitOfWork.UserRepository
-                    .ActiveEntities
-                    .Where(u => u.Id == b.UserId)
-                    .Select(u => u.FullName)
-                    .FirstOrDefault();
-
-                var tourName = _unitOfWork.TourRepository
-                    .ActiveEntities
-                    .Where(u => u.Id == b.TourId)
-                    .Select(u => u.Name)
-                    .FirstOrDefault();
-
-                string? tourGuideName = null;
-                if (b.TourGuideId.HasValue)
+                Id = b.Id,
+                UserId = b.UserId,
+                // UserName = b.User?.FullName ?? string.Empty,
+                UserName = b.UserName,
+                TourId = b.TourId,
+                // TourName = b.Tour?.Name ?? string.Empty,
+                TourName = b.TourName,
+                TourScheduleId = b.TourScheduleId,
+                // DepartureDate = b.TourSchedule?.DepartureDate,
+                DepartureDate = b.DepartureDate,
+                TourGuideId = b.TourGuideId,
+                // TourGuideName = b.TourGuide?.User?.FullName ?? string.Empty,
+                TourGuideName = b.TourGuideName,
+                TripPlanId = b.TripPlanId,
+                // TripPlanName = b.TripPlan?.Name ?? string.Empty,
+                TripPlanName = b.TripPlanName,
+                WorkshopId = b.WorkshopId,
+                // WorkshopName = b.Workshop?.Name ?? string.Empty,
+                WorkshopName = b.WorkshopName,
+                WorkshopScheduleId = b.WorkshopScheduleId,
+                PaymentLinkId = b.PaymentLinkId,
+                Status = b.Status,
+                StatusText = _enumService.GetEnumDisplayName<BookingStatus>(b.Status),
+                BookingType = b.BookingType,
+                BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(b.BookingType),
+                BookingDate = b.BookingDate,
+                StartDate = b.StartDate,
+                EndDate = b.EndDate,
+                CancelledAt = b.CancelledAt,
+                PromotionId = b.PromotionId,
+                OriginalPrice = b.OriginalPrice,
+                DiscountAmount = b.DiscountAmount,
+                FinalPrice = b.FinalPrice,
+                ContactName = b.ContactName,
+                ContactAddress = b.ContactAddress,
+                ContactEmail = b.ContactEmail,
+                ContactPhone = b.ContactPhone,
+                Participants = b.Participants.Select(p => new BookingParticipantDataModel
                 {
-                    var tourGuide = _unitOfWork.TourGuideRepository
-                        .ActiveEntities
-                        // .Include(tg => tg.User)
-                        .Where(u => u.Id == b.TourGuideId)
-                        .Select(u => u.User.FullName)
-                        .FirstOrDefault();
-                    tourGuideName = tourGuide;
-                }
-
-                //Kiểm ra TourSchedule có giá trị k
-                if (b.TourSchedule == null && b.BookingType == BookingType.Tour)
-                {
-                    b.TourSchedule = await _unitOfWork.TourScheduleRepository
-                        .ActiveEntities
-                        .FirstOrDefaultAsync(ts => ts.Id == b.TourScheduleId);
-                }
-
-                var bookingModel = new BookingDataModel
-                {
-                    Id = b.Id,
-                    UserId = b.UserId,
-                    UserName = userName,
-                    TourId = b.TourId,
-                    TourName = tourName,
-                    TourScheduleId = b.TourScheduleId,
-                    DepartureDate = b.TourSchedule?.DepartureDate,
-                    TourGuideId = b.TourGuideId,
-                    TourGuideName = tourGuideName,
-                    TripPlanName = b.TripPlan?.Name ?? string.Empty,
-                    WorkshopId = b.WorkshopId,
-                    WorkshopName = b.Workshop?.Name ?? string.Empty,
-                    WorkshopScheduleId = b.WorkshopScheduleId,
-                    PaymentLinkId = b.PaymentLinkId,
-                    Status = b.Status,
-                    StatusText = _enumService.GetEnumDisplayName<BookingStatus>(b.Status),
-                    BookingType = b.BookingType,
-                    BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(b.BookingType),
-                    BookingDate = b.BookingDate,
-                    StartDate = b.StartDate,
-                    EndDate = b.EndDate,
-                    CancelledAt = b.CancelledAt,
-                    PromotionId = b.PromotionId,
-                    OriginalPrice = b.OriginalPrice,
-                    DiscountAmount = b.DiscountAmount,
-                    FinalPrice = b.FinalPrice
-                };
-
-                result.Add(bookingModel);
-            }
+                    Id = p.Id,
+                    BookingId = p.BookingId,
+                    Type = p.Type,
+                    Quantity = 1,
+                    PricePerParticipant = p.PricePerParticipant,
+                    FullName = p.FullName,
+                    Gender = p.Gender,
+                    GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                    DateOfBirth = p.DateOfBirth
+                }).ToList()
+            }).ToList();
 
             return new PagedResult<BookingDataModel>
             {
@@ -1321,7 +1553,62 @@ public class BookingService : IBookingService
 
             var query = _unitOfWork.BookingRepository
                 .ActiveEntities
-                .Where(b => b.Id == bookingId);
+                .Where(b => b.Id == bookingId)
+                .Select(b => new
+                {
+                    b.Id,
+                    b.UserId,
+                    b.TourId,
+                    b.TourScheduleId,
+                    b.TourGuideId,
+                    b.TripPlanId,
+                    b.WorkshopId,
+                    b.WorkshopScheduleId,
+                    b.PaymentLinkId,
+                    b.PromotionId,
+                    b.Status,
+                    b.BookingType,
+                    b.BookingDate,
+                    b.StartDate,
+                    b.EndDate,
+                    b.CancelledAt,
+                    b.OriginalPrice,
+                    b.DiscountAmount,
+                    b.FinalPrice,
+                    b.ContactName,
+                    b.ContactAddress,
+                    b.ContactEmail,
+                    b.ContactPhone,
+
+                    // Extra fields lấy trực tiếp
+                    UserName = b.User != null ? b.User.FullName : string.Empty,
+                    TourName = b.Tour != null ? b.Tour.Name : string.Empty,
+                    DepartureDate = b.TourSchedule != null
+                        ? (DateTime?)b.TourSchedule.DepartureDate
+                        : null,
+                    TourGuideName = b.TourGuide != null && b.TourGuide.User != null ? b.TourGuide.User.FullName : string.Empty,
+                    TripPlanName = b.TripPlan != null ? b.TripPlan.Name : string.Empty,
+                    WorkshopName = b.Workshop != null ? b.Workshop.Name : string.Empty,
+                    PromotionCode = b.Promotion != null ? b.Promotion.PromotionCode : string.Empty,
+                    // PromotionDescription = b.Promotion != null ? b.Promotion.Description : string.Empty,
+
+                    Participants = b.Participants.Select(p => new
+                    {
+                        p.Id,
+                        p.BookingId,
+                        p.Type,
+                        Quantity = 1,
+                        p.PricePerParticipant,
+                        p.FullName,
+                        p.Gender,
+                        GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                        p.DateOfBirth
+                    }).ToList()
+                });
+
+            // var query = _unitOfWork.BookingRepository
+            //     .ActiveEntities
+            //     .Where(b => b.Id == bookingId);
 
             if (!isAdminOrModerator)
             {
@@ -1329,35 +1616,42 @@ public class BookingService : IBookingService
             }
 
             var booking = await query
-                .Include(b => b.TourGuide)
-                    .ThenInclude(tg => tg != null ? tg.User : null)
-                .Include(b => b.Tour)
-                .Include(b => b.TourSchedule)
-                .Include(b => b.TripPlan)
-                .Include(b => b.Workshop)
-                .Include(b => b.WorkshopSchedule)
-                .Include(b => b.Promotion)
+                // .Include(b => b.TourGuide)
+                //     .ThenInclude(tg => tg != null ? tg.User : null)
+                // .Include(b => b.Tour)
+                // .Include(b => b.TourSchedule)
+                // .Include(b => b.TripPlan)
+                // .Include(b => b.Workshop)
+                // .Include(b => b.WorkshopSchedule)
+                // .Include(b => b.Promotion)
                 .FirstOrDefaultAsync();
 
             if (booking == null)
             {
-                throw CustomExceptionFactory.CreateNotFoundError("Booking không tồn tại hoặc không thuộc về bạn.");
+                throw CustomExceptionFactory.CreateNotFoundError("Booking");
             }
 
             var result = new BookingDataModel
             {
                 Id = booking.Id,
                 UserId = booking.UserId,
-                UserName = booking.User?.FullName ?? string.Empty,
+                // UserName = booking.User?.FullName ?? string.Empty,
+                UserName = booking.UserName,
                 TourId = booking.TourId,
-                TourName = booking.Tour?.Name ?? string.Empty,
+                // TourName = booking.Tour?.Name ?? string.Empty,
+                TourName = booking.TourName,
                 TourScheduleId = booking.TourScheduleId,
-                DepartureDate = booking.TourSchedule?.DepartureDate,
+                // DepartureDate = booking.TourSchedule?.DepartureDate,
+                DepartureDate = booking.DepartureDate,
                 TourGuideId = booking.TourGuideId,
-                TourGuideName = booking.TourGuide?.User?.FullName ?? string.Empty,
-                TripPlanName = booking.TripPlan?.Name ?? string.Empty,
+                // TourGuideName = booking.TourGuide?.User?.FullName ?? string.Empty,
+                TourGuideName = booking.TourGuideName,
+                TripPlanId = booking.TripPlanId,
+                // TripPlanName = booking.TripPlan?.Name ?? string.Empty,
+                TripPlanName = booking.TripPlanName,
                 WorkshopId = booking.WorkshopId,
-                WorkshopName = booking.Workshop?.Name ?? string.Empty,
+                // WorkshopName = booking.Workshop?.Name ?? string.Empty,
+                WorkshopName = booking.WorkshopName,
                 WorkshopScheduleId = booking.WorkshopScheduleId,
                 PaymentLinkId = booking.PaymentLinkId,
                 Status = booking.Status,
@@ -1371,7 +1665,23 @@ public class BookingService : IBookingService
                 PromotionId = booking.PromotionId,
                 OriginalPrice = booking.OriginalPrice,
                 DiscountAmount = booking.DiscountAmount,
-                FinalPrice = booking.FinalPrice
+                FinalPrice = booking.FinalPrice,
+                ContactName = booking.ContactName,
+                ContactAddress = booking.ContactAddress,
+                ContactEmail = booking.ContactEmail,
+                ContactPhone = booking.ContactPhone,
+                Participants = booking.Participants.Select(p => new BookingParticipantDataModel
+                {
+                    Id = p.Id,
+                    BookingId = p.BookingId,
+                    Type = p.Type,
+                    Quantity = 1,
+                    PricePerParticipant = p.PricePerParticipant,
+                    FullName = p.FullName,
+                    Gender = p.Gender,
+                    GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                    DateOfBirth = p.DateOfBirth
+                }).ToList()
             };
 
             return result;

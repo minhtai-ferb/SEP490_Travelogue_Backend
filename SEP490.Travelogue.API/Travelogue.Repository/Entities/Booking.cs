@@ -47,6 +47,21 @@ public sealed class Booking : BaseEntity
     [Column(TypeName = "decimal(10,2)")]
     public decimal FinalPrice { get; set; }
 
+    [Required]
+    [MaxLength(255)]
+    public string ContactName { get; set; } = string.Empty;
+
+    [Required]
+    [MaxLength(100)]
+    public string ContactEmail { get; set; } = string.Empty;
+
+    [Required]
+    [MaxLength(20)]
+    public string ContactPhone { get; set; } = string.Empty;
+
+    [MaxLength(500)]
+    public string? ContactAddress { get; set; }
+
     public User? User { get; set; }
     public Tour? Tour { get; set; }
     public TourSchedule? TourSchedule { get; set; }

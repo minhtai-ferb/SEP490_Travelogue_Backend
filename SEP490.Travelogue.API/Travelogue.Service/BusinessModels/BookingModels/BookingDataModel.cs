@@ -41,4 +41,26 @@ public class BookingDataModel
     public decimal OriginalPrice { get; set; }
     public decimal DiscountAmount { get; set; }
     public decimal FinalPrice { get; set; }
+
+    public string ContactName { get; set; } = string.Empty;
+
+    public string ContactEmail { get; set; } = string.Empty;
+
+    public string ContactPhone { get; set; } = string.Empty;
+
+    public string? ContactAddress { get; set; }
+    public List<BookingParticipantDataModel> Participants { get; set; } = new();
+}
+
+public class BookingParticipantDataModel
+{
+    public Guid Id { get; set; }
+    public Guid BookingId { get; set; }
+    public ParticipantType Type { get; set; }
+    public int Quantity { get; set; }
+    public decimal PricePerParticipant { get; set; }
+    public string? FullName { get; set; }
+    public Gender Gender { get; set; }
+    public string? GenderText { get; set; }
+    public DateTime DateOfBirth { get; set; }
 }

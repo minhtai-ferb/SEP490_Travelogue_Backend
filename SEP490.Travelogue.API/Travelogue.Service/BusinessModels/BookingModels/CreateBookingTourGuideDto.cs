@@ -12,9 +12,12 @@ public class CreateBookingTourGuideDto
     public DateTimeOffset StartDate { get; set; }
     public DateTimeOffset EndDate { get; set; }
 
-    public int AdultCount { get; set; }
-    public int ChildrenCount { get; set; }
-
     public string? PromotionCode { get; set; }
-    public string? Note { get; set; }
+    public string ContactName { get; set; } = string.Empty;
+    public string ContactEmail { get; set; } = string.Empty;
+    public string ContactPhone { get; set; } = string.Empty;
+    public string? ContactAddress { get; set; }
+
+    // Danh sách hành khách
+    public List<CreateBookingParticipantDto> Participants { get; set; } = new();
 }
