@@ -32,6 +32,8 @@ public interface ITourGuideService
     Task<RejectionRequestResponseDto> CreateRejectionRequestAsync(RejectionRequestCreateDto dto);
     Task<RejectionRequestResponseDto> ApproveRejectionRequestAsync(Guid requestId, Guid newTourGuideId);
     Task<RejectionRequestResponseDto> RejectRejectionRequestAsync(Guid requestId, RejectRejectionRequestDto dto);
+    Task<PagedResult<RejectionRequestResponseDto>> GetRejectionRequestsForAdminAsync(RejectionRequestFilter filter, int pageNumber, int pageSize);
+    Task<RejectionRequestResponseDto> GetRejectionRequestByIdAsync(Guid requestId);
 }
 
 public class TourGuideService : ITourGuideService
@@ -1120,5 +1122,152 @@ public class TourGuideService : ITourGuideService
             await _unitOfWork.RollBackAsync();
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
+    }
+
+    public async Task<PagedResult<RejectionRequestResponseDto>> GetRejectionRequestsForAdminAsync(RejectionRequestFilter filter, int pageNumber, int pageSize)
+    {
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            var isAllowed = _userContextService.HasAnyRole(AppRole.TOUR_GUIDE, AppRole.MODERATOR, AppRole.ADMIN);
+            if (!isAllowed)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
+            IQueryable<RejectionRequest> query = _unitOfWork.RejectionRequestRepository.ActiveEntities
+                .Include(r => r.TourGuide)
+                    .ThenInclude(t => t.User)
+                .Include(r => r.TourSchedule)
+                .Include(r => r.Booking)
+                    .ThenInclude(b => b.User);
+
+            //Lọc theo trạng thái
+            if (filter.Status.HasValue)
+            {
+                   query = query.Where(r => r.Status == filter.Status.Value);
+            }
+
+            //Lọc theo tour guide id
+            if (filter.ToutGuideId.HasValue)
+            {
+                query = query.Where(r => r.TourGuideId == filter.ToutGuideId.Value);
+            }
+
+            //Lọc theo ngày
+            if (filter.FromDate.HasValue && filter.ToDate.HasValue)
+            {
+                if (filter.FromDate > filter.ToDate)
+                {
+                    throw CustomExceptionFactory.CreateBadRequestError("Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.");
+                }
+                query = query.Where(r => r.CreatedTime >= filter.FromDate.Value && r.CreatedTime <= filter.ToDate.Value);
+            }
+            else if (filter.FromDate.HasValue)
+            {
+                query = query.Where(r => r.CreatedTime >= filter.FromDate.Value);
+            }
+            else if (filter.ToDate.HasValue)
+            {
+                query = query.Where(r => r.CreatedTime <= filter.ToDate.Value);
+            }
+
+            // Tổng số bản ghi trước khi phân trang
+            var totalRecords = await query.CountAsync();
+
+            // Phân trang
+            var rejectionRequests = await query
+                .OrderByDescending(r => r.CreatedTime)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var result = new List<RejectionRequestResponseDto>();
+
+            foreach (var item in rejectionRequests) {
+                var response = new RejectionRequestResponseDto
+                {
+                    Id = item.Id,
+                    TourGuideId = item.TourGuideId,
+                    RequestType = item.RequestType,
+                    TourScheduleId = item.TourScheduleId,
+                    BookingId = item.BookingId,
+                    Reason = item.Reason,
+                    Status = item.Status,
+                    StatusText = _enumService.GetEnumDisplayName<RejectionRequestStatus>(item.Status),
+                    ModeratorComment = item.ModeratorComment,
+                    ReviewedAt = item.ReviewedAt,
+                    ReviewedBy = item.ReviewedBy,
+                };
+                result.Add(response);
+            }
+
+            return new PagedResult<RejectionRequestResponseDto>
+            {
+                Items = result,
+                TotalCount = totalRecords,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<RejectionRequestResponseDto> GetRejectionRequestByIdAsync(Guid requestId)
+    {
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+            var isAllowed = _userContextService.HasAnyRole(AppRole.TOUR_GUIDE, AppRole.MODERATOR, AppRole.ADMIN);
+            if (!isAllowed)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
+            var request = await _unitOfWork.RejectionRequestRepository
+                .ActiveEntities
+                .Include(r => r.TourGuide)
+                    .ThenInclude(t => t.User)
+                .Include(r => r.TourSchedule)
+                .Include(r => r.Booking)
+                    .ThenInclude(b => b.User)
+                .FirstOrDefaultAsync(r => r.Id == requestId);
+            if (request == null)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("Yêu cầu từ chối của hướng dẫn viên không tồn tại.");
+            }
+
+            return new RejectionRequestResponseDto
+            {
+                Id = request.Id,
+                TourGuideId = request.TourGuideId,
+                RequestType = request.RequestType,
+                TourScheduleId = request.TourScheduleId,
+                BookingId = request.BookingId,
+                Reason = request.Reason,
+                Status = request.Status,
+                StatusText = _enumService.GetEnumDisplayName<RejectionRequestStatus>(request.Status),
+                ModeratorComment = request.ModeratorComment,
+                ReviewedAt = request.ReviewedAt,
+                ReviewedBy = request.ReviewedBy
+            };
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message); 
+        } 
     }
 }

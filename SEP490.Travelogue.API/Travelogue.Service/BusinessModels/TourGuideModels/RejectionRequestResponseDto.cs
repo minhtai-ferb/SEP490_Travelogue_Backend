@@ -4,6 +4,7 @@ namespace Travelogue.Service.BusinessModels.TourGuideModels;
 
 public class RejectionRequestResponseDto
 {
+    public Guid Id { get; set; }
     public Guid TourGuideId { get; set; }
     public RejectionRequestType RequestType { get; set; }
     public Guid? TourScheduleId { get; set; }
