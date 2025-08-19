@@ -3,28 +3,77 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
+using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.Commons.SignalR;
 
 namespace Travelogue.Service.Services;
 
-public interface INotificationService
+public interface IAnnouncementService
 {
     Task SendNotificationAsync(Guid userId, string message);
     Task<List<Announcement>> GetUserNotificationsAsync(Guid userId);
     Task MarkAsReadAsync(Guid notificationId);
     Task<bool> SendNotificationToAllAsync(string message);
     Task<bool> SendNotificationAsync2(Guid userId, string message);
+    Task<Announcement> SendToUserAsync( Guid userId,
+                                        string title,
+                                        string content,
+                                        NotificationType type,
+                                        Guid? referenceId = null);
 }
 
-public class NotificationService : INotificationService
+public class AnnouncementService : IAnnouncementService
 {
     private readonly IHubContext<NotificationHub> _hubContext;
     private readonly IUnitOfWork _unitOfWork;
 
-    public NotificationService(IHubContext<NotificationHub> hubContext, IUnitOfWork unitOfWork)
+    public AnnouncementService(IHubContext<NotificationHub> hubContext, IUnitOfWork unitOfWork)
     {
         _hubContext = hubContext;
         _unitOfWork = unitOfWork;
+    }
+
+    /// G?i thông báo cho 1 user
+    public async Task<Announcement> SendToUserAsync(
+        Guid userId,
+        string title,
+        string content,
+        NotificationType type,
+        Guid? referenceId = null)
+    {
+        var announcement = new Announcement
+        {
+            Title = title,
+            Content = content,
+            Type = type,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _unitOfWork.AnnouncementRepository.AddAsync(announcement);
+
+        var ua = new UserAnnouncement
+        {
+            Announcement = announcement,
+            UserId = userId,
+            IsRead = false
+        };
+
+        await _userAnnouncementRepo.AddAsync(ua);
+
+        // ? Push realtime
+        await _hubContext.Clients.Group($"user-{userId}")
+            .SendAsync("ReceiveNotification", new
+            {
+                announcement.Id,
+                announcement.Title,
+                announcement.Content,
+                Type = type.GetDisplayName(),
+                ReferenceId = referenceId,
+                Url = url,
+                announcement.CreatedAt
+            });
+
+        return announcement;
     }
 
     public async Task<bool> SendNotificationToAllAsync(string message)

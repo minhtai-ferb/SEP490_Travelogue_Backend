@@ -43,6 +43,7 @@ public interface IUnitOfWork //: IDisposable
     IReviewRepository ReviewRepository { get; }
     IPromotionApplicableRepository PromotionApplicableRepository { get; }
     IAnnouncementRepository AnnouncementRepository { get; }
+    IUserAnnouncementRepository UserAnnouncementRepository { get; }
     IReportRepository ReportRepository { get; }
     IWalletRepository WalletRepository { get; }
     IWithdrawalRequestRepository WithdrawalRequestRepository { get; }
