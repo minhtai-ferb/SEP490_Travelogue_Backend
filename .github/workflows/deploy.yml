@@ -32,12 +32,12 @@ jobs:
             mkdir -p Travelogue.API/Config
 
             cat > Travelogue.API/appsettings.json << '__APP_JSON__'
-${{ secrets.APPSETTINGS_JSON }}
-__APP_JSON__
+            ${{ secrets.APPSETTINGS_JSON }}
+            __APP_JSON__
 
             cat > Travelogue.API/Config/serviceAccountKey.json << '__FIREBASE_JSON__'
-${{ secrets.FIREBASE_KEY_JSON }}
-__FIREBASE_JSON__
+            ${{ secrets.FIREBASE_KEY_JSON }}
+            __FIREBASE_JSON__
 
             git pull origin main
             docker compose down || docker-compose down
