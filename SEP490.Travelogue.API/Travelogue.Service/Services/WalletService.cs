@@ -161,6 +161,7 @@ public class WalletService : IWalletService
         {
             var query = _unitOfWork.WithdrawalRequestRepository.ActiveEntities
                 .Include(wr => wr.User)
+                .Include(wr => wr.Wallet)
                 .Include(wr => wr.BankAccount)
                 .AsQueryable();
 
@@ -191,6 +192,7 @@ public class WalletService : IWalletService
             {
                 Id = wr.Id,
                 WalletId = wr.WalletId,
+                WalletBalance = wr.Wallet?.Balance ?? 0.0m,
                 UserId = wr.UserId,
                 UserName = wr.User.FullName,
                 Amount = wr.Amount,

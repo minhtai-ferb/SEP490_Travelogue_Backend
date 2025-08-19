@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Service.BusinessModels.TourModels;
 
@@ -8,6 +9,9 @@ public class UpdateTourPlanLocationDto
     public Guid LocationId { get; set; }
     [Range(1, int.MaxValue)]
     public int DayOrder { get; set; }
+
+    public ActivityType ActivityType { get; set; } = ActivityType.Sightseeing;
+
     [Required]
     public TimeSpan StartTime { get; set; }
     [Required]

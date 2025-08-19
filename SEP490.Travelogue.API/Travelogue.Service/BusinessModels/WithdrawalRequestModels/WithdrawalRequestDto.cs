@@ -9,6 +9,7 @@ public class WithdrawalRequestDto
     public Guid WalletId { get; set; }
     public Guid UserId { get; set; }
     public string? UserName { get; set; }
+    public decimal WalletBalance { get; set; }
     public decimal Amount { get; set; }
     public WithdrawalRequestStatus Status { get; set; }
     public string? StatusText { get; set; }

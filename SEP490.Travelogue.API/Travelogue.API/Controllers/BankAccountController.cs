@@ -28,6 +28,17 @@ namespace Travelogue.API.Controllers
             ));
         }
 
+        [HttpGet("my-bank-accounts")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ResponseModel<List<BankAccountDto>>))]
+        public async Task<IActionResult> GetMyBankAccounts(CancellationToken cancellationToken)
+        {
+            var result = await _bankAccountService.GetMyBankAccountsAsync();
+            return Ok(ResponseModel<List<BankAccountDto>>.OkResponseModel(
+                data: result,
+                message: ResponseMessages.SUCCESS
+            ));
+        }
+
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ResponseModel<BankAccountDto>))]
         public async Task<IActionResult> AddBankAccount([FromBody] BankAccountCreateDto dto, CancellationToken cancellationToken)

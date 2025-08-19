@@ -10,8 +10,8 @@ public enum WorkshopStatus
     [Display(Name = "Chờ duyệt")]
     Pending = 2,
 
-    // [Display(Name = "Cần chỉnh sửa")]
-    // NeedRevision = 3,
+    [Display(Name = "Sẵn sàng")] // làng nghề sửa xong, có sschedule đầy đủ rồi, có thể nộp cho moderator
+    Confirmed = 3,
 
     [Display(Name = "Đã phê duyệt")]
     Approved = 4,

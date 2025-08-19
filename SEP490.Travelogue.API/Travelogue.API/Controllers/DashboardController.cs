@@ -55,6 +55,56 @@ public class DashboardController : ControllerBase
          ));
     }
 
+    [HttpGet("tours-statistic/{tourId}")]
+    public async Task<IActionResult> GetTourStatistics(Guid tourId)
+    {
+        var result = await _dashboardService.GetTourBookingStatisticAsync(tourId);
+        return Ok(PagedResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+        ));
+    }
+
+    [HttpGet("tour-schedules-statistic/{tourScheduleId}")]
+    public async Task<IActionResult> GetTourScheduleStatistics(Guid tourScheduleId)
+    {
+        var result = await _dashboardService.GetTourScheduleBookingStatisticAsync(tourScheduleId);
+        return Ok(PagedResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+        ));
+    }
+
+    [HttpGet("tour-guides-statistic/{tourGuideId}")]
+    public async Task<IActionResult> GetTourGuideStatistics(Guid tourGuideId)
+    {
+        var result = await _dashboardService.GetTourGuideBookingStatisticAsync(tourGuideId);
+        return Ok(PagedResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+        ));
+    }
+
+    [HttpGet("workshops-statistic/{workshopId}")]
+    public async Task<IActionResult> GetWorkshopStatistics(Guid workshopId)
+    {
+        var result = await _dashboardService.GetWorkshopBookingStatisticAsync(workshopId);
+        return Ok(PagedResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+        ));
+    }
+
+    [HttpGet("workshop-schedules-statistic/{workshopScheduleId}")]
+    public async Task<IActionResult> GetWorkshopScheduleStatistics(Guid workshopScheduleId)
+    {
+        var result = await _dashboardService.GetWorkshopScheduleBookingStatisticAsync(workshopScheduleId);
+        return Ok(PagedResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+        ));
+    }
+
     [HttpGet("tours/{tourId}")]
     public async Task<IActionResult> GetTourBookings(Guid tourId, BookingStatus? status, int pageNumber = 1, int pageSize = 10)
     {
