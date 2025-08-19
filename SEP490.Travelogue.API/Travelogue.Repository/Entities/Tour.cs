@@ -12,6 +12,7 @@ public sealed class Tour : BaseEntity
     [MaxLength(1000)]
     public string? Description { get; set; }
     public string? Content { get; set; }
+    public string? TransportType { get; set; }
 
     public int TotalDays { get; set; }
 

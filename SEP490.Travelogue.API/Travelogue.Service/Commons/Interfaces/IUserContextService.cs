@@ -3,6 +3,9 @@
 public interface IUserContextService
 {
     string GetCurrentUserId();
+    string? GetCurrentUserIdOrAnonymous();
+    Guid GetCurrentUserIdGuid();
+    Guid GetCurrentUserIdGuidOrAnonymous();
     string GetUserToken();
     string? TryGetCurrentUserId();
     Task<List<string>> GetCurrentUserRolesAsync();

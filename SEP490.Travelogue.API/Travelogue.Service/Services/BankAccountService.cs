@@ -10,6 +10,7 @@ namespace Travelogue.Service.Services;
 public interface IBankAccountService
 {
     Task<List<BankAccountDto>> GetUserBankAccountsAsync(Guid userId);
+    Task<List<BankAccountDto>> GetMyBankAccountsAsync();
     Task<BankAccountDto> AddBankAccountAsync(BankAccountCreateDto dto);
     Task<BankAccountDto> UpdateBankAccountAsync(Guid bankAccountId, BankAccountUpdateDto dto);
     Task DeleteBankAccountAsync(Guid bankAccountId);
@@ -33,6 +34,37 @@ public class BankAccountService : IBankAccountService
             var accounts = await _unitOfWork.BankAccountRepository
                 .ActiveEntities
                 .Where(b => b.UserId == userId)
+                .ToListAsync();
+
+            return accounts.Select(a => new BankAccountDto
+            {
+                Id = a.Id,
+                UserId = a.UserId,
+                BankName = a.BankName,
+                BankAccountNumber = a.BankAccountNumber,
+                BankOwnerName = a.BankOwnerName,
+                IsDefault = a.IsDefault
+            }).ToList();
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<BankAccountDto>> GetMyBankAccountsAsync()
+    {
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            var accounts = await _unitOfWork.BankAccountRepository
+                .ActiveEntities
+                .Where(b => b.UserId == currentUserId)
                 .ToListAsync();
 
             return accounts.Select(a => new BankAccountDto

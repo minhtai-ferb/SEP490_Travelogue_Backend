@@ -17,5 +17,8 @@ public enum BookingStatus
     Expired = 3,
 
     [Display(Name = "Bị hủy bởi nhà cung cấp")]
-    CancelledByProvider = 4
+    CancelledByProvider = 4,
+
+    [Display(Name = "Đã hoàn thành")]
+    Completed = 5
 }

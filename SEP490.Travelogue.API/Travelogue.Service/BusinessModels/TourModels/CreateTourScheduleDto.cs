@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Service.BusinessModels.TourModels;
 

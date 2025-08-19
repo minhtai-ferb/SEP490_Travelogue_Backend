@@ -12,6 +12,7 @@ public class UpdateTourDto
     [MaxLength(1000)]
     public string? Description { get; set; }
     public string? Content { get; set; }
+    public string? TransportType { get; set; }
 
     [Range(1, int.MaxValue)]
     public int TotalDays { get; set; }
