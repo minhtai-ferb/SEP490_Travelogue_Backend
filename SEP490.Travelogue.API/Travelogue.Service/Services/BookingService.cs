@@ -114,7 +114,7 @@ public class BookingService : IBookingService
                 TourScheduleId = dto.ScheduledId,
                 BookingType = BookingType.Tour,
                 Status = BookingStatus.Pending,
-                BookingDate = DateTimeOffset.UtcNow,
+                BookingDate = currentTime,
                 StartDate = tourSchedule.DepartureDate,
                 EndDate = tourSchedule.DepartureDate.AddDays(tourSchedule.Tour.TotalDays - 1),
                 PromotionId = promotion?.Id,
@@ -290,7 +290,7 @@ public class BookingService : IBookingService
                 WorkshopScheduleId = dto.WorkshopScheduleId,
                 BookingType = BookingType.Workshop,
                 Status = BookingStatus.Pending,
-                BookingDate = DateTimeOffset.UtcNow,
+                BookingDate = currentTime,
                 StartDate = workshopSchedule.StartTime,
                 EndDate = workshopSchedule.EndTime,
                 PromotionId = promotion?.Id,
@@ -1703,6 +1703,8 @@ public class BookingService : IBookingService
             if (string.IsNullOrWhiteSpace(promotionCode))
                 return (0, null);
 
+            var currentTime = _timeService.SystemTimeNow;
+
             var promotion = await _unitOfWork.PromotionRepository
                 .ActiveEntities
                 .Include(p => p.PromotionApplicables)
@@ -1712,7 +1714,7 @@ public class BookingService : IBookingService
                 throw CustomExceptionFactory.CreateBadRequestError("Không tim thấy mã giảm giá");
 
             // kieem tra ngày
-            var currentDate = DateTimeOffset.UtcNow;
+            var currentDate = currentTime.DateTime;
             if (promotion.StartDate > currentDate || promotion.EndDate < currentDate)
                 throw CustomExceptionFactory.CreateBadRequestError("Promotion is not active or has expired.");
 

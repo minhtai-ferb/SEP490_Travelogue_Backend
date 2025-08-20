@@ -8,8 +8,11 @@ public enum TransactionType
     Booking = 1,
 
     [Display(Name = "Rút tiền")]
-    Withdraw = 2,
+    Withdrawal = 2,
 
     [Display(Name = "Hoàn tiền")]
     Refund = 3,
+
+    [Display(Name = "Hoa hồng")]
+    Commission = 4
 }

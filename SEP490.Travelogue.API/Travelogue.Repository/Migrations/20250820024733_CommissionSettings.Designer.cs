@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Travelogue.Repository.Data;
 
@@ -11,9 +12,11 @@ using Travelogue.Repository.Data;
 namespace Travelogue.Repository.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250820024733_CommissionSettings")]
+    partial class CommissionSettings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2149,18 +2152,6 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("deleted_time");
 
-                    b.Property<int?>("FinalReportStatus")
-                        .HasColumnType("int")
-                        .HasColumnName("final_report_status");
-
-                    b.Property<DateTimeOffset?>("HandledAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("handled_at");
-
-                    b.Property<Guid?>("HandledBy")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("handled_by");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
@@ -2176,10 +2167,6 @@ namespace Travelogue.Repository.Migrations
                     b.Property<DateTimeOffset>("LastUpdatedTime")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_updated_time");
-
-                    b.Property<string>("ModeratorNote")
-                        .HasColumnType("longtext")
-                        .HasColumnName("moderator_note");
 
                     b.Property<int>("Rating")
                         .HasColumnType("int")

@@ -14,9 +14,12 @@ public sealed class RefundRequest : BaseEntity
     public Guid BookingId { get; set; }
     public string? Reason { get; set; }
 
+    public DateTimeOffset RequestedAt { get; set; }
+    public DateTimeOffset? RespondedAt { get; set; }
+
     [Required]
     public RefundRequestStatus Status { get; set; } = RefundRequestStatus.Pending;
-    public string? RejectionReason { get; set; }
+    public string? Note { get; set; }
 
     [Column(TypeName = "decimal(18,2)")]
     public decimal RefundAmount { get; set; }
