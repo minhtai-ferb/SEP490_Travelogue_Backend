@@ -15,10 +15,3 @@ public sealed class SystemSetting : BaseEntity
     [MaxLength(100)]
     public string? Unit { get; set; }
 }
-public sealed class CommissionSettings : BaseEntity
-{
-    public decimal TourGuideCommissionRate { get; set; }
-
-    public decimal CraftVillageCommissionRate { get; set; }
-    public DateTime EffectiveDate { get; set; }
-}
