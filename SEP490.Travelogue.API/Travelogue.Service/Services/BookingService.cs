@@ -1211,7 +1211,6 @@ public class BookingService : IBookingService
 
             var query = _unitOfWork.BookingRepository
                 .ActiveEntities
-                .Where(b => b.UserId == currentUserId)
                 .Select(b => new
                 {
                     b.Id,
@@ -1377,7 +1376,6 @@ public class BookingService : IBookingService
 
             var query = _unitOfWork.BookingRepository
                 .ActiveEntities
-                .Where(b => b.UserId == currentUserId)
                 .Select(b => new
                 {
                     b.Id,

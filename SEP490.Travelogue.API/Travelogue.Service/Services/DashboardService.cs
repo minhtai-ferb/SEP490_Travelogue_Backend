@@ -274,7 +274,7 @@ public class DashboardService : IDashboardService
             // var commissionRate = (await GetBookingCommissionPercentAsync()) / 100;
 
             var groupedByDateGross = filteredBookings
-                .Where(b => b.Status == BookingStatus.Confirmed)
+                .Where(b => b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed)
                 .GroupBy(b => b.StartDate.Date)
                 .Select(g => new
                 {
@@ -432,11 +432,11 @@ public class DashboardService : IDashboardService
                 .ActiveEntities
                 .Where(b => b.StartDate >= adjustedFromDate && b.StartDate <= adjustedToDate);
 
-            var allBookings = await filteredBookings
-                .Where(b => b.Status == BookingStatus.Confirmed)
+            var grossBookings = await filteredBookings
+                .Where(b => b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Confirmed)
                 .ToListAsync();
 
-            var groupedByDateGross = allBookings
+            var groupedByDateGross = grossBookings
                 .GroupBy(b => b.StartDate.Date)
                 .Select(g => new
                 {
@@ -468,7 +468,10 @@ public class DashboardService : IDashboardService
                     (date, data) => new AdminDailyStatDto
                     {
                         Date = date,
-                        Total = data.FirstOrDefault()?.Tour ?? 0m,
+                        Total =
+                                (data.FirstOrDefault()?.Tour ?? 0m)
+                            + (data.FirstOrDefault()?.BookingTourGuide ?? 0m)
+                            + (data.FirstOrDefault()?.BookingWorkshop ?? 0m),
                         Tour = data.FirstOrDefault()?.Tour ?? 0m,
                         CommissionTourGuide = data.FirstOrDefault()?.BookingTourGuide ?? 0m,
                         CommissionWorkshop = data.FirstOrDefault()?.BookingWorkshop ?? 0m
