@@ -84,6 +84,7 @@ public class TourGuideController : ControllerBase
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
         ));
     }
+
     /// <summary>
     /// Lấy thông tin chi tiết lịch làm việc (schedule) của Tour Guide theo Id lịch làm việc.
     /// </summary>

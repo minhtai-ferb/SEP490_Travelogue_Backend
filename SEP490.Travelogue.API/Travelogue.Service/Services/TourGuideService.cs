@@ -683,8 +683,7 @@ public class TourGuideService : ITourGuideService
                 .AnyAsync(r => r.TourGuideId == tourGuide.Id &&
                     r.Status == RejectionRequestStatus.Pending &&
                     ((dto.RequestType == RejectionRequestType.TourSchedule && r.TourScheduleId == dto.TourScheduleId) ||
-                     (dto.RequestType == RejectionRequestType.Booking && r.BookingId == dto.BookingId)))
-                .ConfigureAwait(false);
+                     (dto.RequestType == RejectionRequestType.Booking && r.BookingId == dto.BookingId)));
 
             if (existingPendingRequest)
             {
@@ -751,6 +750,7 @@ public class TourGuideService : ITourGuideService
 
             var response = new RejectionRequestResponseDto
             {
+                Id = request.Id,
                 TourGuideId = request.TourGuideId,
                 RequestType = request.RequestType,
                 TourScheduleId = request.TourScheduleId,
@@ -1316,16 +1316,23 @@ public class TourGuideService : ITourGuideService
                 throw CustomExceptionFactory.CreateNotFoundError("Tour Guide Schedule");
             }
 
-            var rejection = await _unitOfWork.RejectionRequestRepository
+            var rejectionQuery = _unitOfWork.RejectionRequestRepository
                 .ActiveEntities
                 .Include(r => r.TourGuide)
                 .Include(r => r.TourSchedule)
                 .Include(r => r.Booking)
-                .FirstOrDefaultAsync(r =>
-                    r.TourGuideId == tourGuide.Id &&
-                    (r.TourScheduleId == tourGuideSchedule.TourScheduleId || r.BookingId == tourGuideSchedule.BookingId),
-                    cancellationToken)
-                .ConfigureAwait(false);
+                .Where(r => r.TourGuideId == tourGuide.Id);
+
+            if (tourGuideSchedule.TourScheduleId != null)
+            {
+                rejectionQuery = rejectionQuery.Where(r => r.TourScheduleId == tourGuideSchedule.TourScheduleId);
+            }
+            else if (tourGuideSchedule.BookingId != null)
+            {
+                rejectionQuery = rejectionQuery.Where(r => r.BookingId == tourGuideSchedule.BookingId);
+            }
+
+            var rejection = await rejectionQuery.FirstOrDefaultAsync();
 
             var result = new ScheduleWithRejectionResponseDto
             {
