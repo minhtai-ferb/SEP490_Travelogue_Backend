@@ -437,7 +437,7 @@ public class DashboardService : IDashboardService
                 .Where(b => b.StartDate >= adjustedFromDate && b.StartDate <= adjustedToDate);
 
             var grossBookings = await filteredBookings
-                .Where(b => b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Confirmed)
+                .Where(b => b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed)
                 .ToListAsync();
 
             var groupedByDateGross = grossBookings
