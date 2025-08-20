@@ -8,4 +8,6 @@ public enum ActivityType
     Sightseeing = 1,
     [Display(Name = "Ăn uống")]
     FoodAndDrink = 2,
+    [Display(Name = "Workshop")]
+    Workshop = 3,
 }
