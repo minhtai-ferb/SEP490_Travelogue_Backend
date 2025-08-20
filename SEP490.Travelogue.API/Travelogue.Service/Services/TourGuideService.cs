@@ -1162,9 +1162,9 @@ public class TourGuideService : ITourGuideService
             }
 
             //Lọc theo tour guide id
-            if (filter.ToutGuideId.HasValue)
+            if (filter.TourGuideId.HasValue)
             {
-                query = query.Where(r => r.TourGuideId == filter.ToutGuideId.Value);
+                query = query.Where(r => r.TourGuideId == filter.TourGuideId.Value);
             }
 
             //Lọc theo ngày

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Travelogue.Repository.Data;
 
@@ -11,9 +12,11 @@ using Travelogue.Repository.Data;
 namespace Travelogue.Repository.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250820045651_Review-Report")]
+    partial class ReviewReport
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -612,75 +615,6 @@ namespace Travelogue.Repository.Migrations
                     b.HasIndex("TourGuideId");
 
                     b.ToTable("certifications");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.CommissionSettings", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<decimal>("CraftVillageCommissionRate")
-                        .HasColumnType("decimal(65,30)")
-                        .HasColumnName("craft_village_commission_rate");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<DateTime>("EffectiveDate")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("effective_date");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<decimal>("TourGuideCommissionRate")
-                        .HasColumnType("decimal(65,30)")
-                        .HasColumnName("tour_guide_commission_rate");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("commission_settings");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("b7afd366-c7e4-44b3-ab7e-b222e549e697"),
-                            CraftVillageCommissionRate = 10m,
-                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 20, 9, 47, 26, 254, DateTimeKind.Unspecified).AddTicks(671), new TimeSpan(0, 7, 0, 0, 0)),
-                            EffectiveDate = new DateTime(2025, 8, 20, 9, 47, 26, 254, DateTimeKind.Local).AddTicks(690),
-                            IsActive = true,
-                            IsDeleted = false,
-                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 20, 9, 47, 26, 254, DateTimeKind.Unspecified).AddTicks(676), new TimeSpan(0, 7, 0, 0, 0)),
-                            TourGuideCommissionRate = 20m
-                        });
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.CraftVillage", b =>
@@ -1930,10 +1864,6 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_updated_time");
 
-                    b.Property<string>("Note")
-                        .HasColumnType("longtext")
-                        .HasColumnName("note");
-
                     b.Property<string>("Reason")
                         .HasColumnType("longtext")
                         .HasColumnName("reason");
@@ -1942,13 +1872,9 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("refund_amount");
 
-                    b.Property<DateTimeOffset>("RequestedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("requested_at");
-
-                    b.Property<DateTimeOffset?>("RespondedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("responded_at");
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("longtext")
+                        .HasColumnName("rejection_reason");
 
                     b.Property<int>("Status")
                         .HasColumnType("int")
@@ -2333,12 +2259,12 @@ namespace Travelogue.Repository.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("8704f52d-758f-4084-a772-6be54f5c9ad3"),
-                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 20, 9, 47, 26, 253, DateTimeKind.Unspecified).AddTicks(9560), new TimeSpan(0, 7, 0, 0, 0)),
+                            Id = new Guid("1616cf78-7cdd-483a-ae3f-4c42aefa3780"),
+                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 20, 11, 56, 50, 909, DateTimeKind.Unspecified).AddTicks(3341), new TimeSpan(0, 7, 0, 0, 0)),
                             IsActive = true,
                             IsDeleted = false,
                             Key = 1,
-                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 20, 9, 47, 26, 253, DateTimeKind.Unspecified).AddTicks(9808), new TimeSpan(0, 7, 0, 0, 0)),
+                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 20, 11, 56, 50, 909, DateTimeKind.Unspecified).AddTicks(3391), new TimeSpan(0, 7, 0, 0, 0)),
                             Unit = "%",
                             Value = "10"
                         });
