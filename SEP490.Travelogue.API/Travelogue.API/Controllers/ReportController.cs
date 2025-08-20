@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Threading;
 using Travelogue.Repository.Bases.Responses;
+using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.ReportModels;
 using Travelogue.Service.Commons.BaseResponses;
@@ -19,11 +21,17 @@ public class ReportController : ControllerBase
     }
 
     /// <summary>
-    /// Tạo báo cáo mới cho một đánh giá
+    /// Người dùng gửi báo cáo về một bài đánh giá (review) mà họ cho là vi phạm.
     /// </summary>
-    /// <param name="dto">Thông tin báo cáo</param>
-    /// <param name="cancellationToken">Token hủy thao tác</param>
-    /// <returns>Thông tin báo cáo vừa tạo</returns>
+    /// <param name="dto">
+    /// Thông tin báo cáo bao gồm ID của review và lý do báo cáo.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// Token hủy thao tác bất đồng bộ.
+    /// </param>
+    /// <returns>
+    /// Đối tượng <see cref="ReportResponseDto"/> chứa thông tin báo cáo vừa tạo.
+    /// </returns>
     [HttpPost]
     public async Task<IActionResult> CreateReport([FromBody] CreateReportRequestDto dto, CancellationToken cancellationToken)
     {
@@ -35,11 +43,18 @@ public class ReportController : ControllerBase
     }
 
     /// <summary>
-    /// Xóa báo cáo theo ID
+    /// Người dùng xóa báo cáo của chính mình.
     /// </summary>
-    /// <param name="reportId">ID của báo cáo</param>
-    /// <param name="cancellationToken">Token hủy thao tác</param>
-    /// <returns>Kết quả xóa</returns>
+    /// <param name="reportId">
+    /// ID của báo cáo cần xóa.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// Token hủy thao tác bất đồng bộ.
+    /// </param>
+    /// <returns>
+    /// Trả về <c>true</c> nếu xóa thành công (xóa logic).  
+    /// Nếu báo cáo đã được xử lý thì không thể xóa.
+    /// </returns>
     [HttpDelete("{reportId}")]
     public async Task<IActionResult> DeleteReport(Guid reportId, CancellationToken cancellationToken)
     {
@@ -51,10 +66,14 @@ public class ReportController : ControllerBase
     }
 
     /// <summary>
-    /// Lấy danh sách báo cáo của người dùng hiện tại
+    /// Lấy tất cả báo cáo do người dùng hiện tại đã gửi.
     /// </summary>
-    /// <param name="cancellationToken">Token hủy thao tác</param>
-    /// <returns>Danh sách báo cáo</returns>
+    /// <param name="cancellationToken">
+    /// Token hủy thao tác bất đồng bộ.
+    /// </param>
+    /// <returns>
+    /// Danh sách <see cref="ReportResponseDto"/> chứa thông tin các báo cáo của người dùng.
+    /// </returns>
     [HttpGet("my-reports")]
     public async Task<IActionResult> GetMyReports(CancellationToken cancellationToken)
     {
@@ -66,28 +85,42 @@ public class ReportController : ControllerBase
     }
 
     /// <summary>
-    /// Lấy danh sách báo cáo theo ID của đánh giá
+    /// Lấy chi tiết một bài đánh giá cùng tất cả báo cáo liên quan đến nó.
     /// </summary>
-    /// <param name="id">ID của đánh giá</param>
-    /// <param name="cancellationToken">Token hủy thao tác</param>
-    /// <returns>Danh sách báo cáo liên quan đến đánh giá</returns>
-    [HttpGet("by-review/{id}")]
-    public async Task<IActionResult> GetReportsById(Guid id, CancellationToken cancellationToken)
+    /// <param name="reviewId">
+    /// ID của đánh giá cần lấy báo cáo.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// Token hủy thao tác bất đồng bộ.
+    /// </param>
+    /// <returns>
+    /// Đối tượng <see cref="ReviewReportDetailDto"/> chứa thông tin review và danh sách báo cáo.
+    /// </returns>
+    [HttpGet("by-review/{reviewId}")]
+    public async Task<IActionResult> GetReportsById(Guid reviewId, CancellationToken cancellationToken)
     {
-        var result = await _reportService.GetReportsByIdAsync(id, cancellationToken);
-        return Ok(ResponseModel<List<ReportResponseDto>>.OkResponseModel(
+        var result = await _reportService.GetReviewWithReportByIdAsync(reviewId, cancellationToken);
+        return Ok(ResponseModel<ReviewReportDetailDto>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "reports")
         ));
     }
 
     /// <summary>
-    /// Cập nhật báo cáo theo ID
+    /// Người dùng cập nhật nội dung báo cáo của mình khi báo cáo vẫn còn ở trạng thái Pending.
     /// </summary>
-    /// <param name="reportId">ID của báo cáo</param>
-    /// <param name="dto">Thông tin cập nhật báo cáo</param>
-    /// <param name="cancellationToken">Token hủy thao tác</param>
-    /// <returns>Thông tin báo cáo đã cập nhật</returns>
+    /// <param name="reportId">
+    /// ID của báo cáo cần cập nhật.
+    /// </param>
+    /// <param name="dto">
+    /// Thông tin cập nhật (ví dụ: lý do báo cáo mới).
+    /// </param>
+    /// <param name="cancellationToken">
+    /// Token hủy thao tác bất đồng bộ.
+    /// </param>
+    /// <returns>
+    /// Đối tượng <see cref="ReportResponseDto"/> chứa thông tin báo cáo sau khi cập nhật.
+    /// </returns>
     [HttpPut("{reportId}")]
     public async Task<IActionResult> UpdateReport(Guid reportId, [FromBody] UpdateReportRequestDto dto, CancellationToken cancellationToken)
     {
@@ -98,58 +131,50 @@ public class ReportController : ControllerBase
         ));
     }
 
-    ///// <summary>
-    ///// Lấy tất cả báo cáo - admin
-    ///// </summary>
-    ///// <param name="cancellationToken">Token hủy thao tác</param>
-    ///// <returns>Danh sách tất cả báo cáo</returns>
-    //[HttpGet]
-    //public async Task<IActionResult> GetAllReports(CancellationToken cancellationToken)
-    //{
-    //    var result = await _reportService.GetAllReportsAsync(cancellationToken);
-    //    return Ok(ResponseModel<List<ReportResponseDto>>.OkResponseModel(
-    //        data: result,
-    //        message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "reports")
-    //    ));
-    //}
-
     /// <summary>
-    /// Lấy danh sách báo cáo theo trạng thái - admin
+    /// Lấy danh sách các bài đánh giá đã có báo cáo, kèm thông tin thống kê.
     /// </summary>
-    /// <param name="status">Trạng thái báo cáo (Pending, Approved, Rejected)</param>
-    /// <param name="cancellationToken">Token hủy thao tác</param>
-    /// <returns>Danh sách báo cáo theo trạng thái</returns>
-    [HttpGet("by-status/{status}")]
-    public async Task<IActionResult> GetReportsByStatus(ReportStatus status, CancellationToken cancellationToken)
+    /// <param name="status">
+    /// (Tùy chọn) Lọc theo trạng thái xử lý cuối cùng của báo cáo: Pending, Processed, Rejected.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// Token hủy thao tác bất đồng bộ.
+    /// </param>
+    /// <param name="pageNumber">
+    /// Trang hiện tại (mặc định = 1).
+    /// </param>
+    /// <param name="pageSize">
+    /// Số lượng phần tử trên mỗi trang (mặc định = 10).
+    /// </param>
+    /// <returns>
+    /// Danh sách phân trang chứa các review kèm báo cáo liên quan.
+    /// </returns>
+    [HttpGet("page")]
+    public async Task<IActionResult> GetReportedReviewsAsync(ReportStatus? status, CancellationToken cancellationToken, int pageNumber = 1, int pageSize = 10)
     {
-        var result = await _reportService.GetReportsByStatusAsync(status, cancellationToken);
-        return Ok(ResponseModel<List<ReportResponseDto>>.OkResponseModel(
+        var result = await _reportService.GetReportedReviewsAsync(status, cancellationToken, pageNumber, pageSize);
+        return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "reports")
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "reviews with reports")
         ));
     }
 
-    ///// <summary>
-    ///// Lấy danh sách tất cả đánh giá có báo cáo
-    ///// </summary>
-    //[HttpGet]
-    //public async Task<IActionResult> GetAllReviewsHaveReports(int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken )
-    //{
-    //    var result = await _reportService.GetAllReviewsHaveReportsAsync(pageNumber, pageSize, cancellationToken);
-    //    return Ok(ResponseModel<object>.OkResponseModel(
-    //        data: result,
-    //        message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "reviews with reports")
-    //    ));
-    //}
-
 
     /// <summary>
-    /// Xử lý báo cáo - admin
+    /// Admin/Moderator xử lý một báo cáo: phê duyệt hoặc từ chối.
     /// </summary>
-    /// <param name="reportId">ID của báo cáo</param>
-    /// <param name="dto">Thông tin xử lý báo cáo</param>
-    /// <param name="cancellationToken">Token hủy thao tác</param>
-    /// <returns>Thông tin báo cáo đã xử lý</returns>
+    /// <param name="reportId">
+    /// ID của báo cáo cần xử lý.
+    /// </param>
+    /// <param name="dto">
+    /// Thông tin xử lý báo cáo (trạng thái mới, ghi chú của admin/mod).
+    /// </param>
+    /// <param name="cancellationToken">
+    /// Token hủy thao tác bất đồng bộ.
+    /// </param>
+    /// <returns>
+    /// Đối tượng <see cref="ReportResponseDto"/> chứa thông tin báo cáo sau khi được xử lý.
+    /// </returns>
     [HttpPost("{reportId}/process")]
     public async Task<IActionResult> ProcessReport(Guid reportId, [FromBody] ProcessReportRequestDto dto, CancellationToken cancellationToken)
     {

@@ -14,4 +14,5 @@ public class ReportResponseDto : BaseDataModel
 public class ProcessReportRequestDto
 {
     public ReportStatus Status { get; set; }
+    public string? Note { get; set; }
 }
