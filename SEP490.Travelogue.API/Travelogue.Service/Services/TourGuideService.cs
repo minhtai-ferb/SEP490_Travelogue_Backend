@@ -669,9 +669,12 @@ public class TourGuideService : ITourGuideService
                 throw CustomExceptionFactory.CreateForbiddenError();
             }
 
+            // Lấy TourGuide kèm User
             var tourGuide = await _unitOfWork.TourGuideRepository
                 .ActiveEntities
+                .Include(t => t.User)
                 .FirstOrDefaultAsync(t => t.UserId == currentUserId)
+                .ConfigureAwait(false)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Tour Guide");
 
             // kiểm tra xem có yêu cầu trước đó chưa duyệt
@@ -680,7 +683,9 @@ public class TourGuideService : ITourGuideService
                 .AnyAsync(r => r.TourGuideId == tourGuide.Id &&
                     r.Status == RejectionRequestStatus.Pending &&
                     ((dto.RequestType == RejectionRequestType.TourSchedule && r.TourScheduleId == dto.TourScheduleId) ||
-                    (dto.RequestType == RejectionRequestType.Booking && r.BookingId == dto.BookingId)));
+                     (dto.RequestType == RejectionRequestType.Booking && r.BookingId == dto.BookingId)))
+                .ConfigureAwait(false);
+
             if (existingPendingRequest)
             {
                 throw CustomExceptionFactory.CreateBadRequestError("Bạn đã có một yêu cầu từ chối đang chờ duyệt cho mục này.");
@@ -696,7 +701,8 @@ public class TourGuideService : ITourGuideService
             {
                 var scheduleExists = await _unitOfWork.TourGuideScheduleRepository
                     .ActiveEntities
-                    .AnyAsync(s => s.TourScheduleId == dto.TourScheduleId && s.TourGuideId == tourGuide.Id);
+                    .AnyAsync(s => s.TourScheduleId == dto.TourScheduleId && s.TourGuideId == tourGuide.Id)
+                    .ConfigureAwait(false);
 
                 if (!scheduleExists)
                     throw CustomExceptionFactory.CreateNotFoundError("Tour Schedule không tồn tại hoặc không thuộc về bạn.");
@@ -706,6 +712,7 @@ public class TourGuideService : ITourGuideService
                 var booking = await _unitOfWork.BookingRepository
                     .ActiveEntities
                     .FirstOrDefaultAsync(b => b.Id == dto.BookingId && b.TourGuideId == tourGuide.Id)
+                    .ConfigureAwait(false)
                     ?? throw CustomExceptionFactory.CreateNotFoundError("Booking không tồn tại hoặc không thuộc về bạn.");
             }
             else
@@ -730,12 +737,15 @@ public class TourGuideService : ITourGuideService
 
             // Gửi email thông báo cho Moderator
             var moderators = await _unitOfWork.UserRepository.GetUsersByRoleAsync(AppRole.MODERATOR);
+            var tourGuideName = tourGuide.User?.FullName ?? "Tour Guide";
+
             foreach (var moderator in moderators)
             {
                 await _emailService.SendEmailAsync(
                     new[] { moderator.Email },
-                    $"Yêu cầu từ chối {dto.RequestType} từ Tour Guide {tourGuide.User.FullName}",
-                    $"Tour Guide {tourGuide.User.FullName} muốn từ chối {dto.RequestType} (ID: {(dto.RequestType == RejectionRequestType.TourSchedule ? dto.TourScheduleId : dto.BookingId)}). Lý do: {dto.Reason}. Xem chi tiết tại /admin/rejection-requests/{request.Id}"
+                    $"Yêu cầu từ chối {dto.RequestType} từ Tour Guide {tourGuideName}",
+                    $"Tour Guide {tourGuideName} muốn từ chối {dto.RequestType} (ID: {(dto.RequestType == RejectionRequestType.TourSchedule ? dto.TourScheduleId : dto.BookingId)}). " +
+                    $"Lý do: {dto.Reason}. Xem chi tiết tại /admin/rejection-requests/{request.Id}"
                 );
             }
 
@@ -747,7 +757,7 @@ public class TourGuideService : ITourGuideService
                 BookingId = request.BookingId,
                 Reason = request.Reason,
                 Status = request.Status,
-                StatusText = _enumService.GetEnumDisplayName<BookingPriceRequestStatus>(request.Status),
+                StatusText = _enumService.GetEnumDisplayName<RejectionRequestStatus>(request.Status),
                 ModeratorComment = request.ModeratorComment,
                 ReviewedAt = request.ReviewedAt,
                 ReviewedBy = request.ReviewedBy
