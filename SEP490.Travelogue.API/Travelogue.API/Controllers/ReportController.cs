@@ -129,18 +129,18 @@ public class ReportController : ControllerBase
         ));
     }
 
-    /// <summary>
-    /// Lấy danh sách tất cả đánh giá có báo cáo
-    /// </summary>
-    [HttpGet]
-    public async Task<IActionResult> GetAllReviewsHaveReports(int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken )
-    {
-        var result = await _reportService.GetAllReviewsHaveReportsAsync(pageNumber, pageSize, cancellationToken);
-        return Ok(ResponseModel<object>.OkResponseModel(
-            data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "reviews with reports")
-        ));
-    }
+    ///// <summary>
+    ///// Lấy danh sách tất cả đánh giá có báo cáo
+    ///// </summary>
+    //[HttpGet]
+    //public async Task<IActionResult> GetAllReviewsHaveReports(int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken )
+    //{
+    //    var result = await _reportService.GetAllReviewsHaveReportsAsync(pageNumber, pageSize, cancellationToken);
+    //    return Ok(ResponseModel<object>.OkResponseModel(
+    //        data: result,
+    //        message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "reviews with reports")
+    //    ));
+    //}
 
 
     /// <summary>

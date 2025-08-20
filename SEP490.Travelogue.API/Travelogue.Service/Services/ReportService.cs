@@ -40,16 +40,18 @@ public class ReportService : IReportService
             var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
 
             var review = await _unitOfWork.ReviewRepository.ActiveEntities
+                .Include(r => r.Reports)
                 .FirstOrDefaultAsync(r => r.Id == dto.ReviewId, cancellationToken)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Review");
 
-            var existingReport = await _unitOfWork.ReportRepository.ActiveEntities
-                .FirstOrDefaultAsync(r => r.ReviewId == dto.ReviewId && r.UserId == currentUserId, cancellationToken);
+            // Kiểm tra user đã report chưa
+            var existingReport = review.Reports.FirstOrDefault(r => r.UserId == currentUserId);
             if (existingReport != null)
             {
                 throw CustomExceptionFactory.CreateBadRequestError("Bạn đã báo cáo đánh giá này trước đó");
             }
 
+            // Tạo report mới
             var report = new Report
             {
                 UserId = currentUserId,
@@ -60,6 +62,10 @@ public class ReportService : IReportService
             };
 
             await _unitOfWork.ReportRepository.AddAsync(report);
+
+            review.FinalReportStatus = ReportStatus.Pending; 
+            _unitOfWork.ReviewRepository.Update(review);
+
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);
 
