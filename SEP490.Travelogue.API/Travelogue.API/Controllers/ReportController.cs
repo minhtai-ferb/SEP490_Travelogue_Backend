@@ -98,20 +98,20 @@ public class ReportController : ControllerBase
         ));
     }
 
-    /// <summary>
-    /// Lấy tất cả báo cáo - admin
-    /// </summary>
-    /// <param name="cancellationToken">Token hủy thao tác</param>
-    /// <returns>Danh sách tất cả báo cáo</returns>
-    [HttpGet]
-    public async Task<IActionResult> GetAllReports(CancellationToken cancellationToken)
-    {
-        var result = await _reportService.GetAllReportsAsync(cancellationToken);
-        return Ok(ResponseModel<List<ReportResponseDto>>.OkResponseModel(
-            data: result,
-            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "reports")
-        ));
-    }
+    ///// <summary>
+    ///// Lấy tất cả báo cáo - admin
+    ///// </summary>
+    ///// <param name="cancellationToken">Token hủy thao tác</param>
+    ///// <returns>Danh sách tất cả báo cáo</returns>
+    //[HttpGet]
+    //public async Task<IActionResult> GetAllReports(CancellationToken cancellationToken)
+    //{
+    //    var result = await _reportService.GetAllReportsAsync(cancellationToken);
+    //    return Ok(ResponseModel<List<ReportResponseDto>>.OkResponseModel(
+    //        data: result,
+    //        message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "reports")
+    //    ));
+    //}
 
     /// <summary>
     /// Lấy danh sách báo cáo theo trạng thái - admin
@@ -128,6 +128,20 @@ public class ReportController : ControllerBase
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "reports")
         ));
     }
+
+    /// <summary>
+    /// Lấy danh sách tất cả đánh giá có báo cáo
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetAllReviewsHaveReports(int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken )
+    {
+        var result = await _reportService.GetAllReviewsHaveReportsAsync(pageNumber, pageSize, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "reviews with reports")
+        ));
+    }
+
 
     /// <summary>
     /// Xử lý báo cáo - admin
