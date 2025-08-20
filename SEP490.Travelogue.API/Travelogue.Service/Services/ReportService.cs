@@ -6,7 +6,6 @@ using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.ReportModels;
-using Travelogue.Service.BusinessModels.TourModels;
 using Travelogue.Service.Commons.Interfaces;
 
 namespace Travelogue.Service.Services;
@@ -62,9 +61,12 @@ public class ReportService : IReportService
                 CreatedTime = DateTime.UtcNow
             };
 
+            review.FinalReportStatus = ReportStatus.Pending;
+
+            _unitOfWork.ReviewRepository.Update(review);
             await _unitOfWork.ReportRepository.AddAsync(report);
 
-            review.FinalReportStatus = ReportStatus.Pending; 
+            review.FinalReportStatus = ReportStatus.Pending;
             _unitOfWork.ReviewRepository.Update(review);
 
             await _unitOfWork.SaveAsync();
@@ -143,7 +145,11 @@ public class ReportService : IReportService
                 Comment = review.Comment,
                 Rating = review.Rating,
                 UserId = review.UserId,
-                UserName = review.User.FullName, // giả định User có FullName
+                UserName = review.User.FullName,
+                FinalReportStatus = review.FinalReportStatus,
+                HandledBy = review.HandledBy,
+                HandledAt = review.HandledAt,
+                ModeratorNote = review.ModeratorNote,
                 Reports = review.Reports.Select(r => new ReportResponseDto
                 {
                     Id = r.Id,
@@ -379,6 +385,10 @@ public class ReportService : IReportService
                 Rating = review.Rating,
                 UserId = review.UserId,
                 UserName = review.User.FullName,
+                FinalReportStatus = review.FinalReportStatus,
+                HandledBy = review.HandledBy,
+                HandledAt = review.HandledAt,
+                ModeratorNote = review.ModeratorNote,
                 Reports = review.Reports.Select(r => new ReportResponseDto
                 {
                     Id = r.Id,
