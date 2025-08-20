@@ -84,6 +84,25 @@ public class TourGuideController : ControllerBase
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
         ));
     }
+    /// <summary>
+    /// Lấy thông tin chi tiết lịch làm việc (schedule) của Tour Guide theo Id lịch làm việc.
+    /// </summary>
+    /// <param name="tourGuideSchedulesId">Id của lịch làm việc của Tour Guide</param>
+    /// <param name="cancellationToken">Token hủy bất đồng bộ</param>
+    /// <returns>Thông tin schedule kèm rejection request (nếu có)</returns>
+    [HttpGet("schedules/{tourGuideSchedulesId:guid}")]
+    public async Task<IActionResult> GetScheduleByIdAsync(Guid tourGuideSchedulesId, CancellationToken cancellationToken)
+    {
+        var result = await _tourGuideService.GetShedulesById(tourGuideSchedulesId, cancellationToken);
+
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(
+                ResponseMessages.GET_SUCCESS,
+                "schedule by id with rejection requests"
+            )
+        ));
+    }
 
     /// <summary>
     /// Tour guide tạo yêu cầu để cập nhật giá
