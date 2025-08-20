@@ -7,6 +7,7 @@ using Travelogue.Repository.Bases.Responses;
 using Travelogue.Service.BusinessModels.UserModels.Requests;
 using Travelogue.Service.BusinessModels.UserModels.Responses;
 using Travelogue.Service.Commons.BaseResponses;
+using Travelogue.Service.Commons.Interfaces;
 using Travelogue.Service.Services;
 
 namespace Travelogue.API.Controllers;
@@ -17,13 +18,29 @@ public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
     private readonly IGoogleAuthService _googleAuthService;
+    private readonly ITimeService _timeService;
 
-    public AuthController(IAuthService authService, IGoogleAuthService googleAuthService)
+    public AuthController(IAuthService authService, IGoogleAuthService googleAuthService, ITimeService timeService)
     {
         _authService = authService;
         _googleAuthService = googleAuthService;
+        _timeService = timeService;
     }
 
+    [HttpGet("time-system")]
+    public async Task<IActionResult> TimeSystem(string email)
+    {
+        try
+        {
+            var currentTime = _timeService.SystemTimeNow;
+
+            return Ok(new { message = currentTime });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 
     /// <summary>
     /// Kiểm tra trạng thái xác minh email của người dùng.
