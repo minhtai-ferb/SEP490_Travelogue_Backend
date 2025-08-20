@@ -23,7 +23,7 @@ namespace Travelogue.Service.Services;
 public interface IAuthService
 {
     Task<UserResponseModel> GetCurrentUser();
-    Task<GetCurrentUserResponse> GetUserByEmailAsync(string email, CancellationToken cancellationToken);
+    // Task<GetCurrentUserResponse> GetUserByEmailAsync(string email, CancellationToken cancellationToken);
     Task<LoginResponse> RegisterAsync(RegisterModel userRequestModel);
     Task<bool> RegisterWithRoleAsync(RegisterModelWithRole userRequestModel);
     Task<LoginResponse> LoginAsync(LoginModel loginModel);
@@ -33,11 +33,11 @@ public interface IAuthService
     Task<LoginResponse> LoginWithGoogleAsync(string token);
     string GenerateJwtToken(Guid userId, List<string> roles, bool isRefreshToken);
     Task<LoginResponse> ChangePasswordAsync(ChangePasswordModel model, CancellationToken cancellationToken);
-    Task<bool> VerifyEmailByOOBCode(string oob, CancellationToken cancellationToken);
+    // Task<bool> VerifyEmailByOOBCode(string oob, CancellationToken cancellationToken);
     Task<bool> VerifyEmailAsync(string email);
     Task<bool> ResendEmailVerificationAsync(string email, CancellationToken cancellationToken);
     Task<LoginResponse> RefreshTokenAsync(string refreshToken);
-    Task<bool> CheckTokenAsync(string refreshToken);
+    // Task<bool> CheckTokenAsync(string refreshToken);
     Task<CheckTokenResponse> CheckTokenAsync();
 }
 
