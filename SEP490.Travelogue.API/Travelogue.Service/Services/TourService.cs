@@ -1985,6 +1985,8 @@ public class TourService : ITourService
                     Name = l.Location?.Name ?? "Unknown",
                     Description = l.Location?.Description,
                     Address = l.Location?.Address,
+                    ActivityType = l.ActivityType,
+                    ActivityTypeText = _enumService.GetEnumDisplayName<ActivityType>(l.ActivityType),
                     DayOrder = l.DayOrder,
                     StartTime = l.StartTime,
                     EndTime = l.EndTime,
