@@ -33,7 +33,7 @@ public interface ITourGuideService
     Task<RejectionRequestResponseDto> CreateRejectionRequestAsync(RejectionRequestCreateDto dto);
     Task<RejectionRequestResponseDto> ApproveRejectionRequestAsync(Guid requestId, Guid newTourGuideId);
     Task<RejectionRequestResponseDto> RejectRejectionRequestAsync(Guid requestId, RejectRejectionRequestDto dto);
-    Task<PagedResult<RejectionRequestResponseDto>> GetRejectionRequestsForAdminAsync(RejectionRequestFilter filter, int pageNumber, int pageSize);
+    Task<PagedResult<RejectionRequestResponseDto>> GetRejectionRequestsForAdminAsync(RejectionRequestFilter? filter, int pageNumber, int pageSize);
     Task<RejectionRequestResponseDto> GetRejectionRequestByIdAsync(Guid requestId);
     Task<ScheduleWithRejectionResponseDto> GetShedulesById(Guid tourGuideSchedulesId, CancellationToken cancellationToken);
 }
@@ -526,7 +526,7 @@ public class TourGuideService : ITourGuideService
             var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
             var currentTime = _timeService.SystemTimeNow;
 
-            var isModerator = _userContextService.HasRole(AppRole.MODERATOR);
+            var isModerator = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
             if (!isModerator)
             {
                 throw CustomExceptionFactory.CreateForbiddenError();
@@ -594,7 +594,7 @@ public class TourGuideService : ITourGuideService
             var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
             var currentTime = _timeService.SystemTimeNow;
 
-            var isModerator = _userContextService.HasRole(AppRole.MODERATOR);
+            var isModerator = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
             if (!isModerator)
             {
                 throw CustomExceptionFactory.CreateForbiddenError();
@@ -784,7 +784,7 @@ public class TourGuideService : ITourGuideService
             var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
             var currentTime = _timeService.SystemTimeNow;
 
-            var isModerator = _userContextService.HasRole(AppRole.MODERATOR);
+            var isModerator = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
             if (!isModerator)
             {
                 throw CustomExceptionFactory.CreateForbiddenError();
@@ -904,7 +904,7 @@ public class TourGuideService : ITourGuideService
             var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
             var currentTime = _timeService.SystemTimeNow;
 
-            var isModerator = _userContextService.HasRole(AppRole.MODERATOR);
+            var isModerator = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
             if (!isModerator)
             {
                 throw CustomExceptionFactory.CreateForbiddenError();
@@ -1136,7 +1136,7 @@ public class TourGuideService : ITourGuideService
         }
     }
 
-    public async Task<PagedResult<RejectionRequestResponseDto>> GetRejectionRequestsForAdminAsync(RejectionRequestFilter filter, int pageNumber, int pageSize)
+    public async Task<PagedResult<RejectionRequestResponseDto>> GetRejectionRequestsForAdminAsync(RejectionRequestFilter? filter, int pageNumber, int pageSize)
     {
         try
         {
@@ -1158,7 +1158,7 @@ public class TourGuideService : ITourGuideService
             //Lọc theo trạng thái
             if (filter.Status.HasValue)
             {
-                   query = query.Where(r => r.Status == filter.Status.Value);
+                query = query.Where(r => r.Status == filter.Status.Value);
             }
 
             //Lọc theo tour guide id
@@ -1197,7 +1197,8 @@ public class TourGuideService : ITourGuideService
 
             var result = new List<RejectionRequestResponseDto>();
 
-            foreach (var item in rejectionRequests) {
+            foreach (var item in rejectionRequests)
+            {
                 var response = new RejectionRequestResponseDto
                 {
                     Id = item.Id,
@@ -1279,8 +1280,8 @@ public class TourGuideService : ITourGuideService
         }
         catch (Exception ex)
         {
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message); 
-        } 
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
     }
 
     public async Task<ScheduleWithRejectionResponseDto> GetShedulesById(Guid tourGuideSchedulesId, CancellationToken cancellationToken)

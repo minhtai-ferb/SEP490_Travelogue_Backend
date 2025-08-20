@@ -75,9 +75,9 @@ public class RejectionRequestController : ControllerBase
     /// <returns>Trả về danh sách yêu cầu từ chối theo phân trang</returns>
     [HttpGet("page")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ResponseModel<PagedResult<RejectionRequestResponseDto>>))]
-    public async Task<IActionResult> GetRefundRequestsForAdmin([FromQuery] RejectionRequestFilter filterm, int pageNumber = 1, int pageSize = 10)
+    public async Task<IActionResult> GetRefundRequestsForAdmin([FromQuery] RejectionRequestFilter? filterm, int pageNumber = 1, int pageSize = 10)
     {
-        var result = await _tourGuideService.GetRejectionRequestsForAdminAsync(filterm, pageNumber, pageSize );
+        var result = await _tourGuideService.GetRejectionRequestsForAdminAsync(filterm, pageNumber, pageSize);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
             message: ResponseMessages.SUCCESS
