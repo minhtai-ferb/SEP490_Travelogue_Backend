@@ -400,16 +400,16 @@ public class DashboardService : IDashboardService
         }
     }
 
-    private async Task<decimal> GetCommissionPercentAsync(BookingType bookingType, DateTime applyDate)
+    private decimal GetCommissionPercentAsync(BookingType bookingType, DateTime applyDate)
     {
-        var commissionSettings = await _unitOfWork.CommissionSettingsRepository
+        var commissionSettings = _unitOfWork.CommissionSettingsRepository
             .ActiveEntities
             .Where(c => c.EffectiveDate <= applyDate)
             .OrderByDescending(c => c.EffectiveDate)
-            .FirstOrDefaultAsync();
+            .FirstOrDefault();
 
         if (commissionSettings == null)
-            throw CustomExceptionFactory.CreateNotFoundError("Commission setting not found.");
+            throw CustomExceptionFactory.CreateNotFoundError("Commission setting");
 
         return bookingType switch
         {
@@ -443,9 +443,9 @@ public class DashboardService : IDashboardService
                     Date = g.Key,
                     Tour = g.Where(b => b.BookingType == BookingType.Tour).Sum(b => b.FinalPrice),
                     BookingTourGuide = g.Where(b => b.BookingType == BookingType.TourGuide)
-                                        .Sum(b => b.FinalPrice * GetCommissionPercentAsync(BookingType.TourGuide, g.Key).Result),
+                                        .Sum(b => b.FinalPrice * GetCommissionPercentAsync(BookingType.TourGuide, g.Key)),
                     BookingWorkshop = g.Where(b => b.BookingType == BookingType.Workshop)
-                                        .Sum(b => b.FinalPrice * GetCommissionPercentAsync(BookingType.Workshop, g.Key).Result),
+                                        .Sum(b => b.FinalPrice * GetCommissionPercentAsync(BookingType.Workshop, g.Key)),
                 })
                 .ToList();
 
@@ -495,9 +495,9 @@ public class DashboardService : IDashboardService
                     Date = g.Key,
                     Tour = g.Where(b => b.BookingType == BookingType.Tour).Sum(b => b.FinalPrice),
                     BookingTourGuide = g.Where(b => b.BookingType == BookingType.TourGuide)
-                                        .Sum(b => b.FinalPrice * GetCommissionPercentAsync(BookingType.TourGuide, g.Key).Result),
+                                        .Sum(b => b.FinalPrice * GetCommissionPercentAsync(BookingType.TourGuide, g.Key)),
                     BookingWorkshop = g.Where(b => b.BookingType == BookingType.Workshop)
-                                        .Sum(b => b.FinalPrice * GetCommissionPercentAsync(BookingType.Workshop, g.Key).Result),
+                                        .Sum(b => b.FinalPrice * GetCommissionPercentAsync(BookingType.Workshop, g.Key)),
                 })
                 .ToList();
 

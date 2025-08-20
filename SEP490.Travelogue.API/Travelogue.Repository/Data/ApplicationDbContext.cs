@@ -104,7 +104,7 @@ public class ApplicationDbContext : DbContext
                 Id = Guid.NewGuid(),
                 TourGuideCommissionRate = 20m,
                 CraftVillageCommissionRate = 10m,
-                EffectiveDate = DateTime.Now
+                EffectiveDate = DateTime.Now.AddYears(-1)
             }
         );
 

@@ -877,7 +877,7 @@ public class TourGuideService : ITourGuideService
                 BookingId = request.BookingId,
                 Reason = request.Reason,
                 Status = request.Status,
-                StatusText = _enumService.GetEnumDisplayName<BookingPriceRequestStatus>(request.Status),
+                StatusText = _enumService.GetEnumDisplayName<RejectionRequestStatus>(request.Status),
                 ModeratorComment = request.ModeratorComment,
                 ReviewedAt = request.ReviewedAt,
                 ReviewedBy = request.ReviewedBy
@@ -949,7 +949,7 @@ public class TourGuideService : ITourGuideService
                 BookingId = request.BookingId,
                 Reason = request.Reason,
                 Status = request.Status,
-                StatusText = _enumService.GetEnumDisplayName<BookingPriceRequestStatus>(request.Status),
+                StatusText = _enumService.GetEnumDisplayName<RejectionRequestStatus>(request.Status),
                 ModeratorComment = request.ModeratorComment,
                 ReviewedAt = request.ReviewedAt,
                 ReviewedBy = request.ReviewedBy
