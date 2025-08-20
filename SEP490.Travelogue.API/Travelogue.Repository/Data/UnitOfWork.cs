@@ -53,6 +53,7 @@ public class UnitOfWork : IUnitOfWork
     public IBankAccountRepository BankAccountRepository { get; }
     public ISystemSettingRepository SystemSettingRepository { get; }
     public IRefundRequestRepository RefundRequestRepository { get; }
+    public ICommissionSettingsRepository CommissionSettingsRepository { get; }
 
     public UnitOfWork(ApplicationDbContext dbContext)
     {
@@ -99,6 +100,7 @@ public class UnitOfWork : IUnitOfWork
         BankAccountRepository = new BankAccountRepository(_dbContext);
         SystemSettingRepository = new SystemSettingRepository(_dbContext);
         RefundRequestRepository = new RefundRequestRepository(_dbContext);
+        CommissionSettingsRepository = new CommissionSettingsRepository(_dbContext);
     }
 
     public IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity

@@ -83,6 +83,7 @@ public class ApplicationDbContext : DbContext
 
     // System Configuration
     public DbSet<SystemSetting> SystemSettings { get; set; }
+    public DbSet<CommissionSettings> CommissionSettings { get; set; }
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
@@ -95,6 +96,16 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<SystemSetting>().HasData(
             new SystemSetting { Id = Guid.NewGuid(), Key = SystemSettingKey.BookingCommissionPercent, Value = "10", Unit = "%" }
+        );
+
+        modelBuilder.Entity<CommissionSettings>().HasData(
+            new CommissionSettings
+            {
+                Id = Guid.NewGuid(),
+                TourGuideCommissionRate = 20m,
+                CraftVillageCommissionRate = 10m,
+                EffectiveDate = DateTime.Now
+            }
         );
 
         modelBuilder.Entity<Message>()

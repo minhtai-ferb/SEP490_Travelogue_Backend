@@ -10,8 +10,9 @@ public class RefundRequestDto : BaseDataModel
     public string? UserName { get; set; }
     public RefundRequestStatus Status { get; set; }
     public string? StatusText { get; set; }
-    public string? RejectionReason { get; set; }
-
+    public string? Note { get; set; }
+    public DateTimeOffset RequestedAt { get; set; }
+    public DateTimeOffset? RespondedAt { get; set; }
     public decimal RefundAmount { get; set; }
 }
 
@@ -23,7 +24,7 @@ public class RefundRequestDetailDto : BaseDataModel
     public string? UserName { get; set; }
     public RefundRequestStatus Status { get; set; }
     public string? StatusText { get; set; }
-    public string? RejectionReason { get; set; }
+    public string? Note { get; set; }
 
     public decimal RefundAmount { get; set; }
 }

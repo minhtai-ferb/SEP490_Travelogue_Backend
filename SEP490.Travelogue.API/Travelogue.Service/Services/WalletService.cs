@@ -92,6 +92,10 @@ public class WalletService : IWalletService
                 StatusText = _enumService.GetEnumDisplayName<TransactionStatus>(t.Status),
                 Type = t.Type,
                 TypeText = _enumService.GetEnumDisplayName<TransactionType>(t.Type),
+                TransactionDirection = t.TransactionDirection,
+                TransactionDirectionText = _enumService.GetEnumDisplayName<TransactionType>(t.Type),
+                Reason = t.Reason,
+                Method = t.Method
             }).ToList();
         }
         catch (CustomException)
@@ -310,6 +314,41 @@ public class WalletService : IWalletService
             request.LastUpdatedTime = currentTime;
 
             request.Wallet.Balance -= request.Amount;
+
+            var withdrawalTransaction = new TransactionEntry
+            {
+                Id = Guid.NewGuid(),
+                WalletId = request.Wallet.Id,
+                UserId = request.Wallet.UserId,
+                PaidAmount = request.Amount,
+                Type = TransactionType.Withdrawal,
+                TransactionDirection = TransactionDirection.Debit,
+                Status = TransactionStatus.Completed,
+                PaymentStatus = PaymentStatus.Success,
+                Description = $"Rút tiền cho yêu cầu {request.Id}",
+                Method = "BankTransfer",
+                TransactionDateTime = currentTime.LocalDateTime,
+                Currency = "VND"
+            };
+
+            // var systemTransaction = new TransactionEntry
+            // {
+            //     Id = Guid.NewGuid(),
+            //     WalletId = null, 
+            //     UserId = null,  
+            //     PaidAmount = request.Amount,
+            //     Type = TransactionType.Withdrawal,
+            //     TransactionDirection = TransactionDirection.Debit,
+            //     Status = TransactionStatus.Completed,
+            //     PaymentStatus = PaymentStatus.Success,
+            //     Description = $"Hệ thống chi tiền cho yêu cầu rút {request.Id} của user {request.Wallet.User.FullName}",
+            //     Method = "BankTransfer",
+            //     TransactionDateTime = currentTime.UtcDateTime,
+            //     Currency = "VND"
+            // };
+            // await _unitOfWork.TransactionEntryRepository.AddAsync(systemTransaction);
+
+            await _unitOfWork.TransactionEntryRepository.AddAsync(withdrawalTransaction);
 
             _unitOfWork.WalletRepository.Update(request.Wallet);
             _unitOfWork.WithdrawalRequestRepository.Update(request);
