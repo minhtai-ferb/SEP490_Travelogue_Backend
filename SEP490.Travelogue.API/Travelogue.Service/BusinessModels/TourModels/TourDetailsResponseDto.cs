@@ -49,6 +49,8 @@ public class TourActivity
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? Address { get; set; }
+    public ActivityType ActivityType { get; set; }
+    public string? ActivityTypeText { get; set; }
     public int DayOrder { get; set; }
     public TimeSpan? StartTime { get; set; }
     public TimeSpan? EndTime { get; set; }
