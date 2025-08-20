@@ -134,12 +134,13 @@ public class ReportService : IReportService
             }
 
             var review = await _unitOfWork.ReviewRepository.ActiveEntities
-                                .Include(r => r.Reports)
-                                .ThenInclude(rep => rep.User)
-                                .FirstOrDefaultAsync(r => r.Id == reviewId, cancellationToken)
-                                ?? throw CustomExceptionFactory.CreateNotFoundError("Review not found.");
+                .Include(r => r.Reports)
+                    .ThenInclude(rep => rep.User)
+                .Include(r => r.User)
+                .FirstOrDefaultAsync(r => r.Id == reviewId, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Review");
 
-            var reports = new ReviewReportDetailDto
+            var response = new ReviewReportDetailDto
             {
                 ReviewId = review.Id,
                 Comment = review.Comment,
@@ -162,7 +163,7 @@ public class ReportService : IReportService
                 }).ToList()
             };
 
-            return reports;
+            return response;
         }
         catch (CustomException)
         {
