@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Service.BusinessModels.ReportModels;
+
 public class ReviewReportDetailDto
 {
     public Guid ReviewId { get; set; }
@@ -12,6 +9,10 @@ public class ReviewReportDetailDto
     public int Rating { get; set; }
     public Guid UserId { get; set; }
     public string UserName { get; set; } = string.Empty;
+    public ReportStatus? FinalReportStatus { get; set; }
+    public Guid? HandledBy { get; set; }
+    public DateTimeOffset? HandledAt { get; set; }
+    public string? ModeratorNote { get; set; }
 
     public List<ReportResponseDto> Reports { get; set; } = new();
 }
