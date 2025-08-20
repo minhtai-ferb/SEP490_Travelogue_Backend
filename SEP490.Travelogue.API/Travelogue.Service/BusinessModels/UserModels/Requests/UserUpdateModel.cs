@@ -1,10 +1,13 @@
-﻿namespace Travelogue.Service.BusinessModels.UserModels.Requests;
+﻿using Travelogue.Repository.Entities.Enums;
+
+namespace Travelogue.Service.BusinessModels.UserModels.Requests;
+
 public class UserUpdateModel
 {
     public string? PhoneNumber { get; set; }
     public string FullName { get; set; } = string.Empty;
 
-    //public Gender Sex { get; set; }
+    public Gender Sex { get; set; }
     public string? Address { get; set; }
     //    public List<Guid> RoleIds { get; set; } = new List<Guid>();
     //    public List<Guid> DistrictIds { get; set; } = new List<Guid>();

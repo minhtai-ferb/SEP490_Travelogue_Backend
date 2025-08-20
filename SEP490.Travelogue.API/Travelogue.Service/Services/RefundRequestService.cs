@@ -12,7 +12,7 @@ namespace Travelogue.Service.Services;
 public interface IRefundRequestService
 {
     Task<RefundRequestDto> CreateRefundRequestAsync(RefundRequestCreateDto dto);
-    Task<RefundRequestDto> ApproveRefundRequestAsync(Guid refundRequestId);
+    Task<RefundRequestDto> ApproveRefundRequestAsync(Guid refundRequestId, string? note);
     Task<RefundRequestDto> RejectRefundRequestAsync(Guid refundRequestId, string rejectionReason);
     Task<List<RefundRequestDto>> GetRefundRequestsForAdminAsync(RefundRequestAdminFilter filter);
     Task<List<RefundRequestDto>> GetRefundRequestsForUserAsync(RefundRequestUserFilter filter);
@@ -87,7 +87,8 @@ public class RefundRequestService : IRefundRequestService
                 UserId = currentUserId,
                 BookingId = dto.BookingId,
                 RefundAmount = dto.RefundAmount,
-                Status = RefundRequestStatus.Pending
+                Status = RefundRequestStatus.Pending,
+                RequestedAt = currentTime,
             };
 
             await _unitOfWork.RefundRequestRepository.AddAsync(refundRequest);
@@ -109,7 +110,9 @@ public class RefundRequestService : IRefundRequestService
                 RefundAmount = refundRequest.RefundAmount,
                 Status = refundRequest.Status,
                 StatusText = _enumService.GetEnumDisplayName<RefundRequestStatus>(refundRequest.Status),
-                RejectionReason = refundRequest.RejectionReason,
+                Note = refundRequest.Note,
+                RequestedAt = refundRequest.RequestedAt,
+                RespondedAt = refundRequest.RespondedAt,
                 CreatedTime = refundRequest.CreatedTime,
                 LastUpdatedTime = refundRequest.LastUpdatedTime,
             };
@@ -126,12 +129,13 @@ public class RefundRequestService : IRefundRequestService
         }
     }
 
-    public async Task<RefundRequestDto> ApproveRefundRequestAsync(Guid refundRequestId)
+    public async Task<RefundRequestDto> ApproveRefundRequestAsync(Guid refundRequestId, string? note)
     {
         using (var transaction = await _unitOfWork.BeginTransactionAsync())
         {
             try
             {
+                var currentTime = _timeService.SystemTimeNow;
                 var hasPermission = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
                 if (!hasPermission)
                     throw CustomExceptionFactory.CreateForbiddenError();
@@ -146,7 +150,8 @@ public class RefundRequestService : IRefundRequestService
                 if (refundRequest.Status != RefundRequestStatus.Pending)
                     throw CustomExceptionFactory.CreateBadRequestError("Yêu cầu không ở trạng thái Pending.");
 
-
+                refundRequest.RespondedAt = currentTime;
+                refundRequest.Note = note;
                 refundRequest.Status = RefundRequestStatus.Approved;
 
                 refundRequest.User.Wallet.Balance += refundRequest.RefundAmount;
@@ -155,11 +160,32 @@ public class RefundRequestService : IRefundRequestService
                 {
                     Id = Guid.NewGuid(),
                     WalletId = refundRequest.User.Wallet.Id,
+                    UserId = refundRequest.User.Id,
                     PaidAmount = refundRequest.RefundAmount,
                     Type = TransactionType.Refund,
-                    Description = $"Hoàn tiền cho booking {refundRequest.BookingId}"
+                    TransactionDirection = TransactionDirection.Credit,
+                    Status = TransactionStatus.Completed,
+                    PaymentStatus = PaymentStatus.Success,
+                    Description = $"Hoàn tiền cho booking {refundRequest.BookingId}",
+                    Method = "Banking",
+                    TransactionDateTime = DateTime.UtcNow,
+                    Currency = "VND"
                 };
 
+                // var systemTransaction = new TransactionEntry
+                // {
+                //     Id = Guid.NewGuid(),
+                //     UserId = null, 
+                //     WalletId = null, 
+                //     PaidAmount = refundRequest.RefundAmount,
+                //     Type = TransactionType.Refund,
+                //     TransactionDirection = TransactionDirection.Debit,
+                //     Status = TransactionStatus.Completed,
+                //     Description = $"Nguồn tiền hoàn cho booking {refundRequest.BookingId} xuất phát từ hệ thống",
+                //     Method = "System"
+                // };
+
+                // await _unitOfWork.TransactionEntryRepository.AddAsync(systemTransaction);
                 await _unitOfWork.TransactionEntryRepository.AddAsync(walletTransaction);
                 _unitOfWork.RefundRequestRepository.Update(refundRequest);
                 _unitOfWork.UserRepository.Update(refundRequest.User);
@@ -176,9 +202,11 @@ public class RefundRequestService : IRefundRequestService
                     RefundAmount = refundRequest.RefundAmount,
                     Status = refundRequest.Status,
                     StatusText = _enumService.GetEnumDisplayName<RefundRequestStatus>(refundRequest.Status),
-                    RejectionReason = refundRequest.RejectionReason,
+                    Note = refundRequest.Note,
                     CreatedTime = refundRequest.CreatedTime,
                     LastUpdatedTime = refundRequest.LastUpdatedTime,
+                    RequestedAt = refundRequest.RequestedAt,
+                    RespondedAt = refundRequest.RespondedAt,
                 };
             }
             catch (CustomException)
@@ -199,6 +227,7 @@ public class RefundRequestService : IRefundRequestService
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
+            var currentTime = _timeService.SystemTimeNow;
             var hasPermission = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
             if (!hasPermission)
                 throw CustomExceptionFactory.CreateForbiddenError();
@@ -211,8 +240,9 @@ public class RefundRequestService : IRefundRequestService
             if (refundRequest.Status != RefundRequestStatus.Pending)
                 throw CustomExceptionFactory.CreateBadRequestError("Yêu cầu không ở trạng thái Pending.");
 
+            refundRequest.RespondedAt = currentTime;
             refundRequest.Status = RefundRequestStatus.Rejected;
-            refundRequest.RejectionReason = rejectionReason;
+            refundRequest.Note = rejectionReason;
 
             _unitOfWork.RefundRequestRepository.Update(refundRequest);
             await _unitOfWork.SaveAsync();
@@ -227,9 +257,11 @@ public class RefundRequestService : IRefundRequestService
                 RefundAmount = refundRequest.RefundAmount,
                 Status = refundRequest.Status,
                 StatusText = _enumService.GetEnumDisplayName<RefundRequestStatus>(refundRequest.Status),
-                RejectionReason = refundRequest.RejectionReason,
+                Note = refundRequest.Note,
                 CreatedTime = refundRequest.CreatedTime,
                 LastUpdatedTime = refundRequest.LastUpdatedTime,
+                RequestedAt = refundRequest.RequestedAt,
+                RespondedAt = refundRequest.RespondedAt,
             };
         }
         catch (CustomException)
@@ -275,9 +307,11 @@ public class RefundRequestService : IRefundRequestService
                     RefundAmount = r.RefundAmount,
                     Status = r.Status,
                     StatusText = _enumService.GetEnumDisplayName<RefundRequestStatus>(r.Status),
-                    RejectionReason = r.RejectionReason,
+                    Note = r.Note,
                     CreatedTime = r.CreatedTime,
                     LastUpdatedTime = r.LastUpdatedTime,
+                    RequestedAt = r.RequestedAt,
+                    RespondedAt = r.RespondedAt,
                 })
                 .ToListAsync();
 
@@ -322,9 +356,11 @@ public class RefundRequestService : IRefundRequestService
                     RefundAmount = r.RefundAmount,
                     Status = r.Status,
                     StatusText = _enumService.GetEnumDisplayName<RefundRequestStatus>(r.Status),
-                    RejectionReason = r.RejectionReason,
+                    Note = r.Note,
                     CreatedTime = r.CreatedTime,
                     LastUpdatedTime = r.LastUpdatedTime,
+                    RequestedAt = r.RequestedAt,
+                    RespondedAt = r.RespondedAt,
                 })
                 .ToListAsync();
 
@@ -368,9 +404,11 @@ public class RefundRequestService : IRefundRequestService
                 UserName = request.User.FullName,
                 RefundAmount = request.RefundAmount,
                 Status = request.Status,
-                RejectionReason = request.RejectionReason,
+                Note = request.Note,
                 CreatedTime = request.CreatedTime,
                 LastUpdatedTime = request.LastUpdatedTime,
+                RequestedAt = request.RequestedAt,
+                RespondedAt = request.RespondedAt,
             };
         }
         catch (CustomException)

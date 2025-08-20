@@ -271,7 +271,7 @@ public class DashboardService : IDashboardService
                 // (b.Status == BookingStatus.Completed)
                 );
 
-            var commissionRate = (await GetBookingCommissionPercentAsync()) / 100;
+            // var commissionRate = (await GetBookingCommissionPercentAsync()) / 100;
 
             var groupedByDateGross = filteredBookings
                 .Where(b => b.Status == BookingStatus.Confirmed)
@@ -400,53 +400,61 @@ public class DashboardService : IDashboardService
         }
     }
 
+    private async Task<decimal> GetCommissionPercentAsync(BookingType bookingType, DateTime applyDate)
+    {
+        var commissionSettings = await _unitOfWork.CommissionSettingsRepository
+            .ActiveEntities
+            .Where(c => c.EffectiveDate <= applyDate)
+            .OrderByDescending(c => c.EffectiveDate)
+            .FirstOrDefaultAsync();
+
+        if (commissionSettings == null)
+            throw CustomExceptionFactory.CreateNotFoundError("Commission setting not found.");
+
+        return bookingType switch
+        {
+            BookingType.TourGuide => commissionSettings.TourGuideCommissionRate / 100m,
+            BookingType.Workshop => commissionSettings.CraftVillageCommissionRate / 100m,
+            _ => 0m
+        };
+    }
+
     public async Task<AdminRevenueDataDto> GetAdminRevenueStatisticsAsync(DateTime fromDate, DateTime toDate)
     {
         try
         {
-            var adjustedToDate = toDate.Date.AddDays(1).AddTicks(-1);
             var adjustedFromDate = fromDate.Date;
+            var adjustedToDate = toDate.Date.AddDays(1).AddTicks(-1);
 
             var result = new AdminRevenueDataDto();
 
             var filteredBookings = _unitOfWork.BookingRepository
                 .ActiveEntities
-                .Where(b =>
-                    b.StartDate >= adjustedFromDate &&
-                    b.StartDate <= adjustedToDate
-                // &&
-                // (b.Status == BookingStatus.Confirmed)
-                );
+                .Where(b => b.StartDate >= adjustedFromDate && b.StartDate <= adjustedToDate);
 
-            var countTemp = filteredBookings.Count();
-
-            var commissionRate = (await GetBookingCommissionPercentAsync()) / 100;
-
-            // --------------------------------
-
-            var groupedByDateGross = filteredBookings
+            var allBookings = await filteredBookings
                 .Where(b => b.Status == BookingStatus.Confirmed)
+                .ToListAsync();
+
+            var groupedByDateGross = allBookings
                 .GroupBy(b => b.StartDate.Date)
                 .Select(g => new
                 {
                     Date = g.Key,
                     Tour = g.Where(b => b.BookingType == BookingType.Tour).Sum(b => b.FinalPrice),
-                    BookingTourGuide = g.Where(b => b.BookingType == BookingType.TourGuide).Sum(b => b.FinalPrice * commissionRate),
-                    BookingWorkshop = g.Where(b => b.BookingType == BookingType.Workshop).Sum(b => b.FinalPrice * commissionRate),
-                });
+                    BookingTourGuide = g.Where(b => b.BookingType == BookingType.TourGuide)
+                                        .Sum(b => b.FinalPrice * GetCommissionPercentAsync(BookingType.TourGuide, g.Key).Result),
+                    BookingWorkshop = g.Where(b => b.BookingType == BookingType.Workshop)
+                                        .Sum(b => b.FinalPrice * GetCommissionPercentAsync(BookingType.Workshop, g.Key).Result),
+                })
+                .ToList();
 
-            var grossRevenue = new AdminRevenueDto();
-            var revenueData = await groupedByDateGross.OrderBy(r => r.Date).ToListAsync();
-
-            var tourGrossRevenue = revenueData.Sum(r => r.Tour);
-            var tourGuideGrossRevenue = revenueData.Sum(r => r.BookingTourGuide);
-            var tourWorkshopRevenue = revenueData.Sum(r => r.BookingWorkshop);
-
+            // -------------------------------------------------- Gross revenue
             var revenueByCategoryDto = new AdminRevenueByCategoryDto
             {
-                Tour = tourGrossRevenue,
-                CommissionTourGuide = tourGuideGrossRevenue,
-                CommissionWorkshop = tourWorkshopRevenue,
+                Tour = groupedByDateGross.Sum(r => r.Tour),
+                CommissionTourGuide = groupedByDateGross.Sum(r => r.BookingTourGuide),
+                CommissionWorkshop = groupedByDateGross.Sum(r => r.BookingWorkshop)
             };
 
             var allDates = Enumerable.Range(0, (toDate.Date - fromDate.Date).Days + 1)
@@ -454,7 +462,7 @@ public class DashboardService : IDashboardService
                 .ToList();
 
             var completeRevenueData = allDates
-                .GroupJoin(revenueData,
+                .GroupJoin(groupedByDateGross,
                     date => date,
                     data => data.Date,
                     (date, data) => new AdminDailyStatDto
@@ -468,77 +476,60 @@ public class DashboardService : IDashboardService
                 .OrderBy(r => r.Date)
                 .ToList();
 
-            grossRevenue.Total = revenueByCategoryDto.Tour + revenueByCategoryDto.CommissionTourGuide + revenueByCategoryDto.CommissionWorkshop;
-            grossRevenue.ByCategory = revenueByCategoryDto;
-            grossRevenue.DailyStats = completeRevenueData;
+            result.GrossRevenue = new AdminRevenueDto
+            {
+                Total = revenueByCategoryDto.Tour + revenueByCategoryDto.CommissionTourGuide + revenueByCategoryDto.CommissionWorkshop,
+                ByCategory = revenueByCategoryDto,
+                DailyStats = completeRevenueData
+            };
 
-            result.GrossRevenue = grossRevenue;
-
-            // --------------------------------------------------
-
-            var groupedByDateNet = filteredBookings
+            // -------------------------------------------------- Net Revenue 
+            var completedBookings = await filteredBookings
                 .Where(b => b.Status == BookingStatus.Completed)
+                .ToListAsync();
+
+            var groupedByDateNet = completedBookings
                 .GroupBy(b => b.StartDate.Date)
                 .Select(g => new
                 {
                     Date = g.Key,
                     Tour = g.Where(b => b.BookingType == BookingType.Tour).Sum(b => b.FinalPrice),
-                    BookingTourGuide = g.Where(b => b.BookingType == BookingType.TourGuide).Sum(b => b.FinalPrice * commissionRate),
-                    BookingWorkshop = g.Where(b => b.BookingType == BookingType.Workshop).Sum(b => b.FinalPrice * commissionRate),
-
-                    /* 
-                    // Commission = g.Sum(b =>
-                    //     (b.BookingType == BookingType.TourGuide || b.BookingType == BookingType.Workshop)
-                    //         ? b.FinalPrice * commissionRate
-                    //         : 0m),
-                    // NetRevenue = g.Sum(b =>
-                    //     b.BookingType == BookingType.Tour
-                    //         ? b.FinalPrice
-                    //         : b.FinalPrice * commissionRate)
-                    */
-                });
-
-            var netRevenue = new AdminRevenueDto();
-            var revenueDataNet = await groupedByDateNet.OrderBy(r => r.Date).ToListAsync();
-
-            var tourNetRevenue = revenueData.Sum(r => r.Tour);
-            var tourGuideNetRevenue = revenueData.Sum(r => r.BookingTourGuide);
-            var tourWorkshopNetRevenue = revenueData.Sum(r => r.BookingWorkshop);
+                    BookingTourGuide = g.Where(b => b.BookingType == BookingType.TourGuide)
+                                        .Sum(b => b.FinalPrice * GetCommissionPercentAsync(BookingType.TourGuide, g.Key).Result),
+                    BookingWorkshop = g.Where(b => b.BookingType == BookingType.Workshop)
+                                        .Sum(b => b.FinalPrice * GetCommissionPercentAsync(BookingType.Workshop, g.Key).Result),
+                })
+                .ToList();
 
             var netRevenueByCategoryDto = new AdminRevenueByCategoryDto
             {
-                Tour = tourGrossRevenue,
-                CommissionTourGuide = tourGuideGrossRevenue,
-                CommissionWorkshop = tourWorkshopRevenue,
+                Tour = groupedByDateNet.Sum(r => r.Tour),
+                CommissionTourGuide = groupedByDateNet.Sum(r => r.BookingTourGuide),
+                CommissionWorkshop = groupedByDateNet.Sum(r => r.BookingWorkshop)
             };
 
-            // var totalNetRevenue = revenueData.Sum(r => r.NetRevenue);
-            // var totalCommission = revenueData.Sum(r => r.Commission);
-
-            var allDatesNet = Enumerable.Range(0, (toDate.Date - fromDate.Date).Days + 1)
-                .Select(d => fromDate.Date.AddDays(d))
-                .ToList();
-
             var dailyNetRevenueStatDto = allDates
-                .GroupJoin(revenueData,
+                .GroupJoin(groupedByDateNet,
                     date => date,
                     data => data.Date,
-                    (date, data) => new DailyRevenueStatDto
+                    (date, data) => new AdminDailyStatDto
                     {
                         Date = date,
                         Total = data.FirstOrDefault()?.Tour ?? 0m,
                         Tour = data.FirstOrDefault()?.Tour ?? 0m,
-                        BookingTourGuide = data.FirstOrDefault()?.BookingTourGuide ?? 0m,
-                        BookingWorkshop = data.FirstOrDefault()?.BookingWorkshop ?? 0m
+                        CommissionTourGuide = data.FirstOrDefault()?.BookingTourGuide ?? 0m,
+                        CommissionWorkshop = data.FirstOrDefault()?.BookingWorkshop ?? 0m
                     })
                 .OrderBy(r => r.Date)
                 .ToList();
 
-            netRevenue.Total = revenueByCategoryDto.Tour + revenueByCategoryDto.CommissionTourGuide + revenueByCategoryDto.CommissionWorkshop;
-            netRevenue.ByCategory = revenueByCategoryDto;
-            netRevenue.DailyStats = completeRevenueData;
+            result.NetRevenue = new AdminRevenueDto
+            {
+                Total = netRevenueByCategoryDto.Tour + netRevenueByCategoryDto.CommissionTourGuide + netRevenueByCategoryDto.CommissionWorkshop,
+                ByCategory = netRevenueByCategoryDto,
+                DailyStats = dailyNetRevenueStatDto
+            };
 
-            result.NetRevenue = netRevenue;
             return result;
         }
         catch (CustomException)
@@ -550,6 +541,7 @@ public class DashboardService : IDashboardService
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
+
 
     public async Task<BookingStatisticResponse> GetBookingStatisticsAsync(DateTime fromDate, DateTime toDate)
     {
@@ -1587,27 +1579,35 @@ public class DashboardService : IDashboardService
         }
     }
 
-    private async Task<decimal> GetBookingCommissionPercentAsync()
-    {
-        try
-        {
-            var commissionSetting = await _unitOfWork.SystemSettingRepository
-                .ActiveEntities
-                .FirstOrDefaultAsync(s => s.Key == SystemSettingKey.BookingCommissionPercent)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("system setting BookingCommissionPercent");
+    // private async Task<decimal> GetCommissionPercentAsync(BookingType bookingType, DateTime bookingDate)
+    // {
+    //     try
+    //     {
+    //         var commissionSetting = await _unitOfWork.CommissionSettingsRepository
+    //             .ActiveEntities
+    //             .Where(c => bookingDate >= c.EffectiveDate)
+    //             .OrderByDescending(c => c.EffectiveDate)
+    //             .FirstOrDefaultAsync();
 
-            if (!decimal.TryParse(commissionSetting.Value, out var commissionPercent))
-                throw CustomExceptionFactory.CreateBadRequestError("Giá trị hoa hồng không hợp lệ.");
+    //         if (commissionSetting == null)
+    //             throw CustomExceptionFactory.CreateNotFoundError("commission setting");
 
-            return commissionPercent;
-        }
-        catch (CustomException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
+    //         decimal percent = bookingType switch
+    //         {
+    //             BookingType.TourGuide => commissionSetting.TourGuideCommissionRate,
+    //             BookingType.Workshop => commissionSetting.CraftVillageCommissionRate,
+    //             _ => 0m
+    //         };
+
+    //         return percent / 100m;
+    //     }
+    //     catch (CustomException)
+    //     {
+    //         throw;
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+    //     }
+    // }
 }
