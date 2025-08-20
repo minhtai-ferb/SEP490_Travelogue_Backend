@@ -496,11 +496,23 @@ public class UserService : IUserService
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
+            var currentUserId = _userContextService.GetCurrentUserIdGuid();
+            var isValidRole = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
+            if (!isValidRole)
+                throw CustomExceptionFactory.CreateForbiddenError();
+
             var role = await _unitOfWork.RoleRepository.GetByIdAsync(roleId, cancellationToken);
             if (role == null)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("vai trò");
             }
+
+            if (role.Name == AppRole.TOUR_GUIDE || role.Name == AppRole.CRAFT_VILLAGE_OWNER)
+                throw CustomExceptionFactory.CreateBadRequestError("Không được gán thủ công role này");
+
+            var isAdmin = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
+            if (isAdmin && role.Name == AppRole.MODERATOR)
+                throw CustomExceptionFactory.CreateBadRequestError("Bạn không được tự cấp quyền Moderator cho mình");
 
             // check user có role này chưa
             var userRoleExists = await _unitOfWork.UserRoleRepository.RoleExistsForUserAsync(userId, role.Id);

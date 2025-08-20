@@ -1147,6 +1147,12 @@ public class BookingService : IBookingService
                     throw CustomExceptionFactory.CreateBadRequestError("Không thể hủy đơn trong vòng 24 giờ trước khi bắt đầu.");
                 }
             }
+
+            if (booking.Status == BookingStatus.Pending)
+            {
+                booking.Status = BookingStatus.CancelledUnpaid;
+            }
+
             booking.Status = BookingStatus.Cancelled;
             booking.CancelledAt = currentTime;
             booking.LastUpdatedTime = currentTime;
