@@ -95,12 +95,12 @@ builder.Services.AddQuartz(q =>
     var jobKey = new JobKey("BookingCompletionJob");
     q.AddJob<BookingCompletionJob>(opts => opts.WithIdentity(jobKey));
 
-    // 5 phút chạy 1 lần
+    // 60 phút chạy 1 lần
     q.AddTrigger(opts => opts
         .ForJob(jobKey)
         .WithIdentity("BookingCompletionJob-trigger")
         .StartNow()
-        .WithSimpleSchedule(x => x.WithIntervalInMinutes(1).RepeatForever())
+        .WithSimpleSchedule(x => x.WithIntervalInMinutes(60).RepeatForever())
     );
 });
 
