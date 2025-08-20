@@ -321,8 +321,20 @@ public class NewsService : INewsService
                 title, locationId, isHighlighted, pageNumber, pageSize, cancellationToken);
 
             var eventItems = pagedResult.Items = pagedResult.Items
-            .Where(a => a.NewsCategory == NewsCategory.Event)
-            .ToList();
+                .Where(a => a.NewsCategory == NewsCategory.Event)
+                .ToList();
+
+            if (year.HasValue && month.HasValue &&
+                year.Value > 0 && month.Value > 0)
+            {
+                eventItems = eventItems.Where(a =>
+                    a.StartDate.HasValue &&
+                    a.EndDate.HasValue &&
+                    a.StartDate.Value.Year == year.Value &&
+                    (a.StartDate.Value.Month == month.Value ||
+                     a.EndDate.Value.Month == month.Value)
+                ).ToList();
+            }
 
             var newsDataModels = _mapper.Map<List<NewsDataModel>>(pagedResult.Items);
 
@@ -338,18 +350,6 @@ public class NewsService : INewsService
 
                 item.CategoryName = _enumService.GetEnumDisplayName<NewsCategory>(item.NewsCategory);
                 item.TypeExperienceText = _enumService.GetEnumDisplayName<TypeExperience>(item.TypeExperience);
-            }
-
-            if (year.HasValue && month.HasValue &&
-                year.Value > 0 && month.Value > 0)
-            {
-                newsDataModels = newsDataModels.Where(a =>
-                    a.StartDate.HasValue &&
-                    a.EndDate.HasValue &&
-                    a.StartDate.Value.Year == year.Value &&
-                    (a.StartDate.Value.Month == month.Value ||
-                     a.EndDate.Value.Month == month.Value)
-                ).ToList();
             }
 
             var result = new PagedResult<NewsDataModel>
