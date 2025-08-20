@@ -24,7 +24,7 @@ public sealed class User : BaseEntity
     public string? EmailCode { get; set; }
     public string? AvatarUrl { get; set; }
 
-    public Gender Sex { get; set; }
+    public Gender Sex { get; set; } = Gender.Male;
 
     [StringLength(200)]
     public string? Address { get; set; }

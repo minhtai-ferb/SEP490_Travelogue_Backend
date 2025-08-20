@@ -4,11 +4,13 @@ using FirebaseAdmin.Auth;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using Quartz;
 using Travelogue.API;
 using Travelogue.API.Middlewares;
 using Travelogue.Repository;
 using Travelogue.Repository.Data;
 using Travelogue.Service;
+using Travelogue.Service.Commons.Quartz;
 using Travelogue.Service.Commons.SignalR;
 using Travelogue.Service.Services;
 
@@ -86,6 +88,23 @@ FirebaseApp.Create(new AppOptions
     Credential = GoogleCredential.FromFile(serviceAccountPath)
 });
 
+builder.Services.AddQuartz(q =>
+{
+    q.UseMicrosoftDependencyInjectionJobFactory();
+
+    var jobKey = new JobKey("BookingCompletionJob");
+    q.AddJob<BookingCompletionJob>(opts => opts.WithIdentity(jobKey));
+
+    // 5 phút chạy 1 lần
+    q.AddTrigger(opts => opts
+        .ForJob(jobKey)
+        .WithIdentity("BookingCompletionJob-trigger")
+        .StartNow()
+        .WithSimpleSchedule(x => x.WithIntervalInMinutes(1).RepeatForever())
+    );
+});
+
+builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
 
 
 builder.Services.AddSingleton(FirebaseAuth.DefaultInstance);

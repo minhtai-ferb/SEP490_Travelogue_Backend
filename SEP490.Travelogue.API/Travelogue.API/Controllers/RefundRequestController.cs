@@ -29,9 +29,9 @@ public class RefundRequestController : ControllerBase
 
     [HttpPut("{refundRequestId:guid}/approve")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ResponseModel<object>))]
-    public async Task<IActionResult> ApproveRefundRequest(Guid refundRequestId)
+    public async Task<IActionResult> ApproveRefundRequest(Guid refundRequestId, string? note)
     {
-        var result = await _refundRequestService.ApproveRefundRequestAsync(refundRequestId);
+        var result = await _refundRequestService.ApproveRefundRequestAsync(refundRequestId, note);
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
             message: ResponseMessages.SUCCESS));
