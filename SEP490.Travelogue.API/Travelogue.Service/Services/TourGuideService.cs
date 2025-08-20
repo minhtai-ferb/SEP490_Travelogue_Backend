@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using System.Threading;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Const;
@@ -34,6 +35,7 @@ public interface ITourGuideService
     Task<RejectionRequestResponseDto> RejectRejectionRequestAsync(Guid requestId, RejectRejectionRequestDto dto);
     Task<PagedResult<RejectionRequestResponseDto>> GetRejectionRequestsForAdminAsync(RejectionRequestFilter filter, int pageNumber, int pageSize);
     Task<RejectionRequestResponseDto> GetRejectionRequestByIdAsync(Guid requestId);
+    Task<ScheduleWithRejectionResponseDto> GetShedulesById(Guid tourGuideSchedulesId, CancellationToken cancellationToken);
 }
 
 public class TourGuideService : ITourGuideService
@@ -1269,5 +1271,94 @@ public class TourGuideService : ITourGuideService
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message); 
         } 
+    }
+
+    public async Task<ScheduleWithRejectionResponseDto> GetShedulesById(Guid tourGuideSchedulesId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            var isTourGuide = _userContextService.HasRole(AppRole.TOUR_GUIDE);
+            if (!isTourGuide)
+            {
+                throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
+            var tourGuide = await _unitOfWork.TourGuideRepository
+                .ActiveEntities
+                .FirstOrDefaultAsync(t => t.UserId == currentUserId, cancellationToken)
+                .ConfigureAwait(false)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Tour Guide");
+
+            var tourGuideSchedule = await _unitOfWork.TourGuideScheduleRepository
+                .ActiveEntities
+                .Include(s => s.TourSchedule)
+                    .ThenInclude(ts => ts.Tour)
+                .Include(s => s.Booking)
+                    .ThenInclude(b => b.User)
+                .FirstOrDefaultAsync(s => s.TourGuideId == tourGuide.Id && s.Id == tourGuideSchedulesId, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (tourGuideSchedule == null)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("Tour Guide Schedule");
+            }
+
+            var rejection = await _unitOfWork.RejectionRequestRepository
+                .ActiveEntities
+                .Include(r => r.TourGuide)
+                .Include(r => r.TourSchedule)
+                .Include(r => r.Booking)
+                .FirstOrDefaultAsync(r =>
+                    r.TourGuideId == tourGuide.Id &&
+                    (r.TourScheduleId == tourGuideSchedule.TourScheduleId || r.BookingId == tourGuideSchedule.BookingId),
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            var result = new ScheduleWithRejectionResponseDto
+            {
+                Id = tourGuideSchedule.Id,
+                TourGuideId = tourGuideSchedule.TourGuideId,
+                TourScheduleId = tourGuideSchedule.TourScheduleId,
+                BookingId = tourGuideSchedule.BookingId,
+                Date = tourGuideSchedule.Date,
+                Note = tourGuideSchedule.Note,
+                TourName = tourGuideSchedule.TourSchedule?.Tour?.Name,
+                CustomerName = tourGuideSchedule.Booking?.User?.FullName,
+                Price = tourGuideSchedule.TourSchedule != null
+                    ? tourGuideSchedule.TourSchedule.AdultPrice
+                    : tourGuideSchedule.Booking?.FinalPrice,
+                ScheduleType = tourGuideSchedule.TourScheduleId != null
+                    ? "TourSchedule"
+                    : tourGuideSchedule.BookingId != null ? "Booking" : "Unknown",
+                RejectionRequest = rejection != null
+                    ? new RejectionRequestResponseDto
+                    {
+                        Id = rejection.Id,
+                        TourGuideId = rejection.TourGuideId,
+                        RequestType = rejection.RequestType,
+                        TourScheduleId = rejection.TourScheduleId,
+                        BookingId = rejection.BookingId,
+                        Reason = rejection.Reason,
+                        Status = rejection.Status,
+                        StatusText = _enumService.GetEnumDisplayName<RejectionRequestStatus>(rejection.Status),
+                        ModeratorComment = rejection.ModeratorComment,
+                        ReviewedAt = rejection.ReviewedAt,
+                        ReviewedBy = rejection.ReviewedBy
+                    }
+                    : null
+            };
+
+            return result;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
     }
 }
