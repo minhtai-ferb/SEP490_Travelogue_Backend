@@ -309,7 +309,9 @@ public class DashboardService : IDashboardService
                     (date, data) => new DailyRevenueStatDto
                     {
                         Date = date,
-                        Total = data.FirstOrDefault()?.Tour ?? 0m,
+                        Total = (data.FirstOrDefault()?.Tour ?? 0m)
+                            + (data.FirstOrDefault()?.BookingTourGuide ?? 0m)
+                            + (data.FirstOrDefault()?.BookingWorkshop ?? 0m),
                         Tour = data.FirstOrDefault()?.Tour ?? 0m,
                         BookingTourGuide = data.FirstOrDefault()?.BookingTourGuide ?? 0m,
                         BookingWorkshop = data.FirstOrDefault()?.BookingWorkshop ?? 0m
@@ -375,7 +377,9 @@ public class DashboardService : IDashboardService
                     (date, data) => new DailyRevenueStatDto
                     {
                         Date = date,
-                        Total = data.FirstOrDefault()?.Tour ?? 0m,
+                        Total = (data.FirstOrDefault()?.Tour ?? 0m)
+                        + (data.FirstOrDefault()?.BookingTourGuide ?? 0m)
+                        + (data.FirstOrDefault()?.BookingWorkshop ?? 0m),
                         Tour = data.FirstOrDefault()?.Tour ?? 0m,
                         BookingTourGuide = data.FirstOrDefault()?.BookingTourGuide ?? 0m,
                         BookingWorkshop = data.FirstOrDefault()?.BookingWorkshop ?? 0m
@@ -518,7 +522,9 @@ public class DashboardService : IDashboardService
                     (date, data) => new AdminDailyStatDto
                     {
                         Date = date,
-                        Total = data.FirstOrDefault()?.Tour ?? 0m,
+                        Total = (data.FirstOrDefault()?.Tour ?? 0m)
+                        + (data.FirstOrDefault()?.BookingTourGuide ?? 0m)
+                        + (data.FirstOrDefault()?.BookingWorkshop ?? 0m),
                         Tour = data.FirstOrDefault()?.Tour ?? 0m,
                         CommissionTourGuide = data.FirstOrDefault()?.BookingTourGuide ?? 0m,
                         CommissionWorkshop = data.FirstOrDefault()?.BookingWorkshop ?? 0m
