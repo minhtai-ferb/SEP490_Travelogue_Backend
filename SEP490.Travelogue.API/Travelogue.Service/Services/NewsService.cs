@@ -336,7 +336,7 @@ public class NewsService : INewsService
                 ).ToList();
             }
 
-            var newsDataModels = _mapper.Map<List<NewsDataModel>>(pagedResult.Items);
+            var newsDataModels = _mapper.Map<List<NewsDataModel>>(eventItems);
 
             foreach (var item in newsDataModels)
             {
