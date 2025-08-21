@@ -1160,7 +1160,7 @@ public class LocationService : ILocationService
             var craftVillage = await _unitOfWork.CraftVillageRepository.GetByLocationId(existingLocation.Id, cancellationToken);
             var historicalLocation = await _unitOfWork.HistoricalLocationRepository.GetByLocationId(existingLocation.Id, cancellationToken);
 
-            var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
+    var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
 
             if (cuisine != null)
             {
