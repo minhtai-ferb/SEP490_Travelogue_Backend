@@ -154,6 +154,18 @@ public class RefundRequestService : IRefundRequestService
                 refundRequest.Note = note;
                 refundRequest.Status = RefundRequestStatus.Approved;
 
+                if (refundRequest.User.Wallet == null)
+                {
+                    refundRequest.User.Wallet = new Wallet
+                    {
+                        UserId = refundRequest.User.Id,
+                        Balance = 0
+                    };
+
+                    await _unitOfWork.WalletRepository.AddAsync(refundRequest.User.Wallet);
+                    await _unitOfWork.SaveAsync();
+                }
+
                 refundRequest.User.Wallet.Balance += refundRequest.RefundAmount;
 
                 var walletTransaction = new TransactionEntry
@@ -234,6 +246,7 @@ public class RefundRequestService : IRefundRequestService
 
             var refundRequest = await _unitOfWork.RefundRequestRepository
                 .ActiveEntities
+                .Include(r => r.User)
                 .FirstOrDefaultAsync(r => r.Id == refundRequestId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Refund Request");
 
@@ -404,6 +417,7 @@ public class RefundRequestService : IRefundRequestService
                 UserName = request.User.FullName,
                 RefundAmount = request.RefundAmount,
                 Status = request.Status,
+                StatusText = _enumService.GetEnumDisplayName<RefundRequestStatus>(request.Status),
                 Note = request.Note,
                 CreatedTime = request.CreatedTime,
                 LastUpdatedTime = request.LastUpdatedTime,
