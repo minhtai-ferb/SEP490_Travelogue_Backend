@@ -317,17 +317,14 @@ public class NewsService : INewsService
     {
         try
         {
-            var pagedResult = await _unitOfWork.NewsRepository.GetPageWithSearchAsync(
-                title, locationId, isHighlighted, pageNumber, pageSize, cancellationToken);
-
-            var eventItems = pagedResult.Items = pagedResult.Items
+            var allItems = await _unitOfWork.NewsRepository
+                .ActiveEntities
                 .Where(a => a.NewsCategory == NewsCategory.Event)
-                .ToList();
+                .ToListAsync(cancellationToken);
 
-            if (year.HasValue && month.HasValue &&
-                year.Value > 0 && month.Value > 0)
+            if (year.HasValue && month.HasValue && year.Value > 0 && month.Value > 0)
             {
-                eventItems = eventItems.Where(a =>
+                allItems = allItems.Where(a =>
                     a.StartDate.HasValue &&
                     a.EndDate.HasValue &&
                     a.StartDate.Value.Year == year.Value &&
@@ -335,6 +332,13 @@ public class NewsService : INewsService
                      a.EndDate.Value.Month == month.Value)
                 ).ToList();
             }
+
+            var totalCount = allItems.Count;
+
+            var eventItems = allItems
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
 
             var newsDataModels = _mapper.Map<List<NewsDataModel>>(eventItems);
 
