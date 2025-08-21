@@ -1160,7 +1160,7 @@ public class LocationService : ILocationService
             var craftVillage = await _unitOfWork.CraftVillageRepository.GetByLocationId(existingLocation.Id, cancellationToken);
             var historicalLocation = await _unitOfWork.HistoricalLocationRepository.GetByLocationId(existingLocation.Id, cancellationToken);
 
-    var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
+            var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
 
             if (cuisine != null)
             {
@@ -2458,6 +2458,18 @@ public class LocationService : ILocationService
                 .Where(m => m.LocationId == locationId)
                 .ToListAsync(cancellationToken);
 
+            var requestUrls = mediaDtos.Select(m => m.MediaUrl).Distinct().ToList();
+
+            var mediasToDelete = existingMedias
+                .Where(m => !requestUrls.Contains(m.MediaUrl))
+                .ToList();
+
+            foreach (var media in mediasToDelete)
+            {
+                media.IsDeleted = true;
+                _unitOfWork.LocationMediaRepository.Update(media);
+            }
+
             foreach (var mediaDto in mediaDtos)
             {
                 string fileName = Path.GetFileName(new Uri(mediaDto.MediaUrl).LocalPath);
@@ -2492,14 +2504,13 @@ public class LocationService : ILocationService
             }
 
             var allMediasAfterUpdate = await _unitOfWork.LocationMediaRepository.ActiveEntities
-                .Where(m => m.LocationId == locationId)
+                .Where(m => m.LocationId == locationId && !m.IsDeleted)
                 .ToListAsync(cancellationToken);
 
             var thumbnails = allMediasAfterUpdate.Where(m => m.IsThumbnail).ToList();
 
             if (!thumbnails.Any())
             {
-                // kh có ảnh nào là thumbnail, chọn ảnh đầu tiên
                 var first = allMediasAfterUpdate.FirstOrDefault();
                 if (first != null)
                 {
@@ -2509,7 +2520,6 @@ public class LocationService : ILocationService
             }
             else if (thumbnails.Count > 1)
             {
-                // giữ lại 1 ảnh đầu tiên làm thumbnail
                 foreach (var extraThumb in thumbnails.Skip(1))
                 {
                     extraThumb.IsThumbnail = false;
