@@ -54,6 +54,7 @@ public class UnitOfWork : IUnitOfWork
     public ISystemSettingRepository SystemSettingRepository { get; }
     public IRefundRequestRepository RefundRequestRepository { get; }
     public ICommissionSettingsRepository CommissionSettingsRepository { get; }
+    public ICommissionRateRepository CommissionRateRepository { get; }
 
     public UnitOfWork(ApplicationDbContext dbContext)
     {
@@ -101,6 +102,7 @@ public class UnitOfWork : IUnitOfWork
         SystemSettingRepository = new SystemSettingRepository(_dbContext);
         RefundRequestRepository = new RefundRequestRepository(_dbContext);
         CommissionSettingsRepository = new CommissionSettingsRepository(_dbContext);
+        CommissionRateRepository = new CommissionRateRepository(_dbContext);
     }
 
     public IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity

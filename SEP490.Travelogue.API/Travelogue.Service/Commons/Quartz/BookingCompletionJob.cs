@@ -36,7 +36,10 @@ public class BookingCompletionJob : IJob
                     .Include(b => b.TourGuide)
                         .ThenInclude(g => g.User)
                             .ThenInclude(u => u.Wallet)
-                    .Include(b => b.Workshop).ThenInclude(w => w.CraftVillage).ThenInclude(u => u.Owner).ThenInclude(u => u.Wallet)
+                    .Include(b => b.Workshop)
+                        .ThenInclude(w => w.CraftVillage)
+                            .ThenInclude(cv => cv.Owner)
+                                .ThenInclude(u => u.Wallet)
                     .Where(b => b.EndDate <= now && b.Status == BookingStatus.Confirmed)
                     .ToListAsync();
 
@@ -45,43 +48,39 @@ public class BookingCompletionJob : IJob
                     booking.Status = BookingStatus.Completed;
                     unitOfWork.BookingRepository.Update(booking);
 
-                    var commissionSettings = await unitOfWork.CommissionSettingsRepository.GetByDateAsync(booking.BookingDate.DateTime);
+                    var commissionRate = await unitOfWork.CommissionRateRepository.ActiveEntities
+                        .Where(c =>
+                            c.Type == (booking.BookingType == BookingType.TourGuide
+                                        ? CommissionType.TourGuideCommission
+                                        : CommissionType.CraftVillageCommission)
+                            && c.EffectiveDate <= booking.BookingDate.DateTime
+                            && (!c.ExpiryDate.HasValue || booking.BookingDate.DateTime <= c.ExpiryDate))
+                        .OrderByDescending(c => c.EffectiveDate)
+                        .FirstOrDefaultAsync();
 
-                    if (commissionSettings == null || booking.FinalPrice <= 0)
+                    if (commissionRate == null || booking.FinalPrice <= 0)
                         continue;
 
-                    decimal commissionRate = 0;
+                    var commissionPercent = commissionRate.RateValue / 100m;
+
                     Wallet? targetWallet = null;
                     Guid? targetUserId = null;
 
                     if (booking.BookingType == BookingType.TourGuide && booking.TourGuide?.User.Wallet != null)
                     {
-                        commissionRate = commissionSettings.TourGuideCommissionRate / 100m;
                         targetWallet = booking.TourGuide.User.Wallet;
                         targetUserId = booking.TourGuide.User.Id;
                     }
                     else if (booking.BookingType == BookingType.Workshop && booking.Workshop?.CraftVillage?.Owner?.Wallet != null)
                     {
-                        commissionRate = commissionSettings.CraftVillageCommissionRate / 100m;
                         targetWallet = booking.Workshop.CraftVillage.Owner.Wallet;
                         targetUserId = booking.Workshop.CraftVillage.Owner.Id;
-                    }
-
-                    if (targetWallet == null)
-                    {
-                        var wallet = new Wallet
-                        {
-                            UserId = targetUserId.Value,
-                            Balance = 0m,
-                            CreatedBy = targetUserId.ToString(),
-                            LastUpdatedBy = targetUserId.ToString()
-                        };
-                        await unitOfWork.WalletRepository.AddAsync(wallet);
                     }
 
                     if (targetUserId == null)
                         continue;
 
+                    // chua co vi
                     if (targetWallet == null)
                     {
                         targetWallet = new Wallet
@@ -94,7 +93,7 @@ public class BookingCompletionJob : IJob
                         await unitOfWork.WalletRepository.AddAsync(targetWallet);
                     }
 
-                    var commissionAmount = booking.FinalPrice * commissionRate;
+                    var commissionAmount = booking.FinalPrice * commissionPercent;
 
                     if (commissionAmount > 0)
                     {
@@ -126,7 +125,7 @@ public class BookingCompletionJob : IJob
                 if (expiredBookings.Any())
                 {
                     await unitOfWork.SaveAsync();
-                    Console.WriteLine("Updated booking hoan thanh + chia hoa hong");
+                    Console.WriteLine("Updated booking hoàn thành + chia hoa hồng");
                 }
             }
         }
