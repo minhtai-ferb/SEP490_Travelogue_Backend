@@ -404,23 +404,27 @@ public class DashboardService : IDashboardService
         }
     }
 
-    private decimal GetCommissionPercentAsync(BookingType bookingType, DateTime applyDate)
+    private decimal GetCommissionPercent(BookingType bookingType, DateTime applyDate)
     {
-        var commissionSettings = _unitOfWork.CommissionSettingsRepository
+        var commissionType = bookingType switch
+        {
+            BookingType.TourGuide => CommissionType.TourGuideCommission,
+            BookingType.Workshop => CommissionType.CraftVillageCommission,
+            _ => throw CustomExceptionFactory.CreateNotFoundError("Commission type mapping")
+        };
+
+        var commissionRate = _unitOfWork.CommissionRateRepository
             .ActiveEntities
-            .Where(c => c.EffectiveDate <= applyDate)
+            .Where(c => c.Type == commissionType
+                     && c.EffectiveDate <= applyDate
+                     && (!c.ExpiryDate.HasValue || applyDate <= c.ExpiryDate))
             .OrderByDescending(c => c.EffectiveDate)
             .FirstOrDefault();
 
-        if (commissionSettings == null)
-            throw CustomExceptionFactory.CreateNotFoundError("Commission setting");
+        if (commissionRate == null)
+            throw CustomExceptionFactory.CreateNotFoundError("Commission rate");
 
-        return bookingType switch
-        {
-            BookingType.TourGuide => commissionSettings.TourGuideCommissionRate / 100m,
-            BookingType.Workshop => commissionSettings.CraftVillageCommissionRate / 100m,
-            _ => 0m
-        };
+        return commissionRate.RateValue / 100m;
     }
 
     public async Task<AdminRevenueDataDto> GetAdminRevenueStatisticsAsync(DateTime fromDate, DateTime toDate)
@@ -447,11 +451,12 @@ public class DashboardService : IDashboardService
                     Date = g.Key,
                     Tour = g.Where(b => b.BookingType == BookingType.Tour).Sum(b => b.FinalPrice),
                     BookingTourGuide = g.Where(b => b.BookingType == BookingType.TourGuide)
-                                        .Sum(b => b.FinalPrice * GetCommissionPercentAsync(BookingType.TourGuide, g.Key)),
+                            .Sum(b => b.FinalPrice * GetCommissionPercent(BookingType.TourGuide, b.BookingDate.DateTime)),
+
                     BookingWorkshop = g.Where(b => b.BookingType == BookingType.Workshop)
-                                        .Sum(b => b.FinalPrice * GetCommissionPercentAsync(BookingType.Workshop, g.Key)),
+                            .Sum(b => b.FinalPrice * GetCommissionPercent(BookingType.Workshop, b.BookingDate.DateTime)),
                 })
-                .ToList();
+            .ToList();
 
             // -------------------------------------------------- Gross revenue
             var revenueByCategoryDto = new AdminRevenueByCategoryDto
@@ -502,9 +507,9 @@ public class DashboardService : IDashboardService
                     Date = g.Key,
                     Tour = g.Where(b => b.BookingType == BookingType.Tour).Sum(b => b.FinalPrice),
                     BookingTourGuide = g.Where(b => b.BookingType == BookingType.TourGuide)
-                                        .Sum(b => b.FinalPrice * GetCommissionPercentAsync(BookingType.TourGuide, g.Key)),
+                                        .Sum(b => b.FinalPrice * GetCommissionPercent(BookingType.TourGuide, b.BookingDate.DateTime)),
                     BookingWorkshop = g.Where(b => b.BookingType == BookingType.Workshop)
-                                        .Sum(b => b.FinalPrice * GetCommissionPercentAsync(BookingType.Workshop, g.Key)),
+                                        .Sum(b => b.FinalPrice * GetCommissionPercent(BookingType.Workshop, b.BookingDate.DateTime)),
                 })
                 .ToList();
 

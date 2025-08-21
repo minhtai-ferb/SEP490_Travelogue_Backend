@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Travelogue.Repository.Data;
 
@@ -11,9 +12,11 @@ using Travelogue.Repository.Data;
 namespace Travelogue.Repository.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250821141811_EndDateCommission")]
+    partial class EndDateCommission
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -614,12 +617,16 @@ namespace Travelogue.Repository.Migrations
                     b.ToTable("certifications");
                 });
 
-            modelBuilder.Entity("Travelogue.Repository.Entities.CommissionRate", b =>
+            modelBuilder.Entity("Travelogue.Repository.Entities.CommissionSettings", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)")
                         .HasColumnName("id");
+
+                    b.Property<decimal>("CraftVillageCommissionRate")
+                        .HasColumnType("decimal(65,30)")
+                        .HasColumnName("craft_village_commission_rate");
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("longtext")
@@ -641,101 +648,9 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("effective_date");
 
-                    b.Property<DateTime?>("ExpiryDate")
+                    b.Property<DateTime?>("EndDate")
                         .HasColumnType("datetime(6)")
-                        .HasColumnName("expiry_date");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<decimal>("RateValue")
-                        .HasColumnType("decimal(65,30)")
-                        .HasColumnName("rate_value");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("int")
-                        .HasColumnName("type");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("commission_rates");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("1d63137d-5315-4565-b3b6-4cff5d73baf5"),
-                            CreatedBy = "System",
-                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 21, 15, 33, 45, 504, DateTimeKind.Unspecified).AddTicks(5758), new TimeSpan(0, 0, 0, 0, 0)),
-                            EffectiveDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            IsActive = true,
-                            IsDeleted = false,
-                            LastUpdatedBy = "System",
-                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 21, 15, 33, 45, 504, DateTimeKind.Unspecified).AddTicks(5764), new TimeSpan(0, 0, 0, 0, 0)),
-                            RateValue = 5m,
-                            Type = 1
-                        },
-                        new
-                        {
-                            Id = new Guid("547efa98-ecb9-4e50-a1ea-335efcb24c34"),
-                            CreatedBy = "System",
-                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 21, 15, 33, 45, 504, DateTimeKind.Unspecified).AddTicks(5769), new TimeSpan(0, 0, 0, 0, 0)),
-                            EffectiveDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            IsActive = true,
-                            IsDeleted = false,
-                            LastUpdatedBy = "System",
-                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 21, 15, 33, 45, 504, DateTimeKind.Unspecified).AddTicks(5770), new TimeSpan(0, 0, 0, 0, 0)),
-                            RateValue = 3m,
-                            Type = 2
-                        });
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.CommissionSettings", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<decimal>("CraftVillageCommissionRate")
-                        .HasColumnType("decimal(65,30)")
-                        .HasColumnName("craft_village_commission_rate");
-
-                    b.Property<DateTime>("CraftVillageEffectiveDate")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("craft_village_effective_date");
-
-                    b.Property<DateTime?>("CraftVillageEndDate")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("craft_village_end_date");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
+                        .HasColumnName("end_date");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
@@ -757,17 +672,22 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("decimal(65,30)")
                         .HasColumnName("tour_guide_commission_rate");
 
-                    b.Property<DateTime>("TourGuideEffectiveDate")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("tour_guide_effective_date");
-
-                    b.Property<DateTime?>("TourGuideEndDate")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("tour_guide_end_date");
-
                     b.HasKey("Id");
 
                     b.ToTable("commission_settings");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("c8bf29e3-ec7b-417d-938a-c9a4749a7b63"),
+                            CraftVillageCommissionRate = 10m,
+                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 21, 21, 18, 4, 677, DateTimeKind.Unspecified).AddTicks(9860), new TimeSpan(0, 7, 0, 0, 0)),
+                            EffectiveDate = new DateTime(2024, 8, 21, 21, 18, 4, 677, DateTimeKind.Local).AddTicks(9875),
+                            IsActive = true,
+                            IsDeleted = false,
+                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 21, 21, 18, 4, 677, DateTimeKind.Unspecified).AddTicks(9865), new TimeSpan(0, 7, 0, 0, 0)),
+                            TourGuideCommissionRate = 20m
+                        });
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.CraftVillage", b =>
@@ -2420,12 +2340,12 @@ namespace Travelogue.Repository.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("5eda02e6-5a47-468a-9eb9-9f446174d00a"),
-                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 21, 22, 33, 45, 504, DateTimeKind.Unspecified).AddTicks(5309), new TimeSpan(0, 7, 0, 0, 0)),
+                            Id = new Guid("293e5e5d-ca3e-43d2-8457-54e704fb51d6"),
+                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 21, 21, 18, 4, 677, DateTimeKind.Unspecified).AddTicks(9368), new TimeSpan(0, 7, 0, 0, 0)),
                             IsActive = true,
                             IsDeleted = false,
                             Key = 1,
-                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 21, 22, 33, 45, 504, DateTimeKind.Unspecified).AddTicks(5363), new TimeSpan(0, 7, 0, 0, 0)),
+                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 21, 21, 18, 4, 677, DateTimeKind.Unspecified).AddTicks(9457), new TimeSpan(0, 7, 0, 0, 0)),
                             Unit = "%",
                             Value = "10"
                         });

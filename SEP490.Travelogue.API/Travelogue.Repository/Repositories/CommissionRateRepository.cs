@@ -5,49 +5,27 @@ using Travelogue.Repository.Entities;
 
 namespace Travelogue.Repository.Repositories;
 
-public interface ICommissionSettingsRepository : IGenericRepository<CommissionSettings>
+public interface ICommissionRateRepository : IGenericRepository<CommissionRate>
 {
-    Task<PagedResult<CommissionSettings>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default);
+    Task<PagedResult<CommissionRate>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default);
     // Task<PagedResult<Order>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default);
-    Task<PagedResult<CommissionSettings>> GetPageWithSearchAsync(
+    Task<PagedResult<CommissionRate>> GetPageWithSearchAsync(
         string? title,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken = default);
-    Task<CommissionSettings?> GetCurrentAsync();
-    Task<CommissionSettings?> GetByDateAsync(DateTime date);
 }
 
-public sealed class CommissionSettingsRepository : GenericRepository<CommissionSettings>, ICommissionSettingsRepository
+public sealed class CommissionRateRepository : GenericRepository<CommissionRate>, ICommissionRateRepository
 {
     private readonly ApplicationDbContext _context;
 
-    public CommissionSettingsRepository(ApplicationDbContext dbContext) : base(dbContext)
+    public CommissionRateRepository(ApplicationDbContext dbContext) : base(dbContext)
     {
         _context = dbContext;
     }
 
-    public async Task<CommissionSettings?> GetCurrentAsync()
-    {
-        var today = DateTime.UtcNow.Date;
-
-        return await _context.CommissionSettings
-            .Where(cs => cs.TourGuideEffectiveDate <= today)
-            .OrderByDescending(cs => cs.TourGuideEffectiveDate)
-            .FirstOrDefaultAsync();
-    }
-
-    public async Task<CommissionSettings?> GetByDateAsync(DateTime date)
-    {
-        var targetDate = date.Date;
-
-        return await _context.CommissionSettings
-            .Where(cs => cs.TourGuideEffectiveDate <= targetDate)
-            .OrderByDescending(cs => cs.TourGuideEffectiveDate)
-            .FirstOrDefaultAsync();
-    }
-
-    public async Task<PagedResult<CommissionSettings>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default)
+    public async Task<PagedResult<CommissionRate>> GetPageWithSearchAsync(int pageNumber, int pageSize, string name, CancellationToken cancellationToken = default)
     {
         if (pageNumber < 1 || pageSize < 1)
         {
@@ -61,7 +39,7 @@ public sealed class CommissionSettingsRepository : GenericRepository<CommissionS
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        return new PagedResult<CommissionSettings>
+        return new PagedResult<CommissionRate>
         {
             Items = items,
             TotalCount = totalItems,
@@ -70,7 +48,7 @@ public sealed class CommissionSettingsRepository : GenericRepository<CommissionS
         };
     }
 
-    public async Task<PagedResult<CommissionSettings>> GetPageWithSearchAsync(
+    public async Task<PagedResult<CommissionRate>> GetPageWithSearchAsync(
         string? title,
         int pageNumber,
         int pageSize,
@@ -95,7 +73,7 @@ public sealed class CommissionSettingsRepository : GenericRepository<CommissionS
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        return new PagedResult<CommissionSettings>
+        return new PagedResult<CommissionRate>
         {
             Items = items,
             TotalCount = totalItems,

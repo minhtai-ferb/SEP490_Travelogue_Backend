@@ -84,6 +84,7 @@ public class ApplicationDbContext : DbContext
     // System Configuration
     public DbSet<SystemSetting> SystemSettings { get; set; }
     public DbSet<CommissionSettings> CommissionSettings { get; set; }
+    public DbSet<CommissionRate> CommissionRates { get; set; }
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
@@ -98,13 +99,39 @@ public class ApplicationDbContext : DbContext
             new SystemSetting { Id = Guid.NewGuid(), Key = SystemSettingKey.BookingCommissionPercent, Value = "10", Unit = "%" }
         );
 
-        modelBuilder.Entity<CommissionSettings>().HasData(
-            new CommissionSettings
+        // modelBuilder.Entity<CommissionSettings>().HasData(
+        //     new CommissionSettings
+        //     {
+        //         Id = Guid.NewGuid(),
+        //         TourGuideCommissionRate = 20m,
+        //         CraftVillageCommissionRate = 10m,
+        //         EffectiveDate = DateTime.Now.AddYears(-1)
+        //     }
+        // );
+        modelBuilder.Entity<CommissionRate>().HasData(
+            new CommissionRate
             {
                 Id = Guid.NewGuid(),
-                TourGuideCommissionRate = 20m,
-                CraftVillageCommissionRate = 10m,
-                EffectiveDate = DateTime.Now.AddYears(-1)
+                Type = CommissionType.TourGuideCommission,
+                RateValue = 5m,
+                EffectiveDate = new DateTime(2025, 1, 1),
+                ExpiryDate = null,
+                CreatedBy = "System",
+                LastUpdatedBy = "System",
+                CreatedTime = DateTime.UtcNow,
+                LastUpdatedTime = DateTime.UtcNow
+            },
+            new CommissionRate
+            {
+                Id = Guid.NewGuid(),
+                Type = CommissionType.CraftVillageCommission,
+                RateValue = 3m,
+                EffectiveDate = new DateTime(2025, 1, 1),
+                ExpiryDate = null,
+                CreatedBy = "System",
+                LastUpdatedBy = "System",
+                CreatedTime = DateTime.UtcNow,
+                LastUpdatedTime = DateTime.UtcNow
             }
         );
 
