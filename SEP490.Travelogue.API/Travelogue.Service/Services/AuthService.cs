@@ -105,6 +105,7 @@ public class AuthService : IAuthService
             var existingUser = await _unitOfWork.UserRepository
                 .ActiveEntities
                 .Where(u => u.Id == currentUserId)
+                .Include(u => u.Wallet)
                 .FirstOrDefaultAsync()
                 ?? throw new CustomException(StatusCodes.Status204NoContent, ResponseCodeConstants.NOT_FOUND, ResponseMessages.NOT_FOUND);
             var user = _mapper.Map<UserResponseModel>(existingUser);
