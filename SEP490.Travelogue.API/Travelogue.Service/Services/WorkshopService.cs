@@ -1427,6 +1427,8 @@ public class WorkshopService : IWorkshopService
                     );
                 }
             }
+            workshop.Status = WorkshopStatus.Approved;
+            await _unitOfWork.SaveAsync();
 
             await transaction.CommitAsync();
 
