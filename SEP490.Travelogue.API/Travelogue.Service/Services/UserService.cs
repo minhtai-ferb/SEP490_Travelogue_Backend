@@ -1555,6 +1555,8 @@ public class UserService : IUserService
                 var location = new Location
                 {
                     Name = request.Name,
+                    Description = request.Description,
+                    Content = request.Content,
                     LocationType = LocationType.CraftVillage,
                     Latitude = request.Latitude,
                     Longitude = request.Longitude,
