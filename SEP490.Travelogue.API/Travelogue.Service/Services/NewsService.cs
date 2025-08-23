@@ -380,14 +380,28 @@ public class NewsService : INewsService
     {
         try
         {
-            var pagedResult = await _unitOfWork.NewsRepository.GetPageWithSearchAsync(
-                title, locationId, isHighlighted, pageNumber, pageSize, cancellationToken);
+            var query = _unitOfWork.NewsRepository.ActiveEntities.AsQueryable();
 
-            var newItems = pagedResult.Items = pagedResult.Items.Where(a =>
-                a.NewsCategory == NewsCategory.News
-            ).ToList();
+            // lọc
+            query = query.Where(a => a.NewsCategory == NewsCategory.News);
 
-            var newsDataModels = _mapper.Map<List<NewsDataModel>>(pagedResult.Items);
+            if (!string.IsNullOrEmpty(title))
+                query = query.Where(x => x.Title.Contains(title));
+
+            if (locationId.HasValue)
+                query = query.Where(x => x.LocationId == locationId.Value);
+
+            if (isHighlighted.HasValue)
+                query = query.Where(x => x.IsHighlighted == isHighlighted.Value);
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            var items = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            var newsDataModels = _mapper.Map<List<NewsDataModel>>(items);
 
             foreach (var item in newsDataModels)
             {
@@ -406,7 +420,7 @@ public class NewsService : INewsService
             var result = new PagedResult<NewsDataModel>
             {
                 Items = newsDataModels,
-                TotalCount = newItems.Count,
+                TotalCount = query.Count(),
                 PageNumber = pageNumber,
                 PageSize = pageSize
             };
@@ -427,19 +441,30 @@ public class NewsService : INewsService
     {
         try
         {
-            var pagedResult = await _unitOfWork.NewsRepository.GetPageWithSearchAsync(
-                title, locationId, isHighlighted, typeExperience, pageNumber, pageSize, cancellationToken);
+            var query = _unitOfWork.NewsRepository.ActiveEntities.AsQueryable();
 
-            var experienceItems = pagedResult.Items = pagedResult.Items.Where(a =>
-                a.NewsCategory == NewsCategory.Experience
-            ).ToList();
+            query = query.Where(a => a.NewsCategory == NewsCategory.Experience);
 
             if (locationId.HasValue)
-            {
-                pagedResult.Items = pagedResult.Items.Where(a => a.LocationId == locationId.Value).ToList();
-            }
+                query = query.Where(a => a.LocationId == locationId.Value);
 
-            var newsDataModels = _mapper.Map<List<NewsDataModel>>(pagedResult.Items);
+            if (!string.IsNullOrEmpty(title))
+                query = query.Where(a => a.Title.Contains(title));
+
+            if (isHighlighted.HasValue)
+                query = query.Where(a => a.IsHighlighted == isHighlighted.Value);
+
+            if (typeExperience.HasValue)
+                query = query.Where(a => a.TypeExperience == typeExperience.Value);
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            var items = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            var newsDataModels = _mapper.Map<List<NewsDataModel>>(items);
 
             foreach (var item in newsDataModels)
             {
@@ -458,7 +483,7 @@ public class NewsService : INewsService
             var result = new PagedResult<NewsDataModel>
             {
                 Items = newsDataModels,
-                TotalCount = experienceItems.Count,
+                TotalCount = query.Count(),
                 PageNumber = pageNumber,
                 PageSize = pageSize
             };
