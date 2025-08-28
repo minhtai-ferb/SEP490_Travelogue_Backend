@@ -1318,7 +1318,98 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<CraftVillageRequestResponseDto> CreateCraftVillageRequestAsync(CreateCraftVillageRequestDto model, CancellationToken cancellationToken = default)
+    //public async Task<CraftVillageRequestResponseDto> CreateCraftVillageRequestAsync(CreateCraftVillageRequestDto model, CancellationToken cancellationToken = default)
+    //{
+    //    using var transaction = await _unitOfWork.BeginTransactionAsync();
+    //    try
+    //    {
+    //        var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+    //        var hasPermission = _userContextService.HasAnyRole(AppRole.USER);
+    //        if (!hasPermission)
+    //            throw CustomExceptionFactory.CreateForbiddenError();
+
+    //        var user = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId, cancellationToken);
+    //        if (user == null)
+    //        {
+    //            throw CustomExceptionFactory.CreateNotFoundError("User");
+    //        }
+
+    //        var district = await _unitOfWork.DistrictRepository
+    //            .ActiveEntities
+    //            .Where(d => d.Id == model.DistrictId)
+    //            .FirstOrDefaultAsync()
+    //            ?? throw CustomExceptionFactory.CreateNotFoundError("district");
+
+    //        var existingCraftVillage = await _unitOfWork.CraftVillageRepository
+    //            .ActiveEntities
+    //            .FirstOrDefaultAsync(cv => cv.OwnerId == user.Id);
+    //        if (existingCraftVillage != null)
+    //        {
+    //            throw CustomExceptionFactory.CreateBadRequestError("Bạn đã là chủ 1 làng nghề");
+    //        }
+
+    //        List<MediaRequest> medias = model.MediaDtos.ToMediaRequest();
+
+    //        var craftVillageRequest = new CraftVillageRequest
+    //        {
+    //            Name = model.Name,
+    //            Description = model.Description,
+    //            Content = model.Content,
+    //            Address = model.Address,
+    //            Latitude = model.Latitude,
+    //            Longitude = model.Longitude,
+    //            OpenTime = model.OpenTime,
+    //            CloseTime = model.CloseTime,
+    //            DistrictId = model.DistrictId,
+    //            OwnerId = currentUserId,
+    //            PhoneNumber = model.PhoneNumber,
+    //            Email = model.Email,
+    //            Website = model.Website,
+    //            WorkshopsAvailable = model.WorkshopsAvailable,
+    //            SignatureProduct = model.SignatureProduct,
+    //            YearsOfHistory = model.YearsOfHistory,
+    //            IsRecognizedByUnesco = model.IsRecognizedByUnesco,
+    //            Status = CraftVillageRequestStatus.Pending,
+    //            CreatedTime = DateTimeOffset.UtcNow,
+    //            LastUpdatedTime = DateTimeOffset.UtcNow,
+    //            CreatedBy = currentUserId.ToString(),
+    //            LastUpdatedBy = currentUserId.ToString(),
+    //            Medias = medias
+    //        };
+
+    //        await _unitOfWork.CraftVillageRequestRepository.AddAsync(craftVillageRequest);
+    //        await _unitOfWork.SaveAsync();
+    //        await transaction.CommitAsync();
+
+    //        var moderators = await _unitOfWork.UserRepository.GetUsersByRoleAsync(AppRole.MODERATOR);
+    //        foreach (var moderator in moderators)
+    //        {
+    //            await _emailService.SendEmailAsync(
+    //                new[] { moderator.Email },
+    //                "Yêu cầu duyệt làng nghề",
+    //                "Yêu cầu duyệt làng nghề"
+    //            );
+    //        }
+
+    //        var response = MapToCraftVillageRequestResponseDto(craftVillageRequest, user);
+
+    //        return response;
+    //    }
+    //    catch (CustomException)
+    //    {
+    //        await transaction.RollbackAsync(cancellationToken);
+    //        throw;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        await transaction.RollbackAsync(cancellationToken);
+    //        throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+    //    }
+    //}
+
+    public async Task<CraftVillageRequestResponseDto> CreateCraftVillageRequestAsync(
+    CreateCraftVillageRequestDto model,
+    CancellationToken cancellationToken = default)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
@@ -1330,23 +1421,19 @@ public class UserService : IUserService
 
             var user = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId, cancellationToken);
             if (user == null)
-            {
                 throw CustomExceptionFactory.CreateNotFoundError("User");
-            }
 
             var district = await _unitOfWork.DistrictRepository
                 .ActiveEntities
                 .Where(d => d.Id == model.DistrictId)
-                .FirstOrDefaultAsync()
+                .FirstOrDefaultAsync(cancellationToken)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("district");
 
             var existingCraftVillage = await _unitOfWork.CraftVillageRepository
                 .ActiveEntities
-                .FirstOrDefaultAsync(cv => cv.OwnerId == user.Id);
+                .FirstOrDefaultAsync(cv => cv.OwnerId == user.Id, cancellationToken);
             if (existingCraftVillage != null)
-            {
                 throw CustomExceptionFactory.CreateBadRequestError("Bạn đã là chủ 1 làng nghề");
-            }
 
             List<MediaRequest> medias = model.MediaDtos.ToMediaRequest();
 
@@ -1377,22 +1464,109 @@ public class UserService : IUserService
                 Medias = medias
             };
 
+            // Nếu có workshop kèm theo
+            if (model.WorkshopsAvailable && model.Workshop != null)
+            {
+                var workshopDto = model.Workshop;
+
+                var workshopRequest = new WorkshopRequest
+                {
+                    Name = workshopDto.Name,
+                    Description = workshopDto.Description,
+                    Content = workshopDto.Content,
+                    Status = workshopDto.Status,
+                    CraftVillageId = craftVillageRequest.Id,
+                    CreatedTime = DateTimeOffset.UtcNow,
+                    LastUpdatedTime = DateTimeOffset.UtcNow,
+                    CreatedBy = currentUserId.ToString(),
+                    LastUpdatedBy = currentUserId.ToString()
+                };
+
+                // Map TicketTypes
+                foreach (var ticketDto in workshopDto.TicketTypes)
+                {
+                    var ticket = new WorkshopTicketTypeRequest
+                    {
+                        Type = ticketDto.Type,
+                        Name = ticketDto.Name,
+                        Price = ticketDto.Price,
+                        IsCombo = ticketDto.IsCombo,
+                        DurationMinutes = ticketDto.DurationMinutes,
+                        Content = ticketDto.Content
+                    };
+
+                    // Nếu là Experience thì có Activities
+                    if (ticketDto.WorkshopActivities != null && ticketDto.WorkshopActivities.Any())
+                    {
+                        foreach (var actDto in ticketDto.WorkshopActivities)
+                        {
+                            ticket.WorkshopActivities.Add(new WorkshopActivityRequest
+                            {
+                                Activity = actDto.Activity,
+                                Description = actDto.Description,
+                                StartHour = actDto.StartHour,
+                                EndHour = actDto.EndHour,
+                                ActivityOrder = actDto.ActivityOrder
+                            });
+                        }
+                    }
+
+                    workshopRequest.TicketTypes.Add(ticket);
+                }
+
+                // Map RecurringRules
+                foreach (var ruleDto in workshopDto.RecurringRules)
+                {
+                    var rule = new WorkshopRecurringRuleRequest
+                    {
+                        DaysOfWeek = ruleDto.DaysOfWeek,
+                        StartDate = ruleDto.StartDate,
+                        EndDate = ruleDto.EndDate
+                    };
+
+                    foreach (var sessionDto in ruleDto.Sessions)
+                    {
+                        rule.Sessions.Add(new WorkshopSessionRequest
+                        {
+                            StartTime = sessionDto.StartTime,
+                            EndTime = sessionDto.EndTime,
+                            Capacity = sessionDto.Capacity
+                        });
+                    }
+
+                    workshopRequest.RecurringRules.Add(rule);
+                }
+
+                // Map Exceptions
+                foreach (var exDto in workshopDto.Exceptions)
+                {
+                    workshopRequest.Exceptions.Add(new WorkshopExceptionRequest
+                    {
+                        Date = exDto.Date,
+                        Reason = exDto.Reason,
+                        IsActive = exDto.IsActive
+                    });
+                }
+
+                craftVillageRequest.Workshop=(workshopRequest);
+            }
+
             await _unitOfWork.CraftVillageRequestRepository.AddAsync(craftVillageRequest);
             await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync();
+            await transaction.CommitAsync(cancellationToken);
 
+            // 🔹 Gửi email cho moderator
             var moderators = await _unitOfWork.UserRepository.GetUsersByRoleAsync(AppRole.MODERATOR);
             foreach (var moderator in moderators)
             {
                 await _emailService.SendEmailAsync(
                     new[] { moderator.Email },
                     "Yêu cầu duyệt làng nghề",
-                    "Yêu cầu duyệt làng nghề"
+                    $"Người dùng {user.FullName} đã gửi yêu cầu đăng ký làng nghề"
                 );
             }
 
             var response = MapToCraftVillageRequestResponseDto(craftVillageRequest, user);
-
             return response;
         }
         catch (CustomException)
@@ -1406,6 +1580,7 @@ public class UserService : IUserService
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
+
 
     public async Task<CraftVillageRequestResponseDto> UpdateCraftVillageRequestAsync(
         Guid id,

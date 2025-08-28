@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Travelogue.Service.BusinessModels.MediaModel;
+using Travelogue.Service.BusinessModels.WorkshopModels;
 
 namespace Travelogue.Service.BusinessModels.CraftVillageModels;
 
@@ -34,4 +35,6 @@ public class CreateCraftVillageRequestDto
 
     public bool IsRecognizedByUnesco { get; set; }
     public List<MediaDto> MediaDtos { get; set; } = new List<MediaDto>();
+
+    public WorkshopRequestDto? Workshop { get; set; }
 }

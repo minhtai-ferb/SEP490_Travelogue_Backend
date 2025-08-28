@@ -43,6 +43,8 @@ public sealed class CraftVillageRequest : BaseEntity
     public string? ReviewedBy { get; set; }
     public List<MediaRequest> Medias { get; set; } = new();
     // public ICollection<CraftVillageRequestMedia> CraftVillageRequestMedias { get; set; } = new List<CraftVillageRequestMedia>();
+
+    public WorkshopRequest? Workshop { get; set; }
 }
 
 public class MediaRequest
