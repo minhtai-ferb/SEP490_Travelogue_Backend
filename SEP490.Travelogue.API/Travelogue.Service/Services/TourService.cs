@@ -1675,7 +1675,6 @@ public class TourService : ITourService
                 );
             }
 
-            // Rebuild TourGuideSchedules cho schedule này
             var existingTgs = await _unitOfWork.TourGuideScheduleRepository
                 .ActiveEntities
                 .Where(s => s.TourScheduleId == schedule.Id && !s.IsDeleted)
@@ -1704,18 +1703,15 @@ public class TourService : ITourService
 
             await _unitOfWork.TourGuideScheduleRepository.AddRangeAsync(newTgs);
 
-            // 👇 Rebuild TourScheduleWorkshop cho schedule này dựa theo plan hiện tại
             var existingTsw = await _unitOfWork.TourScheduleWorkshopRepository
                 .ActiveEntities
                 .Where(x => x.TourScheduleId == schedule.Id)
                 .ToListAsync();
 
-            // Map theo Plan: nếu plan không còn workshop → xoá TSW; nếu có → tạo/cập nhật
             var planWorkshops = tour.TourPlanLocations
                 .Where(p => !p.IsDeleted && p.ActivityType == ActivityType.Workshop && p.WorkshopDetail != null && !p.WorkshopDetail.IsDeleted)
                 .ToList();
 
-            // Xoá những TSW không còn plan workshop tương ứng
             var planIds = planWorkshops.Select(p => p.Id).ToHashSet();
             var tswToRemove = existingTsw.Where(tsw => !planIds.Contains(tsw.TourPlanLocationId)).ToList();
             if (tswToRemove.Any())

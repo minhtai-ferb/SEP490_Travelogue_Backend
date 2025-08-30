@@ -15,8 +15,6 @@ public sealed class WorkshopRecurringRule : BaseEntity
     public Workshop Workshop { get; set; } = null!;
 
     public List<DayOfWeek> DaysOfWeek { get; set; } = new();
-    public DateTime StartDate { get; set; }
-    public DateTime? EndDate { get; set; }
 
     public ICollection<WorkshopSessionRule> Sessions { get; set; } = new List<WorkshopSessionRule>();
 }

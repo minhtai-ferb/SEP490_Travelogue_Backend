@@ -61,11 +61,6 @@ public class RecurringRuleRequestDto
     public List<DayOfWeek> DaysOfWeek { get; set; } = new();
 
     [Required]
-    public DateTime StartDate { get; set; }
-
-    public DateTime? EndDate { get; set; }
-
-    [Required]
     public List<SessionRequestDto> Sessions { get; set; } = new();
 }
 
@@ -98,9 +93,8 @@ public class WorkshopActivityRequestDto
 
     public string? Description { get; set; }
 
-    public TimeSpan StartHour { get; set; }
-
-    public TimeSpan EndHour { get; set; }
+    [Range(1, int.MaxValue)]
+    public int DurationMinutes { get; set; }
 
     [Range(1, int.MaxValue)]
     public int ActivityOrder { get; set; }

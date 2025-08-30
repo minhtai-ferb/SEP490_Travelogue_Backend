@@ -191,8 +191,7 @@ public class WorkshopService : IWorkshopService
                             {
                                 Activity = a.Activity,
                                 Description = a.Description,
-                                StartHour = a.StartHour,
-                                EndHour = a.EndHour,
+                                DurationMinutes = a.DurationMinutes,
                                 ActivityOrder = a.ActivityOrder
                             }).ToList()
                     }).ToList(),
@@ -214,8 +213,6 @@ public class WorkshopService : IWorkshopService
                         .Select(rr => new RecurringRuleRequestDto
                         {
                             DaysOfWeek = rr.DaysOfWeek.ToList() ?? new List<DayOfWeek>(),
-                            StartDate = rr.StartDate,
-                            EndDate = rr.EndDate,
                             Sessions = rr.Sessions.Select(s => new SessionRequestDto
                             {
                                 StartTime = s.StartTime,
@@ -1891,8 +1888,7 @@ public class WorkshopService : IWorkshopService
                         {
                             Activity = a.Activity,
                             Description = a.Description,
-                            StartHour = a.StartHour,
-                            EndHour = a.EndHour,
+                            DurationMinutes = a.DurationMinutes,
                             ActivityOrder = a.ActivityOrder
                         }).ToList()
                 }).ToList(),
@@ -1916,8 +1912,6 @@ public class WorkshopService : IWorkshopService
                     DaysOfWeek = rr.DaysOfWeek != null
                         ? rr.DaysOfWeek.ToList()
                         : new List<DayOfWeek>(),
-                    StartDate = rr.StartDate,
-                    EndDate = rr.EndDate,
                     Sessions = (rr.Sessions ?? Enumerable.Empty<WorkshopSessionRule>())
                         .Select(s => new SessionRequestDto
                         {
