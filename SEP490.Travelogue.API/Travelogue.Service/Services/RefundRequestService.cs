@@ -4,6 +4,7 @@ using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.BookingModels;
 using Travelogue.Service.BusinessModels.RefundRequestModels;
 using Travelogue.Service.Commons.Interfaces;
 
@@ -86,6 +87,7 @@ public class RefundRequestService : IRefundRequestService
                 Id = Guid.NewGuid(),
                 UserId = currentUserId,
                 BookingId = dto.BookingId,
+                Reason = dto.Reason,
                 RefundAmount = dto.RefundAmount,
                 Status = RefundRequestStatus.Pending,
                 RequestedAt = currentTime,
@@ -105,6 +107,7 @@ public class RefundRequestService : IRefundRequestService
             {
                 Id = refundRequest.Id,
                 BookingId = refundRequest.BookingId,
+                Reason = refundRequest.Reason,
                 UserId = refundRequest.UserId,
                 UserName = username ?? string.Empty,
                 RefundAmount = refundRequest.RefundAmount,
@@ -211,6 +214,7 @@ public class RefundRequestService : IRefundRequestService
                     BookingId = refundRequest.BookingId,
                     UserId = refundRequest.UserId,
                     UserName = refundRequest.User.FullName,
+                    Reason = refundRequest.Reason,
                     RefundAmount = refundRequest.RefundAmount,
                     Status = refundRequest.Status,
                     StatusText = _enumService.GetEnumDisplayName<RefundRequestStatus>(refundRequest.Status),
@@ -266,6 +270,7 @@ public class RefundRequestService : IRefundRequestService
                 Id = refundRequest.Id,
                 BookingId = refundRequest.BookingId,
                 UserId = refundRequest.UserId,
+                Reason = refundRequest.Reason,
                 UserName = refundRequest.User.FullName,
                 RefundAmount = refundRequest.RefundAmount,
                 Status = refundRequest.Status,
@@ -297,6 +302,7 @@ public class RefundRequestService : IRefundRequestService
                 .Include(r => r.User)
                 .AsQueryable();
 
+
             if (filter.FromDate.HasValue)
                 query = query.Where(r => r.CreatedTime >= filter.FromDate.Value);
 
@@ -319,14 +325,68 @@ public class RefundRequestService : IRefundRequestService
                     UserName = r.User.FullName,
                     RefundAmount = r.RefundAmount,
                     Status = r.Status,
+                    Reason = r.Reason,
                     StatusText = _enumService.GetEnumDisplayName<RefundRequestStatus>(r.Status),
                     Note = r.Note,
                     CreatedTime = r.CreatedTime,
                     LastUpdatedTime = r.LastUpdatedTime,
                     RequestedAt = r.RequestedAt,
                     RespondedAt = r.RespondedAt,
+                    BookingDataModel = new BusinessModels.BookingModels.BookingDataModel
+                    {
+                        Id = r.Booking.Id,
+                        UserId = r.Booking.UserId,
+                        TourId = r.Booking.TourId,
+                        TripPlanId = r.Booking.TripPlanId,
+                        WorkshopId = r.Booking.WorkshopId,
+                        WorkshopScheduleId = r.Booking.WorkshopScheduleId,
+                        TourGuideId = r.Booking.TourGuideId,
+                        BookingType = r.Booking.BookingType,
+                        BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(r.Booking.BookingType),
+                        Status = r.Booking.Status,
+                        StatusText = _enumService.GetEnumDisplayName<BookingStatus>(r.Booking.Status),
+                        BookingDate = r.Booking.BookingDate,
+                        StartDate = r.Booking.StartDate,
+                        EndDate = r.Booking.EndDate,
+                        OriginalPrice = r.Booking.OriginalPrice,
+                        DiscountAmount = r.Booking.DiscountAmount,
+                        FinalPrice = r.Booking.FinalPrice,
+                        ContactName = r.Booking.ContactName,
+                        ContactEmail = r.Booking.ContactEmail,
+                        ContactPhone = r.Booking.ContactPhone,
+                        ContactAddress = r.Booking.ContactAddress,
+                    }
                 })
                 .ToListAsync();
+
+            list.ForEach(r =>
+            {
+                if (r.BookingId != null)
+                {
+                    var query = _unitOfWork.BookingRepository
+                    .ActiveEntities
+                        .Where(b => b.Id == r.BookingId)
+                        .Select(b => new
+                        {
+                            UserName = b.User != null ? b.User.FullName : string.Empty,
+                            TourName = b.Tour != null ? b.Tour.Name : string.Empty,
+                            DepartureDate = b.TourSchedule != null
+                        ? (DateTime?)b.TourSchedule.DepartureDate
+                        : null,
+                            TourGuideName = b.TourGuide != null && b.TourGuide.User != null ? b.TourGuide.User.FullName : string.Empty,
+                            TripPlanName = b.TripPlan != null ? b.TripPlan.Name : string.Empty,
+                            WorkshopName = b.Workshop != null ? b.Workshop.Name : string.Empty
+                        })
+                        .AsQueryable();
+
+                    r.BookingDataModel.UserName = query.Select(b => b.UserName).FirstOrDefault() ?? string.Empty;
+                    r.BookingDataModel.TourName = query.Select(b => b.TourName).FirstOrDefault() ?? string.Empty;
+                    r.BookingDataModel.DepartureDate = query.Select(b => b.DepartureDate).FirstOrDefault();
+                    r.BookingDataModel.TourGuideName = query.Select(b => b.TourGuideName).FirstOrDefault() ?? string.Empty;
+                    r.BookingDataModel.TripPlanName = query.Select(b => b.TripPlanName).FirstOrDefault() ?? string.Empty;
+                    r.BookingDataModel.WorkshopName = query.Select(b => b.WorkshopName).FirstOrDefault() ?? string.Empty;
+                }
+            });
 
             return list;
         }
@@ -365,6 +425,7 @@ public class RefundRequestService : IRefundRequestService
                     Id = r.Id,
                     BookingId = r.BookingId,
                     UserId = r.UserId,
+                    Reason = r.Reason,
                     UserName = r.User.FullName,
                     RefundAmount = r.RefundAmount,
                     Status = r.Status,
@@ -409,11 +470,12 @@ public class RefundRequestService : IRefundRequestService
             var request = await query.FirstOrDefaultAsync(r => r.Id == refundRequestId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Refund Request");
 
-            return new RefundRequestDto
+            var result = new RefundRequestDto
             {
                 Id = request.Id,
                 BookingId = request.BookingId,
                 UserId = request.UserId,
+                Reason = request.Reason,
                 UserName = request.User.FullName,
                 RefundAmount = request.RefundAmount,
                 Status = request.Status,
@@ -423,7 +485,58 @@ public class RefundRequestService : IRefundRequestService
                 LastUpdatedTime = request.LastUpdatedTime,
                 RequestedAt = request.RequestedAt,
                 RespondedAt = request.RespondedAt,
+                BookingDataModel = new BusinessModels.BookingModels.BookingDataModel
+                {
+                    Id = request.Booking.Id,
+                    UserId = request.Booking.UserId,
+                    TourId = request.Booking.TourId,
+                    TripPlanId = request.Booking.TripPlanId,
+                    WorkshopId = request.Booking.WorkshopId,
+                    WorkshopScheduleId = request.Booking.WorkshopScheduleId,
+                    TourGuideId = request.Booking.TourGuideId,
+                    BookingType = request.Booking.BookingType,
+                    BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(request.Booking.BookingType),
+                    Status = request.Booking.Status,
+                    StatusText = _enumService.GetEnumDisplayName<BookingStatus>(request.Booking.Status),
+                    BookingDate = request.Booking.BookingDate,
+                    StartDate = request.Booking.StartDate,
+                    EndDate = request.Booking.EndDate,
+                    OriginalPrice = request.Booking.OriginalPrice,
+                    DiscountAmount = request.Booking.DiscountAmount,
+                    FinalPrice = request.Booking.FinalPrice,
+                    ContactName = request.Booking.ContactName,
+                    ContactEmail = request.Booking.ContactEmail,
+                    ContactPhone = request.Booking.ContactPhone,
+                    ContactAddress = request.Booking.ContactAddress,
+                }
             };
+
+            if (result.BookingId != null)
+            {
+                var bookingQuery = _unitOfWork.BookingRepository
+                .ActiveEntities
+                    .Where(b => b.Id == result.BookingId)
+                    .Select(b => new
+                    {
+                        UserName = b.User != null ? b.User.FullName : string.Empty,
+                        TourName = b.Tour != null ? b.Tour.Name : string.Empty,
+                        DepartureDate = b.TourSchedule != null
+                    ? (DateTime?)b.TourSchedule.DepartureDate
+                    : null,
+                        TourGuideName = b.TourGuide != null && b.TourGuide.User != null ? b.TourGuide.User.FullName : string.Empty,
+                        TripPlanName = b.TripPlan != null ? b.TripPlan.Name : string.Empty,
+                        WorkshopName = b.Workshop != null ? b.Workshop.Name : string.Empty
+                    })
+                    .AsQueryable();
+
+                result.BookingDataModel.UserName = bookingQuery.Select(b => b.UserName).FirstOrDefault() ?? string.Empty;
+                result.BookingDataModel.TourName = bookingQuery.Select(b => b.TourName).FirstOrDefault() ?? string.Empty;
+                result.BookingDataModel.DepartureDate = bookingQuery.Select(b => b.DepartureDate).FirstOrDefault();
+                result.BookingDataModel.TourGuideName = bookingQuery.Select(b => b.TourGuideName).FirstOrDefault() ?? string.Empty;
+                result.BookingDataModel.TripPlanName = bookingQuery.Select(b => b.TripPlanName).FirstOrDefault() ?? string.Empty;
+                result.BookingDataModel.WorkshopName = bookingQuery.Select(b => b.WorkshopName).FirstOrDefault() ?? string.Empty;
+            }
+            return result;
         }
         catch (CustomException)
         {
