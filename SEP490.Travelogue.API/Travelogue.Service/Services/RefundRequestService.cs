@@ -86,6 +86,7 @@ public class RefundRequestService : IRefundRequestService
                 Id = Guid.NewGuid(),
                 UserId = currentUserId,
                 BookingId = dto.BookingId,
+                Reason = dto.Reason,
                 RefundAmount = dto.RefundAmount,
                 Status = RefundRequestStatus.Pending,
                 RequestedAt = currentTime,
@@ -105,6 +106,7 @@ public class RefundRequestService : IRefundRequestService
             {
                 Id = refundRequest.Id,
                 BookingId = refundRequest.BookingId,
+                Reason = refundRequest.Reason,
                 UserId = refundRequest.UserId,
                 UserName = username ?? string.Empty,
                 RefundAmount = refundRequest.RefundAmount,
@@ -211,6 +213,7 @@ public class RefundRequestService : IRefundRequestService
                     BookingId = refundRequest.BookingId,
                     UserId = refundRequest.UserId,
                     UserName = refundRequest.User.FullName,
+                    Reason = refundRequest.Reason,
                     RefundAmount = refundRequest.RefundAmount,
                     Status = refundRequest.Status,
                     StatusText = _enumService.GetEnumDisplayName<RefundRequestStatus>(refundRequest.Status),
@@ -266,6 +269,7 @@ public class RefundRequestService : IRefundRequestService
                 Id = refundRequest.Id,
                 BookingId = refundRequest.BookingId,
                 UserId = refundRequest.UserId,
+                Reason = refundRequest.Reason,
                 UserName = refundRequest.User.FullName,
                 RefundAmount = refundRequest.RefundAmount,
                 Status = refundRequest.Status,
@@ -297,6 +301,7 @@ public class RefundRequestService : IRefundRequestService
                 .Include(r => r.User)
                 .AsQueryable();
 
+
             if (filter.FromDate.HasValue)
                 query = query.Where(r => r.CreatedTime >= filter.FromDate.Value);
 
@@ -319,12 +324,32 @@ public class RefundRequestService : IRefundRequestService
                     UserName = r.User.FullName,
                     RefundAmount = r.RefundAmount,
                     Status = r.Status,
+                    Reason = r.Reason,
                     StatusText = _enumService.GetEnumDisplayName<RefundRequestStatus>(r.Status),
                     Note = r.Note,
                     CreatedTime = r.CreatedTime,
                     LastUpdatedTime = r.LastUpdatedTime,
                     RequestedAt = r.RequestedAt,
                     RespondedAt = r.RespondedAt,
+                    BookingDataModel = new BusinessModels.BookingModels.BookingDataModel
+                    {
+                        Id = r.Booking.Id,
+                        TourId = r.Booking.TourId,
+                        BookingType = r.Booking.BookingType,
+                        BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(r.Booking.BookingType),
+                        Status = r.Booking.Status,
+                        StatusText = _enumService.GetEnumDisplayName<BookingStatus>(r.Booking.Status),
+                        BookingDate = r.Booking.BookingDate,
+                        StartDate = r.Booking.StartDate,
+                        EndDate = r.Booking.EndDate,
+                        OriginalPrice = r.Booking.OriginalPrice,
+                        DiscountAmount = r.Booking.DiscountAmount,
+                        FinalPrice = r.Booking.FinalPrice,
+                        ContactName = r.Booking.ContactName,
+                        ContactEmail = r.Booking.ContactEmail,
+                        ContactPhone = r.Booking.ContactPhone,
+                        ContactAddress = r.Booking.ContactAddress,
+                    }
                 })
                 .ToListAsync();
 
@@ -365,6 +390,7 @@ public class RefundRequestService : IRefundRequestService
                     Id = r.Id,
                     BookingId = r.BookingId,
                     UserId = r.UserId,
+                    Reason = r.Reason,
                     UserName = r.User.FullName,
                     RefundAmount = r.RefundAmount,
                     Status = r.Status,
@@ -413,6 +439,7 @@ public class RefundRequestService : IRefundRequestService
             {
                 Id = request.Id,
                 BookingId = request.BookingId,
+                Reason = request.Reason,
                 UserId = request.UserId,
                 UserName = request.User.FullName,
                 RefundAmount = request.RefundAmount,
