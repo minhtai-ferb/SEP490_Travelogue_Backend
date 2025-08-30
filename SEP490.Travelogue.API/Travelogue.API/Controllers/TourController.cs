@@ -200,7 +200,7 @@ public class TourController : ControllerBase
     /// Lấy chi tiết tour theo lịch trình
     /// </summary>
     /// <param name="tourId">ID của tour</param>
-    /// <param name="cancellationToken">Token để hủy thao tác</param>
+    /// <param name="scheduleId">ID của lịch trình (nếu có)</param>
     /// <returns>Chi tiết tour bao gồm địa điểm và lịch trình</returns>
     [HttpGet("{tourId}/schedules/{scheduleId}")]
     [ProducesResponseType(typeof(ResponseModel<TourDetailsResponseDto>), StatusCodes.Status200OK)]
