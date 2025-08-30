@@ -14,8 +14,8 @@ public sealed class WorkshopActivity : BaseEntity
 
     public string Description { get; set; } = string.Empty;
 
-    public double StartHour { get; set; }
-    public double EndHour { get; set; }
+    public TimeSpan StartHour { get; set; }
+    public TimeSpan EndHour { get; set; }
 
     public int ActivityOrder { get; set; }
 }

@@ -47,6 +47,8 @@ public sealed class Workshop : BaseEntity
     public ICollection<WorkshopTicketType> TicketTypes { get; set; } = new List<WorkshopTicketType>();
     public ICollection<WorkshopMedia> Medias { get; set; } = new List<WorkshopMedia>();
     public ICollection<WorkshopSchedule> Schedules { get; set; } = new List<WorkshopSchedule>();
+    public ICollection<WorkshopException> Exceptions { get; set; } = new List<WorkshopException>();
+    public ICollection<WorkshopRecurringRule> RecurringRules { get; set; } = new List<WorkshopRecurringRule>();
     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     // public ICollection<Review> Reviews { get; set; } = new List<Review>();
     public ICollection<PromotionApplicable> PromotionApplicables { get; set; } = new List<PromotionApplicable>();

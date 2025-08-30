@@ -56,6 +56,7 @@ dotnet ef database update --startup-project ../Travelogue.API/Travelogue.API.csp
 
 ```bash
 dotnet ef migrations remove --startup-project <StartupProjectPath>
+dotnet ef migrations remove --startup-project ../Travelogue.API/Travelogue.API.csproj
 ```
 
 ---

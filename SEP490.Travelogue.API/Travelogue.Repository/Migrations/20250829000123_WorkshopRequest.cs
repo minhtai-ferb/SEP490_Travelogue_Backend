@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Travelogue.Repository.Migrations
 {
     /// <inheritdoc />
-    public partial class updateworkshop : Migration
+    public partial class WorkshopRequest : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -103,19 +103,19 @@ namespace Travelogue.Repository.Migrations
                 nullable: false,
                 defaultValue: 0);
 
-            migrationBuilder.AddColumn<double>(
+            migrationBuilder.AddColumn<TimeSpan>(
                 name: "end_hour",
                 table: "workshop_activities",
-                type: "double",
+                type: "time(6)",
                 nullable: false,
-                defaultValue: 0.0);
+                defaultValue: new TimeSpan(0, 0, 0, 0, 0));
 
-            migrationBuilder.AddColumn<double>(
+            migrationBuilder.AddColumn<TimeSpan>(
                 name: "start_hour",
                 table: "workshop_activities",
-                type: "double",
+                type: "time(6)",
                 nullable: false,
-                defaultValue: 0.0);
+                defaultValue: new TimeSpan(0, 0, 0, 0, 0));
 
             migrationBuilder.AddColumn<Guid>(
                 name: "workshop_id",
@@ -125,18 +125,14 @@ namespace Travelogue.Repository.Migrations
                 collation: "ascii_general_ci");
 
             migrationBuilder.CreateTable(
-                name: "workshop_request",
+                name: "workshop_exceptions",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    name = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
+                    workshop_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    date = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    reason = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    description = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    content = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    craft_village_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    status = table.Column<int>(type: "int", nullable: false),
                     created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
@@ -151,12 +147,111 @@ namespace Travelogue.Repository.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_workshop_request", x => x.id);
+                    table.PrimaryKey("PK_workshop_exceptions", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_workshop_exceptions_workshops_workshop_id",
+                        column: x => x.workshop_id,
+                        principalTable: "workshops",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "workshop_ticket_type",
+                name: "workshop_media_requests",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    media_url = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_thumbnail = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    created_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_workshop_media_requests", x => x.id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "workshop_recurring_rules",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    workshop_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    days_of_week = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    start_date = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    end_date = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    created_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_workshop_recurring_rules", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_workshop_recurring_rules_workshops_workshop_id",
+                        column: x => x.workshop_id,
+                        principalTable: "workshops",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "workshop_requests",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    name = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    description = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    content = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    craft_village_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    status = table.Column<int>(type: "int", nullable: false),
+                    medias = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    created_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_workshop_requests", x => x.id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "workshop_ticket_types",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
@@ -183,9 +278,9 @@ namespace Travelogue.Repository.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_workshop_ticket_type", x => x.id);
+                    table.PrimaryKey("PK_workshop_ticket_types", x => x.id);
                     table.ForeignKey(
-                        name: "FK_workshop_ticket_type_workshops_workshop_id",
+                        name: "FK_workshop_ticket_types_workshops_workshop_id",
                         column: x => x.workshop_id,
                         principalTable: "workshops",
                         principalColumn: "id",
@@ -194,7 +289,40 @@ namespace Travelogue.Repository.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "workshop_exception_request",
+                name: "workshop_session_rules",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    recurring_rule_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    start_time = table.Column<TimeSpan>(type: "time(6)", nullable: false),
+                    end_time = table.Column<TimeSpan>(type: "time(6)", nullable: false),
+                    capacity = table.Column<int>(type: "int", nullable: false),
+                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    created_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_workshop_session_rules", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_workshop_session_rules_workshop_recurring_rules_recurring_ru~",
+                        column: x => x.recurring_rule_id,
+                        principalTable: "workshop_recurring_rules",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "workshop_exception_requests",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
@@ -216,49 +344,17 @@ namespace Travelogue.Repository.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_workshop_exception_request", x => x.id);
+                    table.PrimaryKey("PK_workshop_exception_requests", x => x.id);
                     table.ForeignKey(
-                        name: "FK_workshop_exception_request_workshop_request_workshop_request~",
+                        name: "FK_workshop_exception_requests_workshop_requests_workshop_reque~",
                         column: x => x.workshop_request_id,
-                        principalTable: "workshop_request",
+                        principalTable: "workshop_requests",
                         principalColumn: "id");
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "workshop_media_request",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    media_url = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    is_thumbnail = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    workshop_request_id = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
-                    created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    last_updated_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    deleted_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    created_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    last_updated_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    deleted_by = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    is_active = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    is_deleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_workshop_media_request", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_workshop_media_request_workshop_request_workshop_request_id",
-                        column: x => x.workshop_request_id,
-                        principalTable: "workshop_request",
-                        principalColumn: "id");
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "workshop_recurring_rule_request",
+                name: "workshop_recurring_rule_requests",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
@@ -281,17 +377,17 @@ namespace Travelogue.Repository.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_workshop_recurring_rule_request", x => x.id);
+                    table.PrimaryKey("PK_workshop_recurring_rule_requests", x => x.id);
                     table.ForeignKey(
-                        name: "FK_workshop_recurring_rule_request_workshop_request_workshop_re~",
+                        name: "FK_workshop_recurring_rule_requests_workshop_requests_workshop_~",
                         column: x => x.workshop_request_id,
-                        principalTable: "workshop_request",
+                        principalTable: "workshop_requests",
                         principalColumn: "id");
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "workshop_ticket_type_request",
+                name: "workshop_ticket_type_requests",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
@@ -318,17 +414,17 @@ namespace Travelogue.Repository.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_workshop_ticket_type_request", x => x.id);
+                    table.PrimaryKey("PK_workshop_ticket_type_requests", x => x.id);
                     table.ForeignKey(
-                        name: "FK_workshop_ticket_type_request_workshop_request_workshop_reque~",
+                        name: "FK_workshop_ticket_type_requests_workshop_requests_workshop_req~",
                         column: x => x.workshop_request_id,
-                        principalTable: "workshop_request",
+                        principalTable: "workshop_requests",
                         principalColumn: "id");
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "workshop_session_request",
+                name: "workshop_session_requests",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
@@ -350,17 +446,17 @@ namespace Travelogue.Repository.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_workshop_session_request", x => x.id);
+                    table.PrimaryKey("PK_workshop_session_requests", x => x.id);
                     table.ForeignKey(
-                        name: "FK_workshop_session_request_workshop_recurring_rule_request_wor~",
+                        name: "FK_workshop_session_requests_workshop_recurring_rule_requests_w~",
                         column: x => x.workshop_recurring_rule_request_id,
-                        principalTable: "workshop_recurring_rule_request",
+                        principalTable: "workshop_recurring_rule_requests",
                         principalColumn: "id");
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "workshop_activity_request",
+                name: "workshop_activity_requests",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
@@ -368,8 +464,8 @@ namespace Travelogue.Repository.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     description = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    start_hour = table.Column<double>(type: "double", nullable: false),
-                    end_hour = table.Column<double>(type: "double", nullable: false),
+                    start_hour = table.Column<TimeSpan>(type: "time(6)", nullable: false),
+                    end_hour = table.Column<TimeSpan>(type: "time(6)", nullable: false),
                     activity_order = table.Column<int>(type: "int", nullable: false),
                     workshop_ticket_type_request_id = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     created_time = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
@@ -386,11 +482,11 @@ namespace Travelogue.Repository.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_workshop_activity_request", x => x.id);
+                    table.PrimaryKey("PK_workshop_activity_requests", x => x.id);
                     table.ForeignKey(
-                        name: "FK_workshop_activity_request_workshop_ticket_type_request_works~",
+                        name: "FK_workshop_activity_requests_workshop_ticket_type_requests_wor~",
                         column: x => x.workshop_ticket_type_request_id,
-                        principalTable: "workshop_ticket_type_request",
+                        principalTable: "workshop_ticket_type_requests",
                         principalColumn: "id");
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
@@ -400,14 +496,14 @@ namespace Travelogue.Repository.Migrations
                 columns: new[] { "id", "created_by", "created_time", "deleted_by", "deleted_time", "effective_date", "expiry_date", "is_active", "is_deleted", "last_updated_by", "last_updated_time", "rate_value", "type" },
                 values: new object[,]
                 {
-                    { new Guid("92b50155-f384-4a9b-843f-356b85165586"), "System", new DateTimeOffset(new DateTime(2025, 8, 28, 10, 58, 55, 634, DateTimeKind.Unspecified).AddTicks(7928), new TimeSpan(0, 0, 0, 0, 0)), null, null, new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), null, true, false, "System", new DateTimeOffset(new DateTime(2025, 8, 28, 10, 58, 55, 634, DateTimeKind.Unspecified).AddTicks(7933), new TimeSpan(0, 0, 0, 0, 0)), 5m, 1 },
-                    { new Guid("fdb75c2c-73cc-4f32-837e-d7a3888fc199"), "System", new DateTimeOffset(new DateTime(2025, 8, 28, 10, 58, 55, 634, DateTimeKind.Unspecified).AddTicks(7939), new TimeSpan(0, 0, 0, 0, 0)), null, null, new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), null, true, false, "System", new DateTimeOffset(new DateTime(2025, 8, 28, 10, 58, 55, 634, DateTimeKind.Unspecified).AddTicks(7940), new TimeSpan(0, 0, 0, 0, 0)), 3m, 2 }
+                    { new Guid("9d569f7b-3fb5-480a-9e72-29148e15898a"), "System", new DateTimeOffset(new DateTime(2025, 8, 29, 0, 1, 22, 188, DateTimeKind.Unspecified).AddTicks(3680), new TimeSpan(0, 0, 0, 0, 0)), null, null, new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), null, true, false, "System", new DateTimeOffset(new DateTime(2025, 8, 29, 0, 1, 22, 188, DateTimeKind.Unspecified).AddTicks(3690), new TimeSpan(0, 0, 0, 0, 0)), 5m, 1 },
+                    { new Guid("d7258da4-b955-442a-9daa-31ca4e1fcb6c"), "System", new DateTimeOffset(new DateTime(2025, 8, 29, 0, 1, 22, 188, DateTimeKind.Unspecified).AddTicks(3705), new TimeSpan(0, 0, 0, 0, 0)), null, null, new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), null, true, false, "System", new DateTimeOffset(new DateTime(2025, 8, 29, 0, 1, 22, 188, DateTimeKind.Unspecified).AddTicks(3707), new TimeSpan(0, 0, 0, 0, 0)), 3m, 2 }
                 });
 
             migrationBuilder.InsertData(
                 table: "system_settings",
                 columns: new[] { "id", "created_by", "created_time", "deleted_by", "deleted_time", "is_active", "is_deleted", "key", "last_updated_by", "last_updated_time", "unit", "value" },
-                values: new object[] { new Guid("122a5a24-b0d8-486d-9b11-d22cf1994512"), null, new DateTimeOffset(new DateTime(2025, 8, 28, 17, 58, 55, 634, DateTimeKind.Unspecified).AddTicks(7621), new TimeSpan(0, 7, 0, 0, 0)), null, null, true, false, 1, null, new DateTimeOffset(new DateTime(2025, 8, 28, 17, 58, 55, 634, DateTimeKind.Unspecified).AddTicks(7679), new TimeSpan(0, 7, 0, 0, 0)), "%", "10" });
+                values: new object[] { new Guid("d971be9e-fad5-44e2-9562-f8a2729199d6"), null, new DateTimeOffset(new DateTime(2025, 8, 29, 7, 1, 22, 188, DateTimeKind.Unspecified).AddTicks(3107), new TimeSpan(0, 7, 0, 0, 0)), null, null, true, false, 1, null, new DateTimeOffset(new DateTime(2025, 8, 29, 7, 1, 22, 188, DateTimeKind.Unspecified).AddTicks(3163), new TimeSpan(0, 7, 0, 0, 0)), "%", "10" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_craft_village_requests_workshop_id",
@@ -415,52 +511,62 @@ namespace Travelogue.Repository.Migrations
                 column: "workshop_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_workshop_activity_request_workshop_ticket_type_request_id",
-                table: "workshop_activity_request",
+                name: "IX_workshop_activity_requests_workshop_ticket_type_request_id",
+                table: "workshop_activity_requests",
                 column: "workshop_ticket_type_request_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_workshop_exception_request_workshop_request_id",
-                table: "workshop_exception_request",
+                name: "IX_workshop_exception_requests_workshop_request_id",
+                table: "workshop_exception_requests",
                 column: "workshop_request_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_workshop_media_request_workshop_request_id",
-                table: "workshop_media_request",
-                column: "workshop_request_id");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_workshop_recurring_rule_request_workshop_request_id",
-                table: "workshop_recurring_rule_request",
-                column: "workshop_request_id");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_workshop_session_request_workshop_recurring_rule_request_id",
-                table: "workshop_session_request",
-                column: "workshop_recurring_rule_request_id");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_workshop_ticket_type_workshop_id",
-                table: "workshop_ticket_type",
+                name: "IX_workshop_exceptions_workshop_id",
+                table: "workshop_exceptions",
                 column: "workshop_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_workshop_ticket_type_request_workshop_request_id",
-                table: "workshop_ticket_type_request",
+                name: "IX_workshop_recurring_rule_requests_workshop_request_id",
+                table: "workshop_recurring_rule_requests",
                 column: "workshop_request_id");
 
+            migrationBuilder.CreateIndex(
+                name: "IX_workshop_recurring_rules_workshop_id",
+                table: "workshop_recurring_rules",
+                column: "workshop_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_workshop_session_requests_workshop_recurring_rule_request_id",
+                table: "workshop_session_requests",
+                column: "workshop_recurring_rule_request_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_workshop_session_rules_recurring_rule_id",
+                table: "workshop_session_rules",
+                column: "recurring_rule_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_workshop_ticket_type_requests_workshop_request_id",
+                table: "workshop_ticket_type_requests",
+                column: "workshop_request_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_workshop_ticket_types_workshop_id",
+                table: "workshop_ticket_types",
+                column: "workshop_id");
+
             migrationBuilder.AddForeignKey(
-                name: "FK_craft_village_requests_workshop_request_workshop_id",
+                name: "FK_craft_village_requests_workshop_requests_workshop_id",
                 table: "craft_village_requests",
                 column: "workshop_id",
-                principalTable: "workshop_request",
+                principalTable: "workshop_requests",
                 principalColumn: "id");
 
             migrationBuilder.AddForeignKey(
-                name: "FK_workshop_activities_workshop_ticket_type_workshop_ticket_typ~",
+                name: "FK_workshop_activities_workshop_ticket_types_workshop_ticket_ty~",
                 table: "workshop_activities",
                 column: "workshop_ticket_type_id",
-                principalTable: "workshop_ticket_type",
+                principalTable: "workshop_ticket_types",
                 principalColumn: "id",
                 onDelete: ReferentialAction.Cascade);
         }
@@ -469,36 +575,45 @@ namespace Travelogue.Repository.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropForeignKey(
-                name: "FK_craft_village_requests_workshop_request_workshop_id",
+                name: "FK_craft_village_requests_workshop_requests_workshop_id",
                 table: "craft_village_requests");
 
             migrationBuilder.DropForeignKey(
-                name: "FK_workshop_activities_workshop_ticket_type_workshop_ticket_typ~",
+                name: "FK_workshop_activities_workshop_ticket_types_workshop_ticket_ty~",
                 table: "workshop_activities");
 
             migrationBuilder.DropTable(
-                name: "workshop_activity_request");
+                name: "workshop_activity_requests");
 
             migrationBuilder.DropTable(
-                name: "workshop_exception_request");
+                name: "workshop_exception_requests");
 
             migrationBuilder.DropTable(
-                name: "workshop_media_request");
+                name: "workshop_exceptions");
 
             migrationBuilder.DropTable(
-                name: "workshop_session_request");
+                name: "workshop_media_requests");
 
             migrationBuilder.DropTable(
-                name: "workshop_ticket_type");
+                name: "workshop_session_requests");
 
             migrationBuilder.DropTable(
-                name: "workshop_ticket_type_request");
+                name: "workshop_session_rules");
 
             migrationBuilder.DropTable(
-                name: "workshop_recurring_rule_request");
+                name: "workshop_ticket_types");
 
             migrationBuilder.DropTable(
-                name: "workshop_request");
+                name: "workshop_ticket_type_requests");
+
+            migrationBuilder.DropTable(
+                name: "workshop_recurring_rule_requests");
+
+            migrationBuilder.DropTable(
+                name: "workshop_recurring_rules");
+
+            migrationBuilder.DropTable(
+                name: "workshop_requests");
 
             migrationBuilder.DropIndex(
                 name: "IX_craft_village_requests_workshop_id",
@@ -507,17 +622,17 @@ namespace Travelogue.Repository.Migrations
             migrationBuilder.DeleteData(
                 table: "commission_rates",
                 keyColumn: "id",
-                keyValue: new Guid("92b50155-f384-4a9b-843f-356b85165586"));
+                keyValue: new Guid("9d569f7b-3fb5-480a-9e72-29148e15898a"));
 
             migrationBuilder.DeleteData(
                 table: "commission_rates",
                 keyColumn: "id",
-                keyValue: new Guid("fdb75c2c-73cc-4f32-837e-d7a3888fc199"));
+                keyValue: new Guid("d7258da4-b955-442a-9daa-31ca4e1fcb6c"));
 
             migrationBuilder.DeleteData(
                 table: "system_settings",
                 keyColumn: "id",
-                keyValue: new Guid("122a5a24-b0d8-486d-9b11-d22cf1994512"));
+                keyValue: new Guid("d971be9e-fad5-44e2-9562-f8a2729199d6"));
 
             migrationBuilder.DropColumn(
                 name: "capacity",

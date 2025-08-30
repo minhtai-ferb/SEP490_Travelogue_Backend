@@ -23,5 +23,5 @@ public sealed class WorkshopRequest : BaseEntity
 
     public ICollection<WorkshopRecurringRuleRequest> RecurringRules { get; set; } = new List<WorkshopRecurringRuleRequest>();
     public ICollection<WorkshopExceptionRequest> Exceptions { get; set; } = new List<WorkshopExceptionRequest>();
-    public ICollection<WorkshopMediaRequest> Medias { get; set; } = new List<WorkshopMediaRequest>();
+    public List<MediaRequest> Medias { get; set; } = new();
 }

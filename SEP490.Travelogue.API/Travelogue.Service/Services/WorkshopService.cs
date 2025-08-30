@@ -21,6 +21,11 @@ public interface IWorkshopService
     Task<WorkshopResponseDto> CreateWorkshopAsync(CreateWorkshopDto dto);
     Task<WorkshopResponseDto> UpdateWorkshopAsync(Guid workshopId, UpdateWorkshopDto dto);
     Task<WorkshopResponseDto> SubmitWorkshopForReviewAsync(Guid workshopId, CancellationToken cancellationToken);
+    Task<List<WorkshopDto>> GetWorkshopsAsync(
+        Guid? craftVillageId,
+        string? name,
+        CancellationToken cancellationToken = default);
+
     //// Task<WorkshopResponseDto> ConfirmWorkshopAsync(Guid workshopId, ConfirmWorkshopDto dto);
     //Task DeleteWorkshopAsync(Guid workshopId);
     //// Task<WorkshopDetailsResponseDto> GetWorkshopDetailsAsync(Guid workshopId);
@@ -128,6 +133,106 @@ public class WorkshopService : IWorkshopService
             }
 
             return workshopResponses;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<WorkshopDto>> GetWorkshopsAsync(
+        Guid? craftVillageId,
+        string? name,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var query = _unitOfWork.WorkshopRepository
+                .ActiveEntities
+                .AsNoTracking();
+
+            if (craftVillageId.HasValue)
+                query = query.Where(w => w.CraftVillageId == craftVillageId.Value);
+
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                var keyword = name.Trim();
+                query = query.Where(w => EF.Functions.Like(w.Name, $"%{keyword}%"));
+            }
+
+            var now = _timeService.SystemTimeNow;
+
+            var result = await query
+                .OrderBy(w => w.Name)
+                .Select(w => new WorkshopDto
+                {
+                    Name = w.Name,
+                    Description = w.Description,
+                    Content = w.Content,
+                    Status = w.Status,
+
+                    TicketTypes = w.TicketTypes.Select(tt => new TicketTypeRequestDto
+                    {
+                        Type = tt.Type,
+                        Name = tt.Name,
+                        Price = tt.Price,
+                        IsCombo = tt.IsCombo,
+                        DurationMinutes = tt.DurationMinutes,
+                        Content = tt.Content,
+                        WorkshopActivities = tt.WorkshopActivities
+                            .OrderBy(a => a.ActivityOrder)
+                            .Select(a => new WorkshopActivityRequestDto
+                            {
+                                Activity = a.Activity,
+                                Description = a.Description,
+                                StartHour = a.StartHour,
+                                EndHour = a.EndHour,
+                                ActivityOrder = a.ActivityOrder
+                            }).ToList()
+                    }).ToList(),
+
+                    Schedules = w.Schedules
+                        .OrderBy(s => s.StartTime)
+                        .Select(s => new WorkshopScheduleResponseDto
+                        {
+                            Id = s.Id,
+                            StartTime = s.StartTime,
+                            EndTime = s.EndTime,
+                            Capacity = s.Capacity,
+                            CurrentBooked = s.CurrentBooked,
+                            Status = s.Status,
+                            Notes = s.Notes
+                        }).ToList(),
+
+                    RecurringRules = w.RecurringRules
+                        .Select(rr => new RecurringRuleRequestDto
+                        {
+                            DaysOfWeek = rr.DaysOfWeek.ToList() ?? new List<DayOfWeek>(),
+                            StartDate = rr.StartDate,
+                            EndDate = rr.EndDate,
+                            Sessions = rr.Sessions.Select(s => new SessionRequestDto
+                            {
+                                StartTime = s.StartTime,
+                                EndTime = s.EndTime,
+                                Capacity = s.Capacity
+                            }).ToList()
+                        }).ToList(),
+
+                    Exceptions = w.Exceptions
+                        .Select(ex => new WorkshopExceptionRequestDto
+                        {
+                            Date = ex.Date,
+                            Reason = ex.Reason,
+                            IsActive = ex.IsActive
+                        }).ToList()
+                })
+                .ToListAsync(cancellationToken);
+
+            return result;
         }
         catch (CustomException)
         {

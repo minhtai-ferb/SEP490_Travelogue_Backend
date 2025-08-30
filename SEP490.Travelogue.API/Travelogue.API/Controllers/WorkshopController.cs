@@ -27,8 +27,8 @@ public class WorkshopController : ControllerBase
     [HttpGet()]
     public async Task<IActionResult> GetFilteredWorkshopsAsync([FromQuery] string? name, [FromQuery] Guid? craftVillageId, CancellationToken cancellationToken)
     {
-        var result = await _workshopService.GetFilteredWorkshopsAsync(name, craftVillageId, cancellationToken);
-        return Ok(ResponseModel<List<WorkshopResponseDto>>.OkResponseModel(
+        var result = await _workshopService.GetWorkshopsAsync(craftVillageId, name, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "workshops")
         ));

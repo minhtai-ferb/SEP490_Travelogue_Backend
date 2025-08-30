@@ -13,6 +13,7 @@ using Travelogue.Service.BusinessModels.CuisineModels;
 using Travelogue.Service.BusinessModels.HistoricalLocationModels;
 using Travelogue.Service.BusinessModels.LocationModels;
 using Travelogue.Service.BusinessModels.MediaModel;
+using Travelogue.Service.BusinessModels.WorkshopModels;
 using Travelogue.Service.Commons.Implementations;
 using Travelogue.Service.Commons.Interfaces;
 
@@ -1170,8 +1171,33 @@ public class LocationService : ILocationService
 
             if (craftVillage != null)
             {
-                locationDataModel.CraftVillage = _mapper.Map<CraftVillageDataModel>(craftVillage);
-                // locationDataModel.CraftVillage.CraftVillageId = craftVillage.Id;
+                locationDataModel.CraftVillage = new CraftVillageDataModel
+                {
+                    OwnerId = craftVillage.OwnerId,
+                    PhoneNumber = craftVillage.PhoneNumber,
+                    Email = craftVillage.Email,
+                    Website = craftVillage.Website,
+                    SignatureProduct = craftVillage.SignatureProduct,
+                    YearsOfHistory = craftVillage.YearsOfHistory,
+                    WorkshopsAvailable = craftVillage.WorkshopsAvailable,
+                    IsRecognizedByUnesco = craftVillage.IsRecognizedByUnesco
+                };
+
+                var workshopQuery = _unitOfWork.WorkshopRepository
+                    .ActiveEntities
+                    .AsNoTracking()
+                    .Where(w => w.CraftVillageId == craftVillage.Id)
+                    .Include(w => w.TicketTypes).ThenInclude(tt => tt.WorkshopActivities)
+                    // .Include(w => w.RecurringRules).ThenInclude(rr => rr.Sessions)
+                    .Include(w => w.Exceptions)
+                    .Include(w => w.Schedules)
+                    .AsSplitQuery();
+
+                var workshopEntity = await workshopQuery.FirstOrDefaultAsync();
+
+                locationDataModel.CraftVillage.Workshop = workshopEntity != null
+                    ? MapWorkshopToRequestDto(workshopEntity)
+                    : null;
             }
 
             if (historicalLocation != null)
@@ -2536,6 +2562,75 @@ public class LocationService : ILocationService
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
+
+    private static WorkshopDto MapWorkshopToRequestDto(Workshop w)
+    {
+        return new WorkshopDto
+        {
+            Name = w.Name,
+            Description = w.Description,
+            Content = w.Content,
+            Status = w.Status,
+
+            TicketTypes = w.TicketTypes?
+                .Select(tt => new TicketTypeRequestDto
+                {
+                    Type = tt.Type,
+                    Name = tt.Name,
+                    Price = tt.Price,
+                    IsCombo = tt.IsCombo,
+                    DurationMinutes = tt.DurationMinutes,
+                    Content = tt.Content,
+                    WorkshopActivities = tt.WorkshopActivities?
+                        .OrderBy(a => a.ActivityOrder)
+                        .Select(a => new WorkshopActivityRequestDto
+                        {
+                            Activity = a.Activity,
+                            Description = a.Description,
+                            StartHour = a.StartHour,
+                            EndHour = a.EndHour,
+                            ActivityOrder = a.ActivityOrder
+                        }).ToList() ?? new List<WorkshopActivityRequestDto>()
+                }).ToList() ?? new List<TicketTypeRequestDto>(),
+
+            Schedules = w.Schedules?
+                .OrderBy(s => s.StartTime)
+                .Select(s => new WorkshopScheduleResponseDto
+                {
+                    Id = s.Id,
+                    StartTime = s.StartTime,
+                    EndTime = s.EndTime,
+                    Capacity = s.Capacity,
+                    CurrentBooked = s.CurrentBooked,
+                    Status = s.Status,
+                    Notes = s.Notes
+                }).ToList() ?? new List<WorkshopScheduleResponseDto>(),
+
+            RecurringRules = w.RecurringRules?
+                .Select(rr => new RecurringRuleRequestDto
+                {
+                    DaysOfWeek = rr.DaysOfWeek?.ToList() ?? new List<DayOfWeek>(),
+                    StartDate = rr.StartDate,
+                    EndDate = rr.EndDate,
+                    Sessions = rr.Sessions?
+                        .Select(s => new SessionRequestDto
+                        {
+                            StartTime = s.StartTime,
+                            EndTime = s.EndTime,
+                            Capacity = s.Capacity
+                        }).ToList() ?? new List<SessionRequestDto>()
+                }).ToList() ?? new List<RecurringRuleRequestDto>(),
+
+            Exceptions = w.Exceptions?
+                .Select(ex => new WorkshopExceptionRequestDto
+                {
+                    Date = ex.Date,
+                    Reason = ex.Reason,
+                    IsActive = ex.IsActive
+                }).ToList() ?? new List<WorkshopExceptionRequestDto>()
+        };
+    }
+
 
     #endregion
 }

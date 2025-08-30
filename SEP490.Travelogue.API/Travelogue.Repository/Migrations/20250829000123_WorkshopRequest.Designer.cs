@@ -12,8 +12,8 @@ using Travelogue.Repository.Data;
 namespace Travelogue.Repository.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250828105856_update-workshop")]
-    partial class updateworkshop
+    [Migration("20250829000123_WorkshopRequest")]
+    partial class WorkshopRequest
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -679,27 +679,27 @@ namespace Travelogue.Repository.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("92b50155-f384-4a9b-843f-356b85165586"),
+                            Id = new Guid("9d569f7b-3fb5-480a-9e72-29148e15898a"),
                             CreatedBy = "System",
-                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 28, 10, 58, 55, 634, DateTimeKind.Unspecified).AddTicks(7928), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 29, 0, 1, 22, 188, DateTimeKind.Unspecified).AddTicks(3680), new TimeSpan(0, 0, 0, 0, 0)),
                             EffectiveDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             IsActive = true,
                             IsDeleted = false,
                             LastUpdatedBy = "System",
-                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 28, 10, 58, 55, 634, DateTimeKind.Unspecified).AddTicks(7933), new TimeSpan(0, 0, 0, 0, 0)),
+                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 29, 0, 1, 22, 188, DateTimeKind.Unspecified).AddTicks(3690), new TimeSpan(0, 0, 0, 0, 0)),
                             RateValue = 5m,
                             Type = 1
                         },
                         new
                         {
-                            Id = new Guid("fdb75c2c-73cc-4f32-837e-d7a3888fc199"),
+                            Id = new Guid("d7258da4-b955-442a-9daa-31ca4e1fcb6c"),
                             CreatedBy = "System",
-                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 28, 10, 58, 55, 634, DateTimeKind.Unspecified).AddTicks(7939), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 29, 0, 1, 22, 188, DateTimeKind.Unspecified).AddTicks(3705), new TimeSpan(0, 0, 0, 0, 0)),
                             EffectiveDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             IsActive = true,
                             IsDeleted = false,
                             LastUpdatedBy = "System",
-                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 28, 10, 58, 55, 634, DateTimeKind.Unspecified).AddTicks(7940), new TimeSpan(0, 0, 0, 0, 0)),
+                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 29, 0, 1, 22, 188, DateTimeKind.Unspecified).AddTicks(3707), new TimeSpan(0, 0, 0, 0, 0)),
                             RateValue = 3m,
                             Type = 2
                         });
@@ -2429,12 +2429,12 @@ namespace Travelogue.Repository.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("122a5a24-b0d8-486d-9b11-d22cf1994512"),
-                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 28, 17, 58, 55, 634, DateTimeKind.Unspecified).AddTicks(7621), new TimeSpan(0, 7, 0, 0, 0)),
+                            Id = new Guid("d971be9e-fad5-44e2-9562-f8a2729199d6"),
+                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 29, 7, 1, 22, 188, DateTimeKind.Unspecified).AddTicks(3107), new TimeSpan(0, 7, 0, 0, 0)),
                             IsActive = true,
                             IsDeleted = false,
                             Key = 1,
-                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 28, 17, 58, 55, 634, DateTimeKind.Unspecified).AddTicks(7679), new TimeSpan(0, 7, 0, 0, 0)),
+                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 29, 7, 1, 22, 188, DateTimeKind.Unspecified).AddTicks(3163), new TimeSpan(0, 7, 0, 0, 0)),
                             Unit = "%",
                             Value = "10"
                         });
@@ -3859,8 +3859,8 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("longtext")
                         .HasColumnName("description");
 
-                    b.Property<double>("EndHour")
-                        .HasColumnType("double")
+                    b.Property<TimeSpan>("EndHour")
+                        .HasColumnType("time(6)")
                         .HasColumnName("end_hour");
 
                     b.Property<bool>("IsActive")
@@ -3879,8 +3879,8 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_updated_time");
 
-                    b.Property<double>("StartHour")
-                        .HasColumnType("double")
+                    b.Property<TimeSpan>("StartHour")
+                        .HasColumnType("time(6)")
                         .HasColumnName("start_hour");
 
                     b.Property<Guid>("WorkshopTicketTypeId")
@@ -3931,8 +3931,8 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("longtext")
                         .HasColumnName("description");
 
-                    b.Property<double>("EndHour")
-                        .HasColumnType("double")
+                    b.Property<TimeSpan>("EndHour")
+                        .HasColumnType("time(6)")
                         .HasColumnName("end_hour");
 
                     b.Property<bool>("IsActive")
@@ -3951,8 +3951,8 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_updated_time");
 
-                    b.Property<double>("StartHour")
-                        .HasColumnType("double")
+                    b.Property<TimeSpan>("StartHour")
+                        .HasColumnType("time(6)")
                         .HasColumnName("start_hour");
 
                     b.Property<Guid?>("WorkshopTicketTypeRequestId")
@@ -3963,7 +3963,65 @@ namespace Travelogue.Repository.Migrations
 
                     b.HasIndex("WorkshopTicketTypeRequestId");
 
-                    b.ToTable("workshop_activity_request");
+                    b.ToTable("workshop_activity_requests");
+                });
+
+            modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopException", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("CreatedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_time");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("date");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("deleted_by");
+
+                    b.Property<DateTimeOffset?>("DeletedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_time");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("last_updated_by");
+
+                    b.Property<DateTimeOffset>("LastUpdatedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_updated_time");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("longtext")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("WorkshopId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("workshop_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkshopId");
+
+                    b.ToTable("workshop_exceptions");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopExceptionRequest", b =>
@@ -4021,7 +4079,7 @@ namespace Travelogue.Repository.Migrations
 
                     b.HasIndex("WorkshopRequestId");
 
-                    b.ToTable("workshop_exception_request");
+                    b.ToTable("workshop_exception_requests");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopMedia", b =>
@@ -4143,15 +4201,72 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("longtext")
                         .HasColumnName("media_url");
 
-                    b.Property<Guid?>("WorkshopRequestId")
+                    b.HasKey("Id");
+
+                    b.ToTable("workshop_media_requests");
+                });
+
+            modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopRecurringRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)")
-                        .HasColumnName("workshop_request_id");
+                        .HasColumnName("id");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("CreatedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_time");
+
+                    b.Property<string>("DaysOfWeek")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("days_of_week");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("deleted_by");
+
+                    b.Property<DateTimeOffset?>("DeletedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_time");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("end_date");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("last_updated_by");
+
+                    b.Property<DateTimeOffset>("LastUpdatedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_updated_time");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("start_date");
+
+                    b.Property<Guid>("WorkshopId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("workshop_id");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("WorkshopRequestId");
+                    b.HasIndex("WorkshopId");
 
-                    b.ToTable("workshop_media_request");
+                    b.ToTable("workshop_recurring_rules");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopRecurringRuleRequest", b =>
@@ -4214,7 +4329,7 @@ namespace Travelogue.Repository.Migrations
 
                     b.HasIndex("WorkshopRequestId");
 
-                    b.ToTable("workshop_recurring_rule_request");
+                    b.ToTable("workshop_recurring_rule_requests");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopRequest", b =>
@@ -4268,6 +4383,11 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_updated_time");
 
+                    b.Property<string>("Medias")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("medias");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -4280,7 +4400,7 @@ namespace Travelogue.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("workshop_request");
+                    b.ToTable("workshop_requests");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopSchedule", b =>
@@ -4416,7 +4536,69 @@ namespace Travelogue.Repository.Migrations
 
                     b.HasIndex("WorkshopRecurringRuleRequestId");
 
-                    b.ToTable("workshop_session_request");
+                    b.ToTable("workshop_session_requests");
+                });
+
+            modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopSessionRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Capacity")
+                        .HasColumnType("int")
+                        .HasColumnName("capacity");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("CreatedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_time");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("deleted_by");
+
+                    b.Property<DateTimeOffset?>("DeletedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_time");
+
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("time(6)")
+                        .HasColumnName("end_time");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .HasColumnType("longtext")
+                        .HasColumnName("last_updated_by");
+
+                    b.Property<DateTimeOffset>("LastUpdatedTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_updated_time");
+
+                    b.Property<Guid>("RecurringRuleId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("recurring_rule_id");
+
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("time(6)")
+                        .HasColumnName("start_time");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecurringRuleId");
+
+                    b.ToTable("workshop_session_rules");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopTicketType", b =>
@@ -4492,7 +4674,7 @@ namespace Travelogue.Repository.Migrations
 
                     b.HasIndex("WorkshopId");
 
-                    b.ToTable("workshop_ticket_type");
+                    b.ToTable("workshop_ticket_types");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopTicketTypeRequest", b =>
@@ -4567,7 +4749,7 @@ namespace Travelogue.Repository.Migrations
 
                     b.HasIndex("WorkshopRequestId");
 
-                    b.ToTable("workshop_ticket_type_request");
+                    b.ToTable("workshop_ticket_type_requests");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.Announcement", b =>
@@ -5275,6 +5457,17 @@ namespace Travelogue.Repository.Migrations
                         .HasForeignKey("WorkshopTicketTypeRequestId");
                 });
 
+            modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopException", b =>
+                {
+                    b.HasOne("Travelogue.Repository.Entities.Workshop", "Workshop")
+                        .WithMany()
+                        .HasForeignKey("WorkshopId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Workshop");
+                });
+
             modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopExceptionRequest", b =>
                 {
                     b.HasOne("Travelogue.Repository.Entities.WorkshopRequest", null)
@@ -5293,11 +5486,15 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("Workshop");
                 });
 
-            modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopMediaRequest", b =>
+            modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopRecurringRule", b =>
                 {
-                    b.HasOne("Travelogue.Repository.Entities.WorkshopRequest", null)
-                        .WithMany("Medias")
-                        .HasForeignKey("WorkshopRequestId");
+                    b.HasOne("Travelogue.Repository.Entities.Workshop", "Workshop")
+                        .WithMany()
+                        .HasForeignKey("WorkshopId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Workshop");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopRecurringRuleRequest", b =>
@@ -5323,6 +5520,17 @@ namespace Travelogue.Repository.Migrations
                     b.HasOne("Travelogue.Repository.Entities.WorkshopRecurringRuleRequest", null)
                         .WithMany("Sessions")
                         .HasForeignKey("WorkshopRecurringRuleRequestId");
+                });
+
+            modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopSessionRule", b =>
+                {
+                    b.HasOne("Travelogue.Repository.Entities.WorkshopRecurringRule", "RecurringRule")
+                        .WithMany("Sessions")
+                        .HasForeignKey("RecurringRuleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RecurringRule");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopTicketType", b =>
@@ -5491,6 +5699,11 @@ namespace Travelogue.Repository.Migrations
                     b.Navigation("TicketTypes");
                 });
 
+            modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopRecurringRule", b =>
+                {
+                    b.Navigation("Sessions");
+                });
+
             modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopRecurringRuleRequest", b =>
                 {
                     b.Navigation("Sessions");
@@ -5499,8 +5712,6 @@ namespace Travelogue.Repository.Migrations
             modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopRequest", b =>
                 {
                     b.Navigation("Exceptions");
-
-                    b.Navigation("Medias");
 
                     b.Navigation("RecurringRules");
 

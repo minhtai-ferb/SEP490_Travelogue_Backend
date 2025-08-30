@@ -8,7 +8,7 @@ using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Service.BusinessModels.WorkshopModels;
 
-public class WorkshopRequestDto
+public class WorkshopDto
 {
     [Required, MaxLength(100)]
     public string Name { get; set; } = string.Empty;
@@ -17,13 +17,25 @@ public class WorkshopRequestDto
     public WorkshopStatus Status { get; set; } = WorkshopStatus.Pending;
 
     public List<TicketTypeRequestDto> TicketTypes { get; set; } = new();
+    public List<WorkshopScheduleResponseDto> Schedules { get; set; } = new();
     public List<RecurringRuleRequestDto> RecurringRules { get; set; } = new();
     public List<WorkshopExceptionRequestDto> Exceptions { get; set; } = new();
 }
 
+public class WorkshopScheduleResponseDto
+{
+    public Guid Id { get; set; }
+    public DateTime StartTime { get; set; }
+    public DateTime EndTime { get; set; }
+    public int Capacity { get; set; }
+    public int CurrentBooked { get; set; }
+    public ScheduleStatus Status { get; set; }
+    public string? Notes { get; set; }
+}
+
 public class TicketTypeRequestDto
 {
-    [Required, MaxLength(50)]
+    [Required]
     public TicketType Type { get; set; } = TicketType.Visit; // Visit / Experience
 
     [Required, MaxLength(100)]
@@ -86,22 +98,10 @@ public class WorkshopActivityRequestDto
 
     public string? Description { get; set; }
 
-    /// <summary>
-    /// Giờ bắt đầu tính theo số giờ từ lúc workshop khởi động.
-    /// Ví dụ: 0 = ngay khi bắt đầu, 1 = sau 1 tiếng.
-    /// </summary>
-    [Range(0, 24)]
-    public double StartHour { get; set; }
+    public TimeSpan StartHour { get; set; }
 
-    /// <summary>
-    /// Giờ kết thúc tính theo số giờ từ lúc workshop khởi động.
-    /// </summary>
-    [Range(0, 24)]
-    public double EndHour { get; set; }
+    public TimeSpan EndHour { get; set; }
 
-    /// <summary>
-    /// Thứ tự hoạt động trong quy trình (step 1, step 2, ...)
-    /// </summary>
     [Range(1, int.MaxValue)]
     public int ActivityOrder { get; set; }
 }

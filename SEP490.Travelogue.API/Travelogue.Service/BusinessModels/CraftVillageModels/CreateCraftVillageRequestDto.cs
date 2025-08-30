@@ -36,5 +36,5 @@ public class CreateCraftVillageRequestDto
     public bool IsRecognizedByUnesco { get; set; }
     public List<MediaDto> MediaDtos { get; set; } = new List<MediaDto>();
 
-    public WorkshopRequestDto? Workshop { get; set; }
+    public WorkshopDto? Workshop { get; set; }
 }
