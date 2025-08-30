@@ -78,6 +78,8 @@ public class TourService : ITourService
                 Name = dto.Name,
                 Description = dto.Description,
                 TransportType = dto.TransportType,
+                StayInfo = dto.StayInfo,
+                PickupAddress = dto.PickupAddress,
                 Content = dto.Content,
                 TotalDays = dto.TotalDays,
                 TourType = dto.TourType,
@@ -132,6 +134,8 @@ public class TourService : ITourService
                 Description = tour.Description,
                 Content = tour.Content,
                 TransportType = tour.TransportType,
+                StayInfo = tour.StayInfo,
+                PickupAddress = tour.PickupAddress,
                 TotalDays = tour.TotalDays,
                 TotalDaysText = tour.TotalDays == 1 ? "1 ngày" : $"{tour.TotalDays} ngày {tour.TotalDays - 1} đêm",
                 TourType = tour.TourType,
@@ -200,6 +204,8 @@ public class TourService : ITourService
             tour.Description = dto.Description;
             tour.Content = dto.Content;
             tour.TransportType = dto.TransportType;
+            tour.StayInfo = dto.StayInfo;
+            tour.PickupAddress = dto.PickupAddress;
             tour.TourType = dto.TourType;
             tour.TotalDays = dto.TotalDays;
             tour.LastUpdatedTime = DateTimeOffset.UtcNow;
@@ -257,6 +263,8 @@ public class TourService : ITourService
                 Description = tour.Description,
                 Content = tour.Content,
                 TransportType = tour.TransportType,
+                StayInfo = tour.StayInfo,
+                PickupAddress = tour.PickupAddress,
                 TotalDays = tour.TotalDays,
                 TotalDaysText = tour.TotalDays == 1 ? "1 ngày" : $"{tour.TotalDays} ngày {tour.TotalDays - 1} đêm",
                 TourType = tour.TourType,
@@ -482,6 +490,8 @@ public class TourService : ITourService
                     Description = tour.Description,
                     Content = tour.Content,
                     TransportType = tour.TransportType,
+                    StayInfo = tour.StayInfo,
+                    PickupAddress = tour.PickupAddress,
                     TotalDays = tour.TotalDays,
                     TotalDaysText = tour.TotalDays == 1
                         ? "1 ngày"
@@ -668,6 +678,8 @@ public class TourService : ITourService
                 Description = tour.Description,
                 Content = tour.Content,
                 TransportType = tour.TransportType,
+                StayInfo = tour.StayInfo,
+                PickupAddress = tour.PickupAddress,
                 TotalDays = tour.TotalDays,
                 TotalDaysText = tour.TotalDays == 1 ? "1 ngày" : $"{tour.TotalDays} ngày {tour.TotalDays - 1} đêm",
                 TourType = tour.TourType,
@@ -856,6 +868,8 @@ public class TourService : ITourService
                 Description = tour.Description,
                 Content = tour.Content,
                 TransportType = tour.TransportType,
+                StayInfo = tour.StayInfo,
+                PickupAddress = tour.PickupAddress,
                 TotalDays = tour.TotalDays,
                 TotalDaysText = tour.TotalDays == 1 ? "1 ngày" : $"{tour.TotalDays} ngày {tour.TotalDays - 1} đêm",
                 TourType = tour.TourType,
@@ -2137,6 +2151,8 @@ public class TourService : ITourService
                     Description = tour.Description,
                     Content = tour.Content,
                     TransportType = tour.TransportType,
+                    StayInfo = tour.StayInfo,
+                    PickupAddress = tour.PickupAddress,
                     TotalDays = tour.TotalDays,
                     TotalDaysText = tour.TotalDays == 1 ? "1 ngày" : $"{tour.TotalDays} ngày {tour.TotalDays - 1} đêm",
                     TourType = tour.TourType,
