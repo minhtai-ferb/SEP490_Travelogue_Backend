@@ -21,6 +21,8 @@ public sealed class TripPlan : BaseEntity
     public string? ImageUrl { get; set; }
     public TripPlanStatus Status { get; set; } = TripPlanStatus.Draft;
 
+    public string? PickupAddress { get; set; }
+
     [Required]
     public Guid UserId { get; set; }
 
