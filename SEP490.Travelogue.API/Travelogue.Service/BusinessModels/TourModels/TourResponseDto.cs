@@ -10,6 +10,8 @@ public class TourResponseDto : BaseDataModel
     public string? Description { get; set; }
     public string? Content { get; set; }
     public string? TransportType { get; set; }
+    public string? PickupAddress { get; set; }
+    public string? StayInfo { get; set; }
     public int TotalDays { get; set; }
     public TourType? TourType { get; set; }
     public string? TourTypeText { get; set; }

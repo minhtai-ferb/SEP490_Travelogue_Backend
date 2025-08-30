@@ -13,6 +13,10 @@ public sealed class Tour : BaseEntity
     public string? Description { get; set; }
     public string? Content { get; set; }
     public string? TransportType { get; set; }
+    [MaxLength(300)]
+    public string? PickupAddress { get; set; }
+    [MaxLength(500)]
+    public string? StayInfo { get; set; }
 
     public int TotalDays { get; set; }
 
