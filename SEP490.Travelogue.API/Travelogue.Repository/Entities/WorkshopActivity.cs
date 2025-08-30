@@ -6,18 +6,16 @@ namespace Travelogue.Repository.Entities;
 public sealed class WorkshopActivity : BaseEntity
 {
     [Required]
-    public Guid WorkshopId { get; set; }
+    public Guid WorkshopTicketTypeId { get; set; }
+    public WorkshopTicketType WorkshopTicketType { get; set; } = null!;
 
     [Required, MaxLength(200)]
     public string Activity { get; set; } = string.Empty;
+
     public string Description { get; set; } = string.Empty;
 
-    public TimeSpan? StartTime { get; set; }
-    public TimeSpan? EndTime { get; set; }
+    public TimeSpan StartHour { get; set; }
+    public TimeSpan EndHour { get; set; }
 
-    [MaxLength(500)]
-    public string? Notes { get; set; }
-    public int DayOrder { get; set; } = 0;
-
-    public Workshop? Workshop { get; set; }
+    public int ActivityOrder { get; set; }
 }

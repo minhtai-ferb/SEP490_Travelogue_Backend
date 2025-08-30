@@ -230,161 +230,161 @@ public class BookingService : IBookingService
         }
     }
 
-    public async Task<BookingDataModel> CreateWorkshopBookingAsync(CreateBookingWorkshopDto dto, CancellationToken cancellationToken)
-    {
-        if (dto.Participants == null || dto.Participants.Count == 0)
-            throw CustomExceptionFactory.CreateBadRequestError("Cần có ít nhất một hành khách tham gia.");
+    //public async Task<BookingDataModel> CreateWorkshopBookingAsync(CreateBookingWorkshopDto dto, CancellationToken cancellationToken)
+    //{
+    //    if (dto.Participants == null || dto.Participants.Count == 0)
+    //        throw CustomExceptionFactory.CreateBadRequestError("Cần có ít nhất một hành khách tham gia.");
 
-        if (!dto.Participants.Any(p => p.Type == ParticipantType.Adult))
-            throw CustomExceptionFactory.CreateBadRequestError("Phải có ít nhất một người lớn đi kèm.");
+    //    if (!dto.Participants.Any(p => p.Type == ParticipantType.Adult))
+    //        throw CustomExceptionFactory.CreateBadRequestError("Phải có ít nhất một người lớn đi kèm.");
 
-        foreach (var p in dto.Participants)
-        {
-            int age = AgeHelper.CalculateAge(p.DateOfBirth);
+    //    foreach (var p in dto.Participants)
+    //    {
+    //        int age = AgeHelper.CalculateAge(p.DateOfBirth);
 
-            if (p.Type == ParticipantType.Child && !AgeHelper.IsChild(p.DateOfBirth))
-                throw CustomExceptionFactory.CreateBadRequestError($"{p.FullName} không nằm trong độ tuổi trẻ em ({AgeConstraints.MinChildAge}-{AgeConstraints.MaxChildAge}).");
+    //        if (p.Type == ParticipantType.Child && !AgeHelper.IsChild(p.DateOfBirth))
+    //            throw CustomExceptionFactory.CreateBadRequestError($"{p.FullName} không nằm trong độ tuổi trẻ em ({AgeConstraints.MinChildAge}-{AgeConstraints.MaxChildAge}).");
 
-            if (p.Type == ParticipantType.Adult && !AgeHelper.IsAdult(p.DateOfBirth))
-                throw CustomExceptionFactory.CreateBadRequestError($"{p.FullName} không đủ tuổi người lớn (>= {AgeConstraints.MinAdultAge}).");
-        }
+    //        if (p.Type == ParticipantType.Adult && !AgeHelper.IsAdult(p.DateOfBirth))
+    //            throw CustomExceptionFactory.CreateBadRequestError($"{p.FullName} không đủ tuổi người lớn (>= {AgeConstraints.MinAdultAge}).");
+    //    }
 
-        var currentUserId = _userContextService.GetCurrentUserId();
-        var currentTime = _timeService.SystemTimeNow;
+    //    var currentUserId = _userContextService.GetCurrentUserId();
+    //    var currentTime = _timeService.SystemTimeNow;
 
-        await using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var workshopSchedule = await _unitOfWork.WorkshopScheduleRepository
-                .ActiveEntities
-                .Include(ws => ws.Workshop)
-                .FirstOrDefaultAsync(ws => ws.Id == dto.WorkshopScheduleId && ws.WorkshopId == dto.WorkshopId, cancellationToken)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("workshop hoặc workshop schedule");
+    //    await using var transaction = await _unitOfWork.BeginTransactionAsync();
+    //    try
+    //    {
+    //        var workshopSchedule = await _unitOfWork.WorkshopScheduleRepository
+    //            .ActiveEntities
+    //            .Include(ws => ws.Workshop)
+    //            .FirstOrDefaultAsync(ws => ws.Id == dto.WorkshopScheduleId && ws.WorkshopId == dto.WorkshopId, cancellationToken)
+    //            ?? throw CustomExceptionFactory.CreateNotFoundError("workshop hoặc workshop schedule");
 
-            // kiểm tra số lượng
-            int totalParticipants = dto.Participants.Count;
-            if (workshopSchedule.CurrentBooked + totalParticipants > workshopSchedule.MaxParticipant)
-                throw CustomExceptionFactory.CreateBadRequestError("Workshop không còn đủ chỗ cho số lượng bạn yêu cầu.");
+    //        // kiểm tra số lượng
+    //        int totalParticipants = dto.Participants.Count;
+    //        if (workshopSchedule.CurrentBooked + totalParticipants > workshopSchedule.MaxParticipant)
+    //            throw CustomExceptionFactory.CreateBadRequestError("Workshop không còn đủ chỗ cho số lượng bạn yêu cầu.");
 
-            // tính giá
-            decimal originalPrice = 0;
-            foreach (var p in dto.Participants)
-            {
-                decimal price = p.Type switch
-                {
-                    ParticipantType.Adult => workshopSchedule.AdultPrice,
-                    ParticipantType.Child => workshopSchedule.ChildrenPrice,
-                    _ => 0
-                };
-                originalPrice += price;
-            }
+    //        // tính giá
+    //        decimal originalPrice = 0;
+    //        foreach (var p in dto.Participants)
+    //        {
+    //            decimal price = p.Type switch
+    //            {
+    //                ParticipantType.Adult => workshopSchedule.Pr,
+    //                ParticipantType.Child => workshopSchedule.ChildrenPrice,
+    //                _ => 0
+    //            };
+    //            originalPrice += price;
+    //        }
 
-            // khuyến mãi
-            var (discountAmount, promotion) = await ValidateAndCalculateDiscountAsync(dto.PromotionCode, originalPrice, dto.WorkshopId);
-            decimal finalPrice = Math.Max(0, originalPrice - discountAmount);
+    //        // khuyến mãi
+    //        var (discountAmount, promotion) = await ValidateAndCalculateDiscountAsync(dto.PromotionCode, originalPrice, dto.WorkshopId);
+    //        decimal finalPrice = Math.Max(0, originalPrice - discountAmount);
 
-            var booking = new Booking
-            {
-                UserId = Guid.Parse(currentUserId),
-                WorkshopId = dto.WorkshopId,
-                WorkshopScheduleId = dto.WorkshopScheduleId,
-                BookingType = BookingType.Workshop,
-                Status = BookingStatus.Pending,
-                BookingDate = currentTime,
-                StartDate = workshopSchedule.StartTime,
-                EndDate = workshopSchedule.EndTime,
-                PromotionId = promotion?.Id,
-                OriginalPrice = originalPrice,
-                DiscountAmount = discountAmount,
-                FinalPrice = finalPrice,
-                ContactName = dto.ContactName,
-                ContactEmail = dto.ContactEmail,
-                ContactPhone = dto.ContactPhone,
-                ContactAddress = dto.ContactAddress
-            };
+    //        var booking = new Booking
+    //        {
+    //            UserId = Guid.Parse(currentUserId),
+    //            WorkshopId = dto.WorkshopId,
+    //            WorkshopScheduleId = dto.WorkshopScheduleId,
+    //            BookingType = BookingType.Workshop,
+    //            Status = BookingStatus.Pending,
+    //            BookingDate = currentTime,
+    //            StartDate = workshopSchedule.StartTime,
+    //            EndDate = workshopSchedule.EndTime,
+    //            PromotionId = promotion?.Id,
+    //            OriginalPrice = originalPrice,
+    //            DiscountAmount = discountAmount,
+    //            FinalPrice = finalPrice,
+    //            ContactName = dto.ContactName,
+    //            ContactEmail = dto.ContactEmail,
+    //            ContactPhone = dto.ContactPhone,
+    //            ContactAddress = dto.ContactAddress
+    //        };
 
-            // Add participants chi tiết
-            foreach (var p in dto.Participants)
-            {
-                decimal price = p.Type switch
-                {
-                    ParticipantType.Adult => workshopSchedule.AdultPrice,
-                    ParticipantType.Child => workshopSchedule.ChildrenPrice,
-                    _ => 0
-                };
+    //        // Add participants chi tiết
+    //        foreach (var p in dto.Participants)
+    //        {
+    //            decimal price = p.Type switch
+    //            {
+    //                ParticipantType.Adult => workshopSchedule.AdultPrice,
+    //                ParticipantType.Child => workshopSchedule.ChildrenPrice,
+    //                _ => 0
+    //            };
 
-                booking.Participants.Add(new BookingParticipant
-                {
-                    Type = p.Type,
-                    FullName = p.FullName,
-                    Gender = p.Gender,
-                    DateOfBirth = p.DateOfBirth,
-                    PricePerParticipant = price
-                });
-            }
+    //            booking.Participants.Add(new BookingParticipant
+    //            {
+    //                Type = p.Type,
+    //                FullName = p.FullName,
+    //                Gender = p.Gender,
+    //                DateOfBirth = p.DateOfBirth,
+    //                PricePerParticipant = price
+    //            });
+    //        }
 
-            await _unitOfWork.BookingRepository.AddAsync(booking);
-            await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync();
+    //        await _unitOfWork.BookingRepository.AddAsync(booking);
+    //        await _unitOfWork.SaveAsync();
+    //        await transaction.CommitAsync();
 
-            var userName = _unitOfWork.UserRepository
-                .ActiveEntities
-                .Where(u => u.Id == booking.UserId)
-                .Select(u => u.FullName)
-                .FirstOrDefault();
+    //        var userName = _unitOfWork.UserRepository
+    //            .ActiveEntities
+    //            .Where(u => u.Id == booking.UserId)
+    //            .Select(u => u.FullName)
+    //            .FirstOrDefault();
 
-            string workshopName = workshopSchedule.Workshop?.Name ?? string.Empty;
+    //        string workshopName = workshopSchedule.Workshop?.Name ?? string.Empty;
 
-            return new BookingDataModel
-            {
-                Id = booking.Id,
-                UserId = booking.UserId,
-                UserName = userName,
-                WorkshopId = booking.WorkshopId,
-                WorkshopName = workshopName,
-                WorkshopScheduleId = booking.WorkshopScheduleId,
-                PaymentLinkId = booking.PaymentLinkId,
-                Status = booking.Status,
-                StatusText = _enumService.GetEnumDisplayName<BookingStatus>(booking.Status),
-                BookingType = booking.BookingType,
-                BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(booking.BookingType),
-                BookingDate = booking.BookingDate,
-                StartDate = booking.StartDate,
-                EndDate = booking.EndDate,
-                CancelledAt = booking.CancelledAt,
-                PromotionId = booking.PromotionId,
-                OriginalPrice = booking.OriginalPrice,
-                DiscountAmount = booking.DiscountAmount,
-                FinalPrice = booking.FinalPrice,
-                ContactName = booking.ContactName,
-                ContactAddress = booking.ContactAddress,
-                ContactEmail = booking.ContactEmail,
-                ContactPhone = booking.ContactPhone,
-                Participants = booking.Participants.Select(p => new BookingParticipantDataModel
-                {
-                    Id = p.Id,
-                    BookingId = p.BookingId,
-                    Type = p.Type,
-                    Quantity = 1,
-                    PricePerParticipant = p.PricePerParticipant,
-                    FullName = p.FullName,
-                    Gender = p.Gender,
-                    GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
-                    DateOfBirth = p.DateOfBirth
-                }).ToList()
-            };
-        }
-        catch (CustomException)
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
+    //        return new BookingDataModel
+    //        {
+    //            Id = booking.Id,
+    //            UserId = booking.UserId,
+    //            UserName = userName,
+    //            WorkshopId = booking.WorkshopId,
+    //            WorkshopName = workshopName,
+    //            WorkshopScheduleId = booking.WorkshopScheduleId,
+    //            PaymentLinkId = booking.PaymentLinkId,
+    //            Status = booking.Status,
+    //            StatusText = _enumService.GetEnumDisplayName<BookingStatus>(booking.Status),
+    //            BookingType = booking.BookingType,
+    //            BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(booking.BookingType),
+    //            BookingDate = booking.BookingDate,
+    //            StartDate = booking.StartDate,
+    //            EndDate = booking.EndDate,
+    //            CancelledAt = booking.CancelledAt,
+    //            PromotionId = booking.PromotionId,
+    //            OriginalPrice = booking.OriginalPrice,
+    //            DiscountAmount = booking.DiscountAmount,
+    //            FinalPrice = booking.FinalPrice,
+    //            ContactName = booking.ContactName,
+    //            ContactAddress = booking.ContactAddress,
+    //            ContactEmail = booking.ContactEmail,
+    //            ContactPhone = booking.ContactPhone,
+    //            Participants = booking.Participants.Select(p => new BookingParticipantDataModel
+    //            {
+    //                Id = p.Id,
+    //                BookingId = p.BookingId,
+    //                Type = p.Type,
+    //                Quantity = 1,
+    //                PricePerParticipant = p.PricePerParticipant,
+    //                FullName = p.FullName,
+    //                Gender = p.Gender,
+    //                GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+    //                DateOfBirth = p.DateOfBirth
+    //            }).ToList()
+    //        };
+    //    }
+    //    catch (CustomException)
+    //    {
+    //        await transaction.RollbackAsync();
+    //        throw;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        await transaction.RollbackAsync();
+    //        throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+    //    }
+    //}
 
     public async Task<BookingDataModel> CreateTourGuideBookingAsync(CreateBookingTourGuideDto dto, CancellationToken cancellationToken)
     {
@@ -1767,5 +1767,10 @@ public class BookingService : IBookingService
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
+    }
+
+    public Task<BookingDataModel> CreateWorkshopBookingAsync(CreateBookingWorkshopDto dto, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
     }
 }

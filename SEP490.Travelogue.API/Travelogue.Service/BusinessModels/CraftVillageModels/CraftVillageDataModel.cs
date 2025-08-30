@@ -1,4 +1,5 @@
 ﻿using Travelogue.Service.BusinessModels.MediaModel;
+using Travelogue.Service.BusinessModels.WorkshopModels;
 
 namespace Travelogue.Service.BusinessModels.CraftVillageModels;
 
@@ -20,6 +21,7 @@ public class CraftVillageDataModel // : BaseDataModel
     public bool WorkshopsAvailable { get; set; }
 
     public bool IsRecognizedByUnesco { get; set; } = false;
+    public WorkshopDto? Workshop { get; set; } = new();
     // public double Latitude { get; set; }
     // public double Longitude { get; set; }
     // public Guid? DistrictId { get; set; }

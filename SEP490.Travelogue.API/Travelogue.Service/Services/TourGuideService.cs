@@ -897,6 +897,12 @@ public class TourGuideService : ITourGuideService
         }
     }
 
+    private static bool CanCancelBooking(BookingStatus status)
+    {
+        return status == BookingStatus.Pending
+            || status == BookingStatus.Confirmed;
+    }
+
     public async Task<RejectionRequestResponseDto> RejectRejectionRequestAsync(Guid requestId, RejectRejectionRequestDto dto)
     {
         try

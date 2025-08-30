@@ -55,6 +55,10 @@ public class UnitOfWork : IUnitOfWork
     public IRefundRequestRepository RefundRequestRepository { get; }
     public ICommissionSettingsRepository CommissionSettingsRepository { get; }
     public ICommissionRateRepository CommissionRateRepository { get; }
+    public IWorkshopExceptionRepository WorkshopExceptionRepository { get; }
+    public IWorkshopSessionRuleRepository WorkshopSessionRuleRepository { get; }
+    public IWorkshopRecurringRuleRepository WorkshopRecurringRuleRepository { get; }
+    public IWorkshopTicketTypeRepository WorkshopTicketTypeRepository { get; }
 
     public UnitOfWork(ApplicationDbContext dbContext)
     {
@@ -103,6 +107,10 @@ public class UnitOfWork : IUnitOfWork
         RefundRequestRepository = new RefundRequestRepository(_dbContext);
         CommissionSettingsRepository = new CommissionSettingsRepository(_dbContext);
         CommissionRateRepository = new CommissionRateRepository(_dbContext);
+        WorkshopExceptionRepository = new WorkshopExceptionRepository(_dbContext);
+        WorkshopSessionRuleRepository = new WorkshopSessionRuleRepository(_dbContext);
+        WorkshopRecurringRuleRepository = new WorkshopRecurringRuleRepository(_dbContext);
+        WorkshopTicketTypeRepository = new WorkshopTicketTypeRepository(_dbContext);
     }
 
     public IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity
