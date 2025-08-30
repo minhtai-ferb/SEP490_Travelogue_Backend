@@ -1470,6 +1470,66 @@ public class UserService : IUserService
             {
                 var workshopDto = model.Workshop;
 
+                int SessionLengthMinutes(TimeSpan start, TimeSpan end)
+                {
+                    if (end > start) return (int)(end - start).TotalMinutes;
+                    return (int)((TimeSpan.FromDays(1) - start) + end).TotalMinutes;
+                }
+
+                var allSessionLengths = (workshopDto.RecurringRules ?? Enumerable.Empty<RecurringRuleRequestDto>())
+                    .SelectMany(r => r.Sessions ?? Enumerable.Empty<SessionRequestDto>())
+                    .Select(s =>
+                    {
+                        if (s.EndTime == s.StartTime)
+                            throw CustomExceptionFactory.CreateBadRequestError(
+                                $"Session không hợp lệ: StartTime và EndTime không được bằng nhau. (Start={s.StartTime}, End={s.EndTime})");
+
+                        var len = SessionLengthMinutes(s.StartTime, s.EndTime);
+                        if (len < 1)
+                            throw CustomExceptionFactory.CreateBadRequestError(
+                                $"Session không hợp lệ: độ dài phải >= 1 phút. (Start={s.StartTime}, End={s.EndTime})");
+
+                        return len;
+                    })
+                    .ToList();
+
+                if (!allSessionLengths.Any())
+                    throw CustomExceptionFactory.CreateBadRequestError("RecurringRule phải có ít nhất một session.");
+
+                var minSessionLen = allSessionLengths.Min();
+
+                foreach (var ticket in workshopDto.TicketTypes ?? Enumerable.Empty<TicketTypeRequestDto>())
+                {
+                    if (ticket.DurationMinutes < 1)
+                        throw CustomExceptionFactory.CreateBadRequestError(
+                            $"Ticket \"{ticket.Name}\" phải có DurationMinutes >= 1.");
+
+                    var totalActivityMinutes = (ticket.WorkshopActivities ?? new List<WorkshopActivityRequestDto>())
+                        .Select(a =>
+                        {
+                            if (a.DurationMinutes < 1)
+                                throw CustomExceptionFactory.CreateBadRequestError(
+                                    $"Hoạt động \"{a.Activity}\" phải có DurationMinutes >= 1.");
+                            return a.DurationMinutes;
+                        })
+                        .Sum();
+
+                    if (totalActivityMinutes > ticket.DurationMinutes)
+                        throw CustomExceptionFactory.CreateBadRequestError(
+                            $"Tổng thời lượng hoạt động ({totalActivityMinutes} phút) vượt quá DurationMinutes " +
+                            $"({ticket.DurationMinutes} phút) của ticket \"{ticket.Name}\".");
+
+                    if (ticket.DurationMinutes > minSessionLen)
+                        throw CustomExceptionFactory.CreateBadRequestError(
+                            $"Thời lượng ticket \"{ticket.Name}\" ({ticket.DurationMinutes} phút) " +
+                            $"vượt quá thời lượng session ngắn nhất ({minSessionLen} phút).");
+
+                    if (totalActivityMinutes > minSessionLen)
+                        throw CustomExceptionFactory.CreateBadRequestError(
+                            $"Tổng thời lượng hoạt động ({totalActivityMinutes} phút) của ticket \"{ticket.Name}\" " +
+                            $"vượt quá thời lượng session ngắn nhất ({minSessionLen} phút).");
+                }
+
                 var workshopRequest = new WorkshopRequest
                 {
                     Name = workshopDto.Name,
@@ -1509,8 +1569,7 @@ public class UserService : IUserService
                             {
                                 Activity = actDto.Activity,
                                 Description = actDto.Description,
-                                StartHour = actDto.StartHour,
-                                EndHour = actDto.EndHour,
+                                DurationMinutes = actDto.DurationMinutes,
                                 ActivityOrder = actDto.ActivityOrder
                             });
                         }
@@ -1524,8 +1583,6 @@ public class UserService : IUserService
                     var rule = new WorkshopRecurringRuleRequest
                     {
                         DaysOfWeek = ruleDto.DaysOfWeek,
-                        StartDate = ruleDto.StartDate,
-                        EndDate = ruleDto.EndDate,
                         Sessions = new List<WorkshopSessionRequest>()
                     };
 
@@ -1868,8 +1925,7 @@ public class UserService : IUserService
                                         WorkshopTicketTypeId = ticket.Id,
                                         Activity = act.Activity,
                                         Description = act.Description ?? string.Empty,
-                                        StartHour = act.StartHour,
-                                        EndHour = act.EndHour,
+                                        DurationMinutes = act.DurationMinutes,
                                         ActivityOrder = act.ActivityOrder,
                                         CreatedTime = DateTimeOffset.UtcNow,
                                         LastUpdatedTime = DateTimeOffset.UtcNow,
@@ -1890,8 +1946,6 @@ public class UserService : IUserService
                             {
                                 WorkshopId = workshop.Id,
                                 DaysOfWeek = rr.DaysOfWeek ?? new List<DayOfWeek>(),
-                                StartDate = rr.StartDate,
-                                EndDate = rr.EndDate,
                                 CreatedTime = DateTimeOffset.UtcNow,
                                 LastUpdatedTime = DateTimeOffset.UtcNow,
                                 CreatedBy = currentUserId,
@@ -1941,6 +1995,7 @@ public class UserService : IUserService
 
                     var today = DateTime.UtcNow.Date;
                     var generationHorizonDays = 90;
+                    var horizonEnd = today.AddDays(generationHorizonDays);
 
                     if (wReq.RecurringRules != null && wReq.RecurringRules.Any())
                     {
@@ -1953,35 +2008,27 @@ public class UserService : IUserService
                         {
                             if (rr.Sessions == null || rr.Sessions.Count == 0) continue;
 
-                            var startDate = rr.StartDate.Date < today ? today : rr.StartDate.Date;
-                            var endDate = (rr.EndDate?.Date) ?? today.AddDays(generationHorizonDays);
-
                             var days = rr.DaysOfWeek ?? new List<DayOfWeek>();
                             if (days.Count == 0) continue;
 
-                            for (var d = startDate; d <= endDate; d = d.AddDays(1))
+                            var occurrenceDates = ExpandDatesByDaysOfWeek(today, horizonEnd, days)
+                                .Where(d => !exceptionDates.Contains(d));
+
+                            foreach (var d in occurrenceDates)
                             {
-                                if (!days.Contains(d.DayOfWeek)) continue;
-
-                                if (exceptionDates.Contains(d)) continue;
-
                                 foreach (var s in rr.Sessions)
                                 {
-                                    var start = d.Add(s.StartTime);
-                                    var end = d.Add(s.EndTime);
+                                    DateTime start = d.Add(s.StartTime);
+                                    DateTime end = (s.EndTime > s.StartTime)
+                                                        ? d.Add(s.EndTime)
+                                                        : d.AddDays(1).Add(s.EndTime);
 
-                                    if (end <= start)
-                                    {
-                                        end = start.AddMinutes(1);
-                                    }
+                                    if (end <= start) end = start.AddMinutes(1);
 
-                                    var exists = await _unitOfWork.WorkshopScheduleRepository.ActiveEntities
-                                        .AnyAsync(x =>
-                                            x.WorkshopId == workshop.Id &&
-                                            x.StartTime == start &&
-                                            x.EndTime == end,
-                                            cancellationToken);
-
+                                    bool exists = await _unitOfWork.WorkshopScheduleRepository.ActiveEntities
+                                        .AnyAsync(x => x.WorkshopId == workshop.Id &&
+                                                       x.StartTime == start &&
+                                                       x.EndTime == end, cancellationToken);
                                     if (exists) continue;
 
                                     var schedule = new WorkshopSchedule
@@ -2341,8 +2388,7 @@ public class UserService : IUserService
                             Id = a.Id,
                             Activity = a.Activity,
                             Description = a.Description,
-                            StartHour = a.StartHour,
-                            EndHour = a.EndHour,
+                            DurationMinutes = a.DurationMinutes,
                             ActivityOrder = a.ActivityOrder
                         }).ToList()
                 }).ToList(),
@@ -2352,8 +2398,6 @@ public class UserService : IUserService
                 {
                     Id = rr.Id,
                     DaysOfWeek = rr.DaysOfWeek ?? new List<DayOfWeek>(),
-                    StartDate = rr.StartDate,
-                    EndDate = rr.EndDate,
                     Sessions = (rr.Sessions ?? Enumerable.Empty<WorkshopSessionRequest>())
                         .Select(s => new SessionRequestResponseDto
                         {
@@ -2373,6 +2417,26 @@ public class UserService : IUserService
                     IsActive = ex.IsActive
                 }).ToList()
         };
+    }
+
+    // ngày trong một DayOfWeek trong 
+    private static IEnumerable<DateTime> DatesForDayOfWeek(DateTime start, DateTime end, DayOfWeek dow)
+    {
+        start = start.Date; end = end.Date;
+        // offset để tìm ngày đầu tiên có DayOfWeek = dow
+        int offset = ((int)dow - (int)start.DayOfWeek + 7) % 7;
+        var first = start.AddDays(offset);
+        for (var d = first; d <= end; d = d.AddDays(7))
+            yield return d;
+    }
+
+    private static IEnumerable<DateTime> ExpandDatesByDaysOfWeek(DateTime start, DateTime end, IEnumerable<DayOfWeek> days)
+    {
+        var set = new HashSet<DateTime>();
+        foreach (var dow in days.Distinct())
+            foreach (var d in DatesForDayOfWeek(start, end, dow))
+                set.Add(d);
+        return set.OrderBy(d => d);
     }
 
     private string GenerateRandomPassword()

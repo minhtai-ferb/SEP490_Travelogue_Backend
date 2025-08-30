@@ -26,6 +26,8 @@ public interface IWorkshopService
         string? name,
         CancellationToken cancellationToken = default);
 
+    Task<WorkshopDto> GetWorkshopByIdAsync(Guid workshopId, CancellationToken cancellationToken = default);
+
     //// Task<WorkshopResponseDto> ConfirmWorkshopAsync(Guid workshopId, ConfirmWorkshopDto dto);
     //Task DeleteWorkshopAsync(Guid workshopId);
     //// Task<WorkshopDetailsResponseDto> GetWorkshopDetailsAsync(Guid workshopId);
@@ -189,8 +191,7 @@ public class WorkshopService : IWorkshopService
                             {
                                 Activity = a.Activity,
                                 Description = a.Description,
-                                StartHour = a.StartHour,
-                                EndHour = a.EndHour,
+                                DurationMinutes = a.DurationMinutes,
                                 ActivityOrder = a.ActivityOrder
                             }).ToList()
                     }).ToList(),
@@ -212,8 +213,6 @@ public class WorkshopService : IWorkshopService
                         .Select(rr => new RecurringRuleRequestDto
                         {
                             DaysOfWeek = rr.DaysOfWeek.ToList() ?? new List<DayOfWeek>(),
-                            StartDate = rr.StartDate,
-                            EndDate = rr.EndDate,
                             Sessions = rr.Sessions.Select(s => new SessionRequestDto
                             {
                                 StartTime = s.StartTime,
@@ -243,6 +242,33 @@ public class WorkshopService : IWorkshopService
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
+
+    public async Task<WorkshopDto> GetWorkshopByIdAsync(Guid workshopId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var query = _unitOfWork.WorkshopRepository
+                .ActiveEntities
+                .AsNoTracking()
+                .Where(w => w.Id == workshopId)
+                .Include(w => w.TicketTypes).ThenInclude(tt => tt.WorkshopActivities)
+                .Include(w => w.RecurringRules).ThenInclude(rr => rr.Sessions)
+                .Include(w => w.Exceptions)
+                .Include(w => w.Schedules)
+                .AsSplitQuery();
+
+            var entity = await query.FirstOrDefaultAsync(cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
+
+            return MapWorkshopEntityToDto(entity);
+        }
+        catch (CustomException) { throw; }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
 
     public async Task<List<WorkshopResponseDto>> ModeratorGetFilteredWorkshopsAsync(FilterWorkshop filter, CancellationToken cancellationToken)
     {
@@ -1836,6 +1862,73 @@ public class WorkshopService : IWorkshopService
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
+    }
+
+    private static WorkshopDto MapWorkshopEntityToDto(Workshop w)
+    {
+        return new WorkshopDto
+        {
+            Name = w.Name,
+            Description = w.Description,
+            Content = w.Content,
+            Status = w.Status,
+
+            TicketTypes = (w.TicketTypes ?? Enumerable.Empty<WorkshopTicketType>())
+                .Select(tt => new TicketTypeRequestDto
+                {
+                    Type = tt.Type,
+                    Name = tt.Name,
+                    Price = tt.Price,
+                    IsCombo = tt.IsCombo,
+                    DurationMinutes = tt.DurationMinutes,
+                    Content = tt.Content,
+                    WorkshopActivities = (tt.WorkshopActivities ?? Enumerable.Empty<WorkshopActivity>())
+                        .OrderBy(a => a.ActivityOrder)
+                        .Select(a => new WorkshopActivityRequestDto
+                        {
+                            Activity = a.Activity,
+                            Description = a.Description,
+                            DurationMinutes = a.DurationMinutes,
+                            ActivityOrder = a.ActivityOrder
+                        }).ToList()
+                }).ToList(),
+
+            Schedules = (w.Schedules ?? Enumerable.Empty<WorkshopSchedule>())
+                .OrderBy(s => s.StartTime)
+                .Select(s => new WorkshopScheduleResponseDto
+                {
+                    Id = s.Id,
+                    StartTime = s.StartTime,
+                    EndTime = s.EndTime,
+                    Capacity = s.Capacity,
+                    CurrentBooked = s.CurrentBooked,
+                    Status = s.Status,
+                    Notes = s.Notes
+                }).ToList(),
+
+            RecurringRules = (w.RecurringRules ?? Enumerable.Empty<WorkshopRecurringRule>())
+                .Select(rr => new RecurringRuleRequestDto
+                {
+                    DaysOfWeek = rr.DaysOfWeek != null
+                        ? rr.DaysOfWeek.ToList()
+                        : new List<DayOfWeek>(),
+                    Sessions = (rr.Sessions ?? Enumerable.Empty<WorkshopSessionRule>())
+                        .Select(s => new SessionRequestDto
+                        {
+                            StartTime = s.StartTime,
+                            EndTime = s.EndTime,
+                            Capacity = s.Capacity
+                        }).ToList()
+                }).ToList(),
+
+            Exceptions = (w.Exceptions ?? Enumerable.Empty<WorkshopException>())
+                .Select(ex => new WorkshopExceptionRequestDto
+                {
+                    Date = ex.Date,
+                    Reason = ex.Reason,
+                    IsActive = ex.IsActive
+                }).ToList()
+        };
     }
     #endregion
 }

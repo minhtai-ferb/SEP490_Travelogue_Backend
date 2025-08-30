@@ -1188,7 +1188,7 @@ public class LocationService : ILocationService
                     .AsNoTracking()
                     .Where(w => w.CraftVillageId == craftVillage.Id)
                     .Include(w => w.TicketTypes).ThenInclude(tt => tt.WorkshopActivities)
-                    // .Include(w => w.RecurringRules).ThenInclude(rr => rr.Sessions)
+                    .Include(w => w.RecurringRules).ThenInclude(rr => rr.Sessions)
                     .Include(w => w.Exceptions)
                     .Include(w => w.Schedules)
                     .AsSplitQuery();
@@ -2587,8 +2587,7 @@ public class LocationService : ILocationService
                         {
                             Activity = a.Activity,
                             Description = a.Description,
-                            StartHour = a.StartHour,
-                            EndHour = a.EndHour,
+                            DurationMinutes = a.DurationMinutes,
                             ActivityOrder = a.ActivityOrder
                         }).ToList() ?? new List<WorkshopActivityRequestDto>()
                 }).ToList() ?? new List<TicketTypeRequestDto>(),
@@ -2610,8 +2609,6 @@ public class LocationService : ILocationService
                 .Select(rr => new RecurringRuleRequestDto
                 {
                     DaysOfWeek = rr.DaysOfWeek?.ToList() ?? new List<DayOfWeek>(),
-                    StartDate = rr.StartDate,
-                    EndDate = rr.EndDate,
                     Sessions = rr.Sessions?
                         .Select(s => new SessionRequestDto
                         {

@@ -196,6 +196,7 @@ public class TripPlanService : ITripPlanService
             // Map new values from dto
             tripPlan.Name = dto.Name;
             tripPlan.Description = dto.Description;
+            tripPlan.PickupAddress = dto.PickupAddress;
             tripPlan.StartDate = dto.StartDate;
             tripPlan.EndDate = dto.EndDate;
             tripPlan.ImageUrl = dto.ImageUrl;
@@ -213,6 +214,7 @@ public class TripPlanService : ITripPlanService
                 Id = tripPlan.Id,
                 Name = tripPlan.Name,
                 Description = tripPlan.Description,
+                PickupAddress = tripPlan.PickupAddress,
                 StartDate = tripPlan.StartDate,
                 EndDate = tripPlan.EndDate,
                 ImageUrl = tripPlan.ImageUrl,
@@ -254,6 +256,7 @@ public class TripPlanService : ITripPlanService
                 Id = tripPlan.Id,
                 Name = tripPlan.Name,
                 Description = tripPlan.Description,
+                PickupAddress = tripPlan.PickupAddress,
                 StartDate = tripPlan.StartDate,
                 EndDate = tripPlan.EndDate,
                 TotalDays = (tripPlan.EndDate - tripPlan.StartDate).Days + 1,

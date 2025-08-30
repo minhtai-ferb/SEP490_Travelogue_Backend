@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Travelogue.Repository.Data;
 
@@ -11,9 +12,11 @@ using Travelogue.Repository.Data;
 namespace Travelogue.Repository.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250830135412_WorkshopActivity")]
+    partial class WorkshopActivity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -676,27 +679,27 @@ namespace Travelogue.Repository.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("ce13ce40-3593-4982-8892-da0fb35a6ab3"),
+                            Id = new Guid("f7188b12-540b-465f-af09-cd539c428844"),
                             CreatedBy = "System",
-                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 30, 14, 50, 41, 445, DateTimeKind.Unspecified).AddTicks(5128), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 30, 13, 54, 9, 472, DateTimeKind.Unspecified).AddTicks(836), new TimeSpan(0, 0, 0, 0, 0)),
                             EffectiveDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             IsActive = true,
                             IsDeleted = false,
                             LastUpdatedBy = "System",
-                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 30, 14, 50, 41, 445, DateTimeKind.Unspecified).AddTicks(5136), new TimeSpan(0, 0, 0, 0, 0)),
+                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 30, 13, 54, 9, 472, DateTimeKind.Unspecified).AddTicks(843), new TimeSpan(0, 0, 0, 0, 0)),
                             RateValue = 5m,
                             Type = 1
                         },
                         new
                         {
-                            Id = new Guid("b6c77e60-bc7a-4c0c-b11a-df1ffdb41273"),
+                            Id = new Guid("19bb7afe-6436-4f2f-8c6a-19896f55b13e"),
                             CreatedBy = "System",
-                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 30, 14, 50, 41, 445, DateTimeKind.Unspecified).AddTicks(5145), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 30, 13, 54, 9, 472, DateTimeKind.Unspecified).AddTicks(851), new TimeSpan(0, 0, 0, 0, 0)),
                             EffectiveDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             IsActive = true,
                             IsDeleted = false,
                             LastUpdatedBy = "System",
-                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 30, 14, 50, 41, 445, DateTimeKind.Unspecified).AddTicks(5146), new TimeSpan(0, 0, 0, 0, 0)),
+                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 30, 13, 54, 9, 472, DateTimeKind.Unspecified).AddTicks(852), new TimeSpan(0, 0, 0, 0, 0)),
                             RateValue = 3m,
                             Type = 2
                         });
@@ -2426,12 +2429,12 @@ namespace Travelogue.Repository.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("08affc58-3282-4cab-bc7f-736bae9493d0"),
-                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 30, 21, 50, 41, 445, DateTimeKind.Unspecified).AddTicks(4672), new TimeSpan(0, 7, 0, 0, 0)),
+                            Id = new Guid("eb3cbbfd-1398-4fa2-afe8-db6bca29acc8"),
+                            CreatedTime = new DateTimeOffset(new DateTime(2025, 8, 30, 20, 54, 9, 472, DateTimeKind.Unspecified).AddTicks(367), new TimeSpan(0, 7, 0, 0, 0)),
                             IsActive = true,
                             IsDeleted = false,
                             Key = 1,
-                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 30, 21, 50, 41, 445, DateTimeKind.Unspecified).AddTicks(4721), new TimeSpan(0, 7, 0, 0, 0)),
+                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 8, 30, 20, 54, 9, 472, DateTimeKind.Unspecified).AddTicks(431), new TimeSpan(0, 7, 0, 0, 0)),
                             Unit = "%",
                             Value = "10"
                         });
@@ -2491,19 +2494,9 @@ namespace Travelogue.Repository.Migrations
                         .HasColumnType("varchar(150)")
                         .HasColumnName("name");
 
-                    b.Property<string>("PickupAddress")
-                        .HasMaxLength(300)
-                        .HasColumnType("varchar(300)")
-                        .HasColumnName("pickup_address");
-
                     b.Property<int>("Status")
                         .HasColumnType("int")
                         .HasColumnName("status");
-
-                    b.Property<string>("StayInfo")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)")
-                        .HasColumnName("stay_info");
 
                     b.Property<int>("TotalDays")
                         .HasColumnType("int")
@@ -2569,10 +2562,6 @@ namespace Travelogue.Repository.Migrations
                     b.Property<DateTimeOffset>("LastUpdatedTime")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_updated_time");
-
-                    b.Property<int>("MaxParticipants")
-                        .HasColumnType("int")
-                        .HasColumnName("max_participants");
 
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(65,30)")
@@ -3435,10 +3424,6 @@ namespace Travelogue.Repository.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)")
                         .HasColumnName("name");
-
-                    b.Property<string>("PickupAddress")
-                        .HasColumnType("longtext")
-                        .HasColumnName("pickup_address");
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime(6)")

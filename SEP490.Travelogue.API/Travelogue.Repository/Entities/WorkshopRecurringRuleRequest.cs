@@ -10,7 +10,5 @@ namespace Travelogue.Repository.Entities;
 public sealed class WorkshopRecurringRuleRequest : BaseEntity
 {
     public List<DayOfWeek> DaysOfWeek { get; set; } = new();
-    public DateTime StartDate { get; set; }
-    public DateTime? EndDate { get; set; }
     public ICollection<WorkshopSessionRequest> Sessions { get; set; } = new List<WorkshopSessionRequest>();
 }

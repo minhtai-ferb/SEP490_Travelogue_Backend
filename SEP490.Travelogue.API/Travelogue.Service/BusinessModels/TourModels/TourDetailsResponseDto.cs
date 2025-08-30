@@ -11,6 +11,8 @@ public class TourDetailsResponseDto
     public string? Description { get; set; }
     public string? Content { get; set; }
     public string? TransportType { get; set; }
+    public string? PickupAddress { get; set; }
+    public string? StayInfo { get; set; }
     public int TotalDays { get; set; }
     public TourType? TourType { get; set; }
     public string? TourTypeText { get; set; }
@@ -63,6 +65,7 @@ public class TourActivity
     public float DistanceFromPrev { get; set; }
     public float EstimatedStartTime { get; set; }
     public float EstimatedEndTime { get; set; }
+    public TourActivityWorkshopInfo? Workshop { get; set; }
     // public decimal? Rating { get; set; }
 }
 
@@ -75,4 +78,21 @@ public class PromotionDto
     public decimal DiscountAmount { get; set; } = 0;
     public DateTimeOffset StartDate { get; set; }
     public DateTimeOffset EndDate { get; set; }
+}
+
+public class TourActivityWorkshopInfo
+{
+    public Guid? WorkshopId { get; set; }
+    public string? WorkshopName { get; set; }
+
+    public Guid? WorkshopTicketTypeId { get; set; }
+    public string? WorkshopTicketTypeName { get; set; }
+    public int? WorkshopTicketDurationMinutes { get; set; }
+    public decimal? WorkshopTicketPrice { get; set; }
+
+    public Guid? WorkshopSessionRuleId { get; set; }
+    public TimeSpan? WorkshopSessionStart { get; set; }
+    public TimeSpan? WorkshopSessionEnd { get; set; }
+    public string? WorkshopSessionTimeFormatted { get; set; }
+    public int? WorkshopSessionCapacity { get; set; }
 }

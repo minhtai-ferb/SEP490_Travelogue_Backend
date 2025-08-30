@@ -39,8 +39,8 @@ public class WorkshopActivityRequestResponseDto
     public Guid Id { get; set; }
     public string Activity { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public TimeSpan StartHour { get; set; }
-    public TimeSpan EndHour { get; set; }
+    public int DurationMinutes { get; set; }
+
     public int ActivityOrder { get; set; }
 }
 

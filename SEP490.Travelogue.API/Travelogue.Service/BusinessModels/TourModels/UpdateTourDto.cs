@@ -13,6 +13,8 @@ public class UpdateTourDto
     public string? Description { get; set; }
     public string? Content { get; set; }
     public string? TransportType { get; set; }
+    public string? PickupAddress { get; set; }
+    public string? StayInfo { get; set; }
 
     [Range(1, int.MaxValue)]
     public int TotalDays { get; set; }

@@ -29,4 +29,5 @@ public sealed class TourPlanLocation : BaseEntity
 
     public Tour Tour { get; set; } = null!;
     public Location Location { get; set; } = null!;
+    public TourPlanLocationWorkshop? WorkshopDetail { get; set; }
 }
