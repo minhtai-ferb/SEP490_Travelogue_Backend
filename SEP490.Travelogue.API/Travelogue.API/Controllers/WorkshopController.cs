@@ -34,6 +34,17 @@ public class WorkshopController : ControllerBase
         ));
     }
 
+    [HttpGet("{workshopId}")]
+    public async Task<IActionResult> GetWorkshopByIdAsync(Guid workshopId, CancellationToken cancellationToken)
+    {
+        var result = await _workshopService.GetWorkshopByIdAsync(workshopId, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "workshops")
+        ));
+    }
+
+
     /// <summary>
     /// moderator filter các workshop theo các điều kiện kèm theo status (đã duyệt hay chưa)
     /// </summary>

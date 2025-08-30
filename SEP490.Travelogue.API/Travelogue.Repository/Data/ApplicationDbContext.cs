@@ -61,6 +61,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<TourPlanLocation> TourPlanLocations { get; set; }
     public DbSet<TourGuideSchedule> TourGuideSchedules { get; set; }
     public DbSet<TourMedia> TourMedias { get; set; }
+    public DbSet<TourScheduleWorkshop> TourScheduleWorkshops { get; set; }
+    public DbSet<TourPlanLocationWorkshop> TourPlanLocationWorkshops { get; set; }
     // public DbSet<TourGroup> TourGroups { get; set; }
     // public DbSet<TourGroupMember> TourGroupMembers { get; set; }
     // public DbSet<TourJoinRequest> TourJoinRequests { get; set; }

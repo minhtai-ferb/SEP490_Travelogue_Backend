@@ -955,16 +955,14 @@ public class TourService : ITourService
 
             var hasPermission = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
             if (!hasPermission)
-            {
                 throw CustomExceptionFactory.CreateForbiddenError();
-            }
 
             var tour = await _unitOfWork.TourRepository
                 .ActiveEntities
                 .Include(t => t.TourPlanLocations)
+                    .ThenInclude(p => p.WorkshopDetail)
                 .Include(t => t.TourSchedules)
-                .Include(t => t.Bookings)
-                .ThenInclude(b => b.User)
+                .Include(t => t.Bookings).ThenInclude(b => b.User)
                 .FirstOrDefaultAsync(t => t.Id == tourId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Tour");
 
@@ -988,6 +986,7 @@ public class TourService : ITourService
 
             var locationIds = dtos.Select(d => d.LocationId).Distinct().ToList();
 
+            // ---- Prefetch thông tin Location (kèm loại)
             var locations = await _unitOfWork.LocationRepository
                 .ActiveEntities
                 .Where(l => locationIds.Contains(l.Id))
@@ -995,7 +994,8 @@ public class TourService : ITourService
                 {
                     l.Id,
                     l.OpenTime,
-                    l.CloseTime
+                    l.CloseTime,
+                    l.LocationType
                 })
                 .ToListAsync();
 
@@ -1003,6 +1003,14 @@ public class TourService : ITourService
             var invalidLocations = locationIds.Except(validLocationIds).ToList();
             if (invalidLocations.Any())
                 throw CustomExceptionFactory.CreateBadRequestError($"Các ID địa điểm không hợp lệ: {string.Join(", ", invalidLocations)}");
+
+            var craftVillageMap = await _unitOfWork.CraftVillageRepository
+                .ActiveEntities
+                .Where(cv => locationIds.Contains(cv.LocationId))
+                .Select(cv => new { cv.LocationId, CraftVillageId = cv.Id })
+                .ToListAsync();
+
+            var locToCv = craftVillageMap.ToDictionary(x => x.LocationId, x => x.CraftVillageId);
 
             var invalidTimeLocations = new List<string>();
             foreach (var dto in dtos)
@@ -1016,17 +1024,19 @@ public class TourService : ITourService
                     }
                 }
             }
-
             if (invalidTimeLocations.Any())
-                throw CustomExceptionFactory.CreateBadRequestError(
-                    $"Các địa điểm có giờ không hợp lệ: {string.Join("; ", invalidTimeLocations)}");
+                throw CustomExceptionFactory.CreateBadRequestError($"Các địa điểm có giờ không hợp lệ: {string.Join("; ", invalidTimeLocations)}");
 
             var existingLocations = tour.TourPlanLocations.Where(l => !l.IsDeleted).ToList();
+
             var providedLocationIds = dtos.Where(d => d.TourPlanLocationId.HasValue).Select(d => d.TourPlanLocationId.Value).ToList();
             var toDelete = existingLocations.Where(l => !providedLocationIds.Contains(l.Id)).ToList();
-            var toAdd = dtos.Where(d => !d.TourPlanLocationId.HasValue)
+
+            var toAdd = dtos
+                .Where(d => !d.TourPlanLocationId.HasValue)
                 .Select(d => new TourPlanLocation
                 {
+                    Id = Guid.NewGuid(),
                     TourId = tourId,
                     LocationId = d.LocationId,
                     DayOrder = d.DayOrder,
@@ -1039,10 +1049,15 @@ public class TourService : ITourService
                     EstimatedEndTime = d.EstimatedEndTime,
                     ActivityType = d.ActivityType,
                     IsActive = true,
-                    IsDeleted = false
-                }).ToList();
-            var toUpdate = dtos.Where(d => d.TourPlanLocationId.HasValue).ToList();
+                    IsDeleted = false,
+                    CreatedBy = userId.ToString(),
+                    CreatedTime = DateTimeOffset.UtcNow,
+                    LastUpdatedBy = userId.ToString(),
+                    LastUpdatedTime = DateTimeOffset.UtcNow
+                })
+                .ToList();
 
+            var toUpdate = dtos.Where(d => d.TourPlanLocationId.HasValue).ToList();
             var updateIds = toUpdate.Select(u => u.TourPlanLocationId.Value).ToHashSet();
 
             // Validate time overlaps
@@ -1050,7 +1065,7 @@ public class TourService : ITourService
                 .Where(l => !toDelete.Contains(l) && !updateIds.Contains(l.Id))
                 .Select(l => new { l.Id, l.StartTime, l.EndTime, l.DayOrder })
                 .Concat(toAdd.Select(l => new { Id = Guid.Empty, l.StartTime, l.EndTime, l.DayOrder }))
-                .Concat(toUpdate.Select(u => new { Id = u.TourPlanLocationId.Value, u.StartTime, u.EndTime, u.DayOrder }))
+                .Concat(toUpdate.Select(u => new { Id = u.TourPlanLocationId!.Value, u.StartTime, u.EndTime, u.DayOrder }))
                 .GroupBy(l => l.DayOrder)
                 .ToList();
 
@@ -1067,21 +1082,8 @@ public class TourService : ITourService
             tour.Status = TourStatus.Draft;
             _unitOfWork.TourRepository.Update(tour);
 
-            // Validate TotalDays
-            // var maxDayOrder = Math.Max(
-            //     existingLocations.Any() ? existingLocations.Max(l => l.DayOrder) : 0,
-            //     toAdd.Any() ? toAdd.Max(l => l.DayOrder) : 0
-            // );
-            // maxDayOrder = Math.Max(maxDayOrder, toUpdate.Any() ? toUpdate.Max(u => u.DayOrder) : 0);
-            // if (tour.TotalDays < maxDayOrder)
-            //     throw CustomExceptionFactory.CreateBadRequestError($"Tổng số ngày ({tour.TotalDays}) không được nhỏ hơn Ngày lớn nhất ({maxDayOrder}).");
-
-            // Kiểm tra số lượng lịch trình
-            // var scheduleDates = tour.TourSchedules.Select(s => s.DepartureDate.Date).Distinct().Count();
-            // if (scheduleDates < maxDayOrder)
-            //     throw CustomExceptionFactory.CreateBadRequestError($"Không đủ lịch trình ({scheduleDates}) để bao phủ Ngày thứ {maxDayOrder}.");
-
             var changes = new List<string>();
+
             using (var transaction = await _unitOfWork.BeginTransactionAsync())
             {
                 try
@@ -1091,21 +1093,94 @@ public class TourService : ITourService
                         location.IsDeleted = true;
                         location.LastUpdatedTime = DateTimeOffset.UtcNow;
                         changes.Add($"Đã xóa địa điểm: {location.LocationId}");
+                        _unitOfWork.TourPlanLocationRepository.Update(location);
+
+                        if (location.WorkshopDetail != null && !location.WorkshopDetail.IsDeleted)
+                        {
+                            location.WorkshopDetail.IsDeleted = true;
+                            location.WorkshopDetail.LastUpdatedBy = userId.ToString();
+                            location.WorkshopDetail.LastUpdatedTime = DateTimeOffset.UtcNow;
+                            _unitOfWork.TourPlanLocationWorkshopRepository.Update(location.WorkshopDetail);
+                        }
                     }
 
-                    if (toAdd?.Any() == true)
+                    if (toAdd.Count > 0)
+                    {
                         await _unitOfWork.TourPlanLocationRepository.AddRangeAsync(toAdd);
-                    foreach (var location in toAdd)
-                        changes.Add($"Đã thêm địa điểm: {location.LocationId}");
+                        foreach (var l in toAdd)
+                            changes.Add($"Đã thêm địa điểm: {l.LocationId}");
+                    }
+
+                    foreach (var dto in dtos.Where(d => !d.TourPlanLocationId.HasValue))
+                    {
+                        if (dto.ActivityType != ActivityType.Workshop || !dto.WorkshopId.HasValue)
+                            continue;
+
+                        var locMeta = locations.First(l => l.Id == dto.LocationId);
+
+                        if (locMeta.LocationType != LocationType.CraftVillage)
+                            throw CustomExceptionFactory.CreateBadRequestError($"Địa điểm {dto.LocationId} không phải là làng nghề.");
+
+                        if (!locToCv.TryGetValue(dto.LocationId, out var craftVillageId))
+                            throw CustomExceptionFactory.CreateBadRequestError($"Không tìm thấy làng nghề cho địa điểm {dto.LocationId}.");
+
+                        var wkOk = await _unitOfWork.WorkshopRepository.ActiveEntities
+                            .AnyAsync(w => w.Id == dto.WorkshopId.Value && w.CraftVillageId == craftVillageId);
+                        if (!wkOk)
+                            throw CustomExceptionFactory.CreateBadRequestError("Workshop không thuộc làng nghề của địa điểm.");
+
+                        if (dto.WorkshopTicketTypeId.HasValue)
+                        {
+                            var ttOk = await _unitOfWork.WorkshopTicketTypeRepository.ActiveEntities
+                                .AnyAsync(tt => tt.Id == dto.WorkshopTicketTypeId.Value && tt.WorkshopId == dto.WorkshopId.Value);
+                            if (!ttOk)
+                                throw CustomExceptionFactory.CreateBadRequestError("Ticket type không thuộc workshop đã chọn.");
+                        }
+
+                        if (dto.WorkshopSessionRuleId.HasValue)
+                        {
+                            var srOk = await _unitOfWork.WorkshopSessionRuleRepository.ActiveEntities
+                                .AnyAsync(sr => sr.Id == dto.WorkshopSessionRuleId.Value
+                                             && sr.RecurringRule.WorkshopId == dto.WorkshopId.Value);
+                            if (!srOk)
+                                throw CustomExceptionFactory.CreateBadRequestError("Session rule không thuộc workshop đã chọn.");
+                        }
+
+                        var addedEntity = toAdd.First(a =>
+                            a.LocationId == dto.LocationId &&
+                            a.DayOrder == dto.DayOrder &&
+                            a.StartTime == dto.StartTime &&
+                            a.EndTime == dto.EndTime);
+
+                        var plannedStart = dto.PreferredStartTime ?? dto.StartTime;
+                        var plannedEnd = dto.PreferredEndTime ?? dto.EndTime;
+
+                        var tplw = new TourPlanLocationWorkshop
+                        {
+                            Id = Guid.NewGuid(),
+                            TourPlanLocationId = addedEntity.Id,
+                            WorkshopId = dto.WorkshopId.Value,
+                            WorkshopTicketTypeId = dto.WorkshopTicketTypeId,
+                            WorkshopSessionRuleId = dto.WorkshopSessionRuleId,
+                            PlannedStartTime = plannedStart,
+                            PlannedEndTime = plannedEnd,
+                            Notes = dto.Notes,
+                            CreatedBy = userId.ToString(),
+                            CreatedTime = DateTimeOffset.UtcNow,
+                            LastUpdatedBy = userId.ToString(),
+                            LastUpdatedTime = DateTimeOffset.UtcNow
+                        };
+                        await _unitOfWork.TourPlanLocationWorkshopRepository.AddAsync(tplw);
+                    }
 
                     foreach (var dto in toUpdate)
                     {
-                        var tourPlanLocation = existingLocations.First(l => l.Id == dto.TourPlanLocationId.Value);
+                        var tourPlanLocation = existingLocations.First(l => l.Id == dto.TourPlanLocationId!.Value);
+
                         tourPlanLocation.LocationId = dto.LocationId;
                         tourPlanLocation.DayOrder = dto.DayOrder;
                         tourPlanLocation.StartTime = dto.StartTime;
                         tourPlanLocation.EndTime = dto.EndTime;
-                        tourPlanLocation.Notes = dto.Notes;
                         tourPlanLocation.Notes = dto.Notes;
                         tourPlanLocation.ActivityType = dto.ActivityType;
                         tourPlanLocation.TravelTimeFromPrev = dto.TravelTimeFromPrev;
@@ -1113,7 +1188,88 @@ public class TourService : ITourService
                         tourPlanLocation.EstimatedStartTime = dto.EstimatedStartTime;
                         tourPlanLocation.EstimatedEndTime = dto.EstimatedEndTime;
                         tourPlanLocation.LastUpdatedTime = DateTimeOffset.UtcNow;
+                        _unitOfWork.TourPlanLocationRepository.Update(tourPlanLocation);
                         changes.Add($"Đã cập nhật địa điểm: {dto.LocationId}");
+
+                        var locMeta = locations.First(l => l.Id == dto.LocationId);
+
+                        if (dto.ActivityType != ActivityType.Workshop || !dto.WorkshopId.HasValue)
+                        {
+                            if (tourPlanLocation.WorkshopDetail != null && !tourPlanLocation.WorkshopDetail.IsDeleted)
+                            {
+                                tourPlanLocation.WorkshopDetail.IsDeleted = true;
+                                tourPlanLocation.WorkshopDetail.LastUpdatedBy = userId.ToString();
+                                tourPlanLocation.WorkshopDetail.LastUpdatedTime = DateTimeOffset.UtcNow;
+                                _unitOfWork.TourPlanLocationWorkshopRepository.Update(tourPlanLocation.WorkshopDetail);
+                            }
+                        }
+                        else
+                        {
+                            if (locMeta.LocationType != LocationType.CraftVillage)
+                                throw CustomExceptionFactory.CreateBadRequestError($"Địa điểm {dto.LocationId} không phải là làng nghề.");
+
+                            if (!locToCv.TryGetValue(dto.LocationId, out var craftVillageId))
+                                throw CustomExceptionFactory.CreateBadRequestError($"Không tìm thấy làng nghề cho địa điểm {dto.LocationId}.");
+
+                            var wkOk = await _unitOfWork.WorkshopRepository.ActiveEntities
+                                .AnyAsync(w => w.Id == dto.WorkshopId.Value && w.CraftVillageId == craftVillageId);
+                            if (!wkOk)
+                                throw CustomExceptionFactory.CreateBadRequestError("Workshop không thuộc làng nghề của địa điểm.");
+
+                            if (dto.WorkshopTicketTypeId.HasValue)
+                            {
+                                var ttOk = await _unitOfWork.WorkshopTicketTypeRepository.ActiveEntities
+                                    .AnyAsync(tt => tt.Id == dto.WorkshopTicketTypeId.Value && tt.WorkshopId == dto.WorkshopId.Value);
+                                if (!ttOk)
+                                    throw CustomExceptionFactory.CreateBadRequestError("Ticket type không thuộc workshop đã chọn.");
+                            }
+
+                            if (dto.WorkshopSessionRuleId.HasValue)
+                            {
+                                var srOk = await _unitOfWork.WorkshopSessionRuleRepository.ActiveEntities
+                                    .AnyAsync(sr => sr.Id == dto.WorkshopSessionRuleId.Value
+                                                 && sr.RecurringRule.WorkshopId == dto.WorkshopId.Value);
+                                if (!srOk)
+                                    throw CustomExceptionFactory.CreateBadRequestError("Session rule không thuộc workshop đã chọn.");
+                            }
+
+                            var plannedStart = dto.PreferredStartTime ?? dto.StartTime;
+                            var plannedEnd = dto.PreferredEndTime ?? dto.EndTime;
+
+                            if (tourPlanLocation.WorkshopDetail == null || tourPlanLocation.WorkshopDetail.IsDeleted)
+                            {
+                                var tplw = new TourPlanLocationWorkshop
+                                {
+                                    Id = Guid.NewGuid(),
+                                    TourPlanLocationId = tourPlanLocation.Id,
+                                    WorkshopId = dto.WorkshopId.Value,
+                                    WorkshopTicketTypeId = dto.WorkshopTicketTypeId,
+                                    WorkshopSessionRuleId = dto.WorkshopSessionRuleId,
+                                    PlannedStartTime = plannedStart,
+                                    PlannedEndTime = plannedEnd,
+                                    Notes = dto.Notes,
+                                    CreatedBy = userId.ToString(),
+                                    CreatedTime = DateTimeOffset.UtcNow,
+                                    LastUpdatedBy = userId.ToString(),
+                                    LastUpdatedTime = DateTimeOffset.UtcNow
+                                };
+                                await _unitOfWork.TourPlanLocationWorkshopRepository.AddAsync(tplw);
+                            }
+                            else
+                            {
+                                var d = tourPlanLocation.WorkshopDetail;
+                                d.WorkshopId = dto.WorkshopId.Value;
+                                d.WorkshopTicketTypeId = dto.WorkshopTicketTypeId;
+                                d.WorkshopSessionRuleId = dto.WorkshopSessionRuleId;
+                                d.PlannedStartTime = plannedStart;
+                                d.PlannedEndTime = plannedEnd;
+                                d.Notes = dto.Notes;
+                                d.IsDeleted = false;
+                                d.LastUpdatedBy = userId.ToString();
+                                d.LastUpdatedTime = DateTimeOffset.UtcNow;
+                                _unitOfWork.TourPlanLocationWorkshopRepository.Update(d);
+                            }
+                        }
                     }
 
                     await _unitOfWork.SaveAsync();
@@ -1140,7 +1296,7 @@ public class TourService : ITourService
                 }
             }
 
-            var result = existingLocations
+            var result = tour.TourPlanLocations
                 .Where(l => !l.IsDeleted)
                 .Select(l => new TourPlanLocationResponseDto
                 {
@@ -1176,10 +1332,7 @@ public class TourService : ITourService
 
             return result;
         }
-        catch (CustomException)
-        {
-            throw;
-        }
+        catch (CustomException) { throw; }
         catch (Exception ex)
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
@@ -1258,20 +1411,18 @@ public class TourService : ITourService
             var tour = await _unitOfWork.TourRepository
                 .ActiveEntities
                 .Include(t => t.TourPlanLocations)
+                    .ThenInclude(p => p.WorkshopDetail)
                 .Include(t => t.TourSchedules)
-                .Include(t => t.Bookings)
-                    .ThenInclude(b => b.User)
+                .Include(t => t.Bookings).ThenInclude(b => b.User)
                 .FirstOrDefaultAsync(t => t.Id == tourId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Tour");
 
             if (tour.Status == TourStatus.Cancelled)
                 throw CustomExceptionFactory.CreateBadRequestError("Không thể cập nhật tour đã bị hủy.");
 
-            // if (tour.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
-            //     throw CustomExceptionFactory.CreateBadRequestError("Không thể cập nhật tour đã có người đặt.");
-
-            var tourGuideSchedulesToAdd = new List<TourGuideSchedule>();
             var schedules = new List<TourSchedule>();
+            var tourGuideSchedulesToAdd = new List<TourGuideSchedule>();
+            var tswToAdd = new List<TourScheduleWorkshop>();
 
             foreach (var dto in dtos)
             {
@@ -1284,6 +1435,7 @@ public class TourService : ITourService
                 if (dto.AdultPrice < 0 || dto.ChildrenPrice < 0)
                     throw CustomExceptionFactory.CreateBadRequestError($"Giá không được âm: {dto.DepartureDate:dd/MM/yyyy}.");
 
+                // Tạo TourSchedule (chưa save)
                 var schedule = new TourSchedule
                 {
                     TourId = tourId,
@@ -1294,7 +1446,6 @@ public class TourService : ITourService
                 };
                 schedules.Add(schedule);
 
-                // tour guide
                 if (dto.TourGuideId != Guid.Empty)
                 {
                     var tourGuide = await _unitOfWork.TourGuideRepository
@@ -1318,16 +1469,63 @@ public class TourService : ITourService
 
                     for (int i = 0; i < tour.TotalDays; i++)
                     {
-                        var tourGuideSchedule = new TourGuideSchedule
+                        tourGuideSchedulesToAdd.Add(new TourGuideSchedule
                         {
                             TourSchedule = schedule,
                             TourGuideId = dto.TourGuideId,
                             Date = startDate.AddDays(i),
                             CreatedTime = DateTimeOffset.UtcNow,
                             LastUpdatedTime = DateTimeOffset.UtcNow
-                        };
-                        tourGuideSchedulesToAdd.Add(tourGuideSchedule);
+                        });
                     }
+                }
+
+                var planWorkshops = tour.TourPlanLocations
+                    .Where(p => !p.IsDeleted && p.ActivityType == ActivityType.Workshop && p.WorkshopDetail != null && !p.WorkshopDetail.IsDeleted)
+                    .ToList();
+
+                foreach (var p in planWorkshops)
+                {
+                    var wd = p.WorkshopDetail!;
+                    var plannedStart = wd.PlannedStartTime ?? p.StartTime;
+                    var plannedEnd = wd.PlannedEndTime ?? p.EndTime;
+
+                    var (winStart, winEnd) = ComputePlanWindow(dto.DepartureDate, p.DayOrder, plannedStart, plannedEnd);
+
+                    var ws = await _unitOfWork.WorkshopScheduleRepository.ActiveEntities
+                        .AsNoTracking()
+                        .Where(s => s.WorkshopId == wd.WorkshopId && s.Status == ScheduleStatus.Active)
+                        .Where(s =>
+                            s.StartTime.Date >= winStart.Date.AddDays(-1) &&
+                            s.StartTime.Date <= winEnd.Date.AddDays(1))
+                        .Where(s => s.StartTime < winEnd && s.EndTime > winStart)
+                        .OrderBy(s => s.StartTime)
+                        .FirstOrDefaultAsync();
+
+                    if (ws == null)
+                    {
+                        throw CustomExceptionFactory.CreateBadRequestError(
+                            $"Không tìm thấy lịch workshop phù hợp cho Ngày {p.DayOrder} (cửa sổ {winStart:dd/MM HH:mm}–{winEnd:dd/MM HH:mm}).");
+                    }
+
+                    if (ws.Capacity <= ws.CurrentBooked)
+                    {
+                        throw CustomExceptionFactory.CreateBadRequestError(
+                            $"Lịch workshop {ws.StartTime:dd/MM HH:mm} đã hết chỗ cho Ngày {p.DayOrder}.");
+                    }
+
+                    tswToAdd.Add(new TourScheduleWorkshop
+                    {
+                        TourSchedule = schedule,
+                        TourPlanLocationId = p.Id,
+                        WorkshopId = wd.WorkshopId,
+                        WorkshopScheduleId = ws.Id,
+                        WorkshopTicketTypeId = wd.WorkshopTicketTypeId,
+                        CreatedBy = userId.ToString(),
+                        CreatedTime = DateTimeOffset.UtcNow,
+                        LastUpdatedBy = userId.ToString(),
+                        LastUpdatedTime = DateTimeOffset.UtcNow
+                    });
                 }
             }
 
@@ -1340,8 +1538,12 @@ public class TourService : ITourService
                     if (tourGuideSchedulesToAdd.Any())
                         await _unitOfWork.TourGuideScheduleRepository.AddRangeAsync(tourGuideSchedulesToAdd);
 
+                    if (tswToAdd.Any())
+                        await _unitOfWork.TourScheduleWorkshopRepository.AddRangeAsync(tswToAdd);
+
                     tour.Status = TourStatus.Confirmed;
                     _unitOfWork.TourRepository.Update(tour);
+
                     await _unitOfWork.SaveAsync();
 
                     if (tour.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
@@ -1349,7 +1551,7 @@ public class TourService : ITourService
                         foreach (var booking in tour.Bookings)
                         {
                             await _emailService.SendEmailAsync(
-                                 new[] { booking.User.Email },
+                                new[] { booking.User.Email },
                                 $"Cập nhật Tour {tour.Name}",
                                 $"Tour {tour.Name} có lịch trình mới. Vui lòng kiểm tra chi tiết."
                             );
@@ -1395,8 +1597,8 @@ public class TourService : ITourService
                 .ActiveEntities
                 .Include(t => t.TourSchedules)
                 .Include(t => t.TourPlanLocations)
-                .Include(t => t.Bookings)
-                    .ThenInclude(b => b.User)
+                    .ThenInclude(p => p.WorkshopDetail) // 👈 cần
+                .Include(t => t.Bookings).ThenInclude(b => b.User)
                 .FirstOrDefaultAsync(t => t.Id == tourId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Tour");
 
@@ -1406,7 +1608,7 @@ public class TourService : ITourService
             var schedule = tour.TourSchedules.FirstOrDefault(s => s.Id == scheduleId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Schedule");
 
-            // Validate đầu vào
+            // Validate
             if (dto.DepartureDate < DateTime.UtcNow.Date)
                 throw CustomExceptionFactory.CreateBadRequestError("Ngày bắt đầu phải ở tương lai.");
 
@@ -1422,42 +1624,34 @@ public class TourService : ITourService
             if (tour.TourPlanLocations == null || !tour.TourPlanLocations.Any())
                 throw CustomExceptionFactory.CreateBadRequestError("Tour chưa có lịch trình chi tiết, không thể tạo schedule.");
 
-            if (tour.TotalDays <= 0)
-                throw CustomExceptionFactory.CreateBadRequestError("Số ngày của tour (TotalDays) phải lớn hơn 0.");
+            var maxDayOrder = tour.TourPlanLocations.Any()
+                ? tour.TourPlanLocations.Max(l => l.DayOrder)
+                : 0;
 
-            // trùng ngày khởi hành
+            if (tour.TotalDays != maxDayOrder)
+                throw CustomExceptionFactory.CreateBadRequestError(
+                    $"Không đủ lịch trình ({tour.TotalDays} ngày) để bao phủ Ngày thứ {maxDayOrder}."
+                );
+
+            // Tránh trùng ngày với schedule khác
             var otherScheduleDates = tour.TourSchedules
                 .Where(s => s.Id != scheduleId)
                 .Select(s => s.DepartureDate.Date)
                 .Distinct()
                 .ToList();
             if (otherScheduleDates.Contains(dto.DepartureDate.Date))
-            {
                 throw CustomExceptionFactory.CreateBadRequestError(
                     $"Đã tồn tại lịch khởi hành vào ngày {dto.DepartureDate:dd/MM/yyyy} cho tour này."
                 );
-            }
 
-            // so sanhs ngay lon nhat
-            var maxDayOrder = tour.TourPlanLocations.Any()
-                ? tour.TourPlanLocations.Max(l => l.DayOrder)
-                : 0;
-
-            if (tour.TotalDays != maxDayOrder)
-            {
-                throw CustomExceptionFactory.CreateBadRequestError(
-                    $"Không đủ lịch trình ({tour.TotalDays} ngày) để bao phủ Ngày thứ {maxDayOrder}."
-                );
-            }
-
-            // Cập nhật schedule
+            // Cập nhật schedule cơ bản
             schedule.DepartureDate = dto.DepartureDate;
             schedule.MaxParticipant = dto.MaxParticipant;
             schedule.AdultPrice = dto.AdultPrice;
             schedule.ChildrenPrice = dto.ChildrenPrice;
             schedule.LastUpdatedTime = DateTimeOffset.UtcNow;
 
-            // Load hướng dẫn viên
+            // TourGuide
             var tourGuide = await _unitOfWork.TourGuideRepository
                 .ActiveEntities
                 .Include(g => g.User)
@@ -1481,29 +1675,23 @@ public class TourService : ITourService
                 );
             }
 
-            var existingSchedules = await _unitOfWork.TourGuideScheduleRepository
+            // Rebuild TourGuideSchedules cho schedule này
+            var existingTgs = await _unitOfWork.TourGuideScheduleRepository
                 .ActiveEntities
                 .Where(s => s.TourScheduleId == schedule.Id && !s.IsDeleted)
                 .ToListAsync();
 
-            // cùng tour guide
-            if (existingSchedules.Any() && existingSchedules.All(s => s.TourGuideId == dto.TourGuideId))
+            if (existingTgs.Any())
             {
-                throw CustomExceptionFactory.CreateBadRequestError("Hướng dẫn viên này đã được gán cho lịch trình.");
-            }
-
-            // khác tour guide 
-            if (existingSchedules.Any())
-            {
-                foreach (var s in existingSchedules)
+                foreach (var s in existingTgs)
                 {
                     s.IsDeleted = true;
                     s.LastUpdatedTime = DateTimeOffset.UtcNow;
                 }
-                _unitOfWork.TourGuideScheduleRepository.UpdateRange(existingSchedules);
+                _unitOfWork.TourGuideScheduleRepository.UpdateRange(existingTgs);
             }
 
-            var tourGuideSchedules = Enumerable.Range(0, tour.TotalDays)
+            var newTgs = Enumerable.Range(0, tour.TotalDays)
                 .Select(i => new TourGuideSchedule
                 {
                     TourScheduleId = schedule.Id,
@@ -1514,7 +1702,84 @@ public class TourService : ITourService
                 })
                 .ToList();
 
-            await _unitOfWork.TourGuideScheduleRepository.AddRangeAsync(tourGuideSchedules);
+            await _unitOfWork.TourGuideScheduleRepository.AddRangeAsync(newTgs);
+
+            // 👇 Rebuild TourScheduleWorkshop cho schedule này dựa theo plan hiện tại
+            var existingTsw = await _unitOfWork.TourScheduleWorkshopRepository
+                .ActiveEntities
+                .Where(x => x.TourScheduleId == schedule.Id)
+                .ToListAsync();
+
+            // Map theo Plan: nếu plan không còn workshop → xoá TSW; nếu có → tạo/cập nhật
+            var planWorkshops = tour.TourPlanLocations
+                .Where(p => !p.IsDeleted && p.ActivityType == ActivityType.Workshop && p.WorkshopDetail != null && !p.WorkshopDetail.IsDeleted)
+                .ToList();
+
+            // Xoá những TSW không còn plan workshop tương ứng
+            var planIds = planWorkshops.Select(p => p.Id).ToHashSet();
+            var tswToRemove = existingTsw.Where(tsw => !planIds.Contains(tsw.TourPlanLocationId)).ToList();
+            if (tswToRemove.Any())
+                _unitOfWork.TourScheduleWorkshopRepository.RemoveRange(tswToRemove);
+
+            var tswUpserts = new List<TourScheduleWorkshop>();
+
+            foreach (var p in planWorkshops)
+            {
+                var wd = p.WorkshopDetail!;
+                var plannedStart = wd.PlannedStartTime ?? p.StartTime;
+                var plannedEnd = wd.PlannedEndTime ?? p.EndTime;
+
+                var (winStart, winEnd) = ComputePlanWindow(dto.DepartureDate, p.DayOrder, plannedStart, plannedEnd);
+
+                var ws = await _unitOfWork.WorkshopScheduleRepository.ActiveEntities
+                    .AsNoTracking()
+                    .Where(s => s.WorkshopId == wd.WorkshopId && s.Status == ScheduleStatus.Active)
+                    .Where(s =>
+                        s.StartTime.Date >= winStart.Date.AddDays(-1) &&
+                        s.StartTime.Date <= winEnd.Date.AddDays(1))
+                    .Where(s => s.StartTime < winEnd && s.EndTime > winStart)
+                    .OrderBy(s => s.StartTime)
+                    .FirstOrDefaultAsync();
+
+                if (ws == null)
+                {
+                    throw CustomExceptionFactory.CreateBadRequestError(
+                        $"Không tìm thấy lịch workshop phù hợp cho Ngày {p.DayOrder} (cửa sổ {winStart:dd/MM HH:mm}–{winEnd:dd/MM HH:mm}).");
+                }
+
+                if (ws.Capacity <= ws.CurrentBooked)
+                    throw CustomExceptionFactory.CreateBadRequestError(
+                        $"Lịch workshop {ws.StartTime:dd/MM HH:mm} đã hết chỗ cho Ngày {p.DayOrder}.");
+
+                var existing = existingTsw.FirstOrDefault(x => x.TourPlanLocationId == p.Id);
+                if (existing == null)
+                {
+                    tswUpserts.Add(new TourScheduleWorkshop
+                    {
+                        TourScheduleId = schedule.Id,
+                        TourPlanLocationId = p.Id,
+                        WorkshopId = wd.WorkshopId,
+                        WorkshopScheduleId = ws.Id,
+                        WorkshopTicketTypeId = wd.WorkshopTicketTypeId,
+                        CreatedBy = userId.ToString(),
+                        CreatedTime = DateTimeOffset.UtcNow,
+                        LastUpdatedBy = userId.ToString(),
+                        LastUpdatedTime = DateTimeOffset.UtcNow
+                    });
+                }
+                else
+                {
+                    existing.WorkshopId = wd.WorkshopId;
+                    existing.WorkshopScheduleId = ws.Id;
+                    existing.WorkshopTicketTypeId = wd.WorkshopTicketTypeId;
+                    existing.LastUpdatedBy = userId.ToString();
+                    existing.LastUpdatedTime = DateTimeOffset.UtcNow;
+                    _unitOfWork.TourScheduleWorkshopRepository.Update(existing);
+                }
+            }
+
+            if (tswUpserts.Any())
+                await _unitOfWork.TourScheduleWorkshopRepository.AddRangeAsync(tswUpserts);
 
             using var transaction = await _unitOfWork.BeginTransactionAsync();
             try
@@ -2489,6 +2754,20 @@ public class TourService : ITourService
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
+
+    private static (DateTime Start, DateTime End) ComputePlanWindow(
+    DateTime departureDate, int dayOrder, TimeSpan start, TimeSpan end)
+    {
+        var dayDate = departureDate.Date.AddDays(dayOrder - 1);
+        var s = dayDate.Add(start);
+        var e = dayDate.Add(end);
+        if (end <= start) e = e.AddDays(1);
+        return (s, e);
+    }
+
+    private static bool Overlap(DateTime aStart, DateTime aEnd, DateTime bStart, DateTime bEnd)
+        => aStart < bEnd && bStart < aEnd;
+
 
     #endregion
 }

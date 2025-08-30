@@ -59,6 +59,8 @@ public class UnitOfWork : IUnitOfWork
     public IWorkshopSessionRuleRepository WorkshopSessionRuleRepository { get; }
     public IWorkshopRecurringRuleRepository WorkshopRecurringRuleRepository { get; }
     public IWorkshopTicketTypeRepository WorkshopTicketTypeRepository { get; }
+    public ITourPlanLocationWorkshopRepository TourPlanLocationWorkshopRepository { get; }
+    public ITourScheduleWorkshopRepository TourScheduleWorkshopRepository { get; }
 
     public UnitOfWork(ApplicationDbContext dbContext)
     {
@@ -111,6 +113,8 @@ public class UnitOfWork : IUnitOfWork
         WorkshopSessionRuleRepository = new WorkshopSessionRuleRepository(_dbContext);
         WorkshopRecurringRuleRepository = new WorkshopRecurringRuleRepository(_dbContext);
         WorkshopTicketTypeRepository = new WorkshopTicketTypeRepository(_dbContext);
+        TourPlanLocationWorkshopRepository = new TourPlanLocationWorkshopRepository(_dbContext);
+        TourScheduleWorkshopRepository = new TourScheduleWorkshopRepository(_dbContext);
     }
 
     public IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity

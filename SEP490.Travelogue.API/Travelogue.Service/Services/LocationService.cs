@@ -1188,7 +1188,7 @@ public class LocationService : ILocationService
                     .AsNoTracking()
                     .Where(w => w.CraftVillageId == craftVillage.Id)
                     .Include(w => w.TicketTypes).ThenInclude(tt => tt.WorkshopActivities)
-                    // .Include(w => w.RecurringRules).ThenInclude(rr => rr.Sessions)
+                    .Include(w => w.RecurringRules).ThenInclude(rr => rr.Sessions)
                     .Include(w => w.Exceptions)
                     .Include(w => w.Schedules)
                     .AsSplitQuery();
