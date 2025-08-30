@@ -1376,6 +1376,7 @@ public class BookingService : IBookingService
 
             var query = _unitOfWork.BookingRepository
                 .ActiveEntities
+                .OrderByDescending(b => b.BookingDate)
                 .Select(b => new
                 {
                     b.Id,
@@ -1462,7 +1463,7 @@ public class BookingService : IBookingService
 
             // Phân trang
             var bookings = await query
-                .OrderBy(b => b.BookingDate)
+                .OrderByDescending(b => b.BookingDate)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
