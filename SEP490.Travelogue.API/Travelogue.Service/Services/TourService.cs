@@ -532,6 +532,28 @@ public class TourService : ITourService
         {
             var tour = await _unitOfWork.TourRepository
                 .ActiveEntities
+                .Include(t => t.TourPlanLocations)
+                    .ThenInclude(l => l.Location)
+
+                .Include(t => t.TourPlanLocations)
+                    .ThenInclude(l => l.WorkshopDetail)
+                        .ThenInclude(w => w.Workshop)
+                .Include(t => t.TourPlanLocations)
+                    .ThenInclude(l => l.WorkshopDetail)
+                        .ThenInclude(w => w.WorkshopTicketType)
+                .Include(t => t.TourPlanLocations)
+                    .ThenInclude(l => l.WorkshopDetail)
+                        .ThenInclude(w => w.WorkshopSessionRule)
+
+                .Include(t => t.TourSchedules)
+                    .ThenInclude(s => s.TourGuideSchedules)
+                        .ThenInclude(tg => tg.TourGuide)
+                            .ThenInclude(g => g.User)
+
+                .Include(t => t.PromotionApplicables)
+                    .ThenInclude(p => p.Promotion)
+
+                .AsSplitQuery()
                 .FirstOrDefaultAsync(t => t.Id == tourId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Tour");
 
@@ -731,12 +753,26 @@ public class TourService : ITourService
                 .ActiveEntities
                 .Include(t => t.TourPlanLocations)
                     .ThenInclude(l => l.Location)
+
+                .Include(t => t.TourPlanLocations)
+                    .ThenInclude(l => l.WorkshopDetail)
+                        .ThenInclude(w => w.Workshop)
+                .Include(t => t.TourPlanLocations)
+                    .ThenInclude(l => l.WorkshopDetail)
+                        .ThenInclude(w => w.WorkshopTicketType)
+                .Include(t => t.TourPlanLocations)
+                    .ThenInclude(l => l.WorkshopDetail)
+                        .ThenInclude(w => w.WorkshopSessionRule)
+
                 .Include(t => t.TourSchedules)
-                    .ThenInclude(t => t.TourGuideSchedules)
+                    .ThenInclude(s => s.TourGuideSchedules)
                         .ThenInclude(tg => tg.TourGuide)
-                            .ThenInclude(tg => tg.User)
+                            .ThenInclude(g => g.User)
+
                 .Include(t => t.PromotionApplicables)
                     .ThenInclude(p => p.Promotion)
+
+                .AsSplitQuery()
                 .FirstOrDefaultAsync(t => t.Id == tourId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("Tour");
 
@@ -2275,6 +2311,30 @@ public class TourService : ITourService
                     EstimatedStartTime = l.EstimatedStartTime,
                     EstimatedEndTime = l.EstimatedEndTime,
                 };
+
+                if (l.ActivityType == ActivityType.Workshop && l.WorkshopDetail != null)
+                {
+                    var link = l.WorkshopDetail;
+
+                    activity.Workshop = new TourActivityWorkshopInfo
+                    {
+                        WorkshopId = link.WorkshopId,
+                        WorkshopName = link.Workshop?.Name,
+
+                        WorkshopTicketTypeId = link.WorkshopTicketTypeId,
+                        WorkshopTicketTypeName = link.WorkshopTicketType?.Name,
+                        WorkshopTicketDurationMinutes = link.WorkshopTicketType?.DurationMinutes,
+                        WorkshopTicketPrice = link.WorkshopTicketType?.Price,
+
+                        WorkshopSessionRuleId = link.WorkshopSessionRuleId,
+                        WorkshopSessionStart = link.WorkshopSessionRule?.StartTime,
+                        WorkshopSessionEnd = link.WorkshopSessionRule?.EndTime,
+                        WorkshopSessionCapacity = link.WorkshopSessionRule?.Capacity,
+                        WorkshopSessionTimeFormatted = (link.WorkshopSessionRule != null)
+                            ? $"{link.WorkshopSessionRule.StartTime:hh\\:mm} - {link.WorkshopSessionRule.EndTime:hh\\:mm}"
+                            : null
+                    };
+                }
 
                 activities.Add(activity);
             }
