@@ -21,22 +21,27 @@ public interface IWorkshopService
     Task<WorkshopResponseDto> CreateWorkshopAsync(CreateWorkshopDto dto);
     Task<WorkshopResponseDto> UpdateWorkshopAsync(Guid workshopId, UpdateWorkshopDto dto);
     Task<WorkshopResponseDto> SubmitWorkshopForReviewAsync(Guid workshopId, CancellationToken cancellationToken);
-    // Task<WorkshopResponseDto> ConfirmWorkshopAsync(Guid workshopId, ConfirmWorkshopDto dto);
-    Task DeleteWorkshopAsync(Guid workshopId);
-    // Task<WorkshopDetailsResponseDto> GetWorkshopDetailsAsync(Guid workshopId);
-    Task<WorkshopDetailsResponseDto> GetWorkshopDetailsAsync(Guid workshopId, Guid? scheduleId = null);
-    // Task<List<ActivityResponseDto>> CreateActivitiesAsync(Guid workshopId, List<CreateActivityDto> dtos);
-    // Task<List<ActivityResponseDto>> GetActivitiesAsync(Guid workshopId);
-    Task<List<ActivityResponseDto>> UpdateActivitiesAsync(Guid workshopId, List<UpdateActivityRequestDto> dtos);
-    // Task<ActivityResponseDto> UpdateActivityAsync(Guid workshopId, Guid activityId, CreateActivityDto dto);
-    // Task DeleteActivityAsync(Guid workshopId, Guid activityId);
-    Task<List<ScheduleResponseDto>> CreateSchedulesAsync(Guid workshopId, List<CreateScheduleDto> dtos);
-    // Task<List<ScheduleResponseDto>> GetSchedulesAsync(Guid workshopId);
-    Task<ScheduleResponseDto> UpdateScheduleAsync(Guid workshopId, Guid scheduleId, CreateScheduleDto dto);
-    Task DeleteScheduleAsync(Guid workshopId, Guid scheduleId);
+    Task<List<WorkshopDto>> GetWorkshopsAsync(
+        Guid? craftVillageId,
+        string? name,
+        CancellationToken cancellationToken = default);
 
-    Task<List<WorkshopMedia>> AddWorkshopMediasAsync(Guid workshopId, List<WorkshopMediaCreateDto> createDtos);
-    Task<bool> DeleteWorkshopMediaAsync(Guid workshopMediaId);
+    //// Task<WorkshopResponseDto> ConfirmWorkshopAsync(Guid workshopId, ConfirmWorkshopDto dto);
+    //Task DeleteWorkshopAsync(Guid workshopId);
+    //// Task<WorkshopDetailsResponseDto> GetWorkshopDetailsAsync(Guid workshopId);
+    //Task<WorkshopDetailsResponseDto> GetWorkshopDetailsAsync(Guid workshopId, Guid? scheduleId = null);
+    //// Task<List<ActivityResponseDto>> CreateActivitiesAsync(Guid workshopId, List<CreateActivityDto> dtos);
+    //// Task<List<ActivityResponseDto>> GetActivitiesAsync(Guid workshopId);
+    //Task<List<ActivityResponseDto>> UpdateActivitiesAsync(Guid workshopId, List<UpdateActivityRequestDto> dtos);
+    //// Task<ActivityResponseDto> UpdateActivityAsync(Guid workshopId, Guid activityId, CreateActivityDto dto);
+    //// Task DeleteActivityAsync(Guid workshopId, Guid activityId);
+    //Task<List<ScheduleResponseDto>> CreateSchedulesAsync(Guid workshopId, List<CreateScheduleDto> dtos);
+    //// Task<List<ScheduleResponseDto>> GetSchedulesAsync(Guid workshopId);
+    //Task<ScheduleResponseDto> UpdateScheduleAsync(Guid workshopId, Guid scheduleId, CreateScheduleDto dto);
+    //Task DeleteScheduleAsync(Guid workshopId, Guid scheduleId);
+
+    //Task<List<WorkshopMedia>> AddWorkshopMediasAsync(Guid workshopId, List<WorkshopMediaCreateDto> createDtos);
+    //Task<bool> DeleteWorkshopMediaAsync(Guid workshopMediaId);
 }
 
 public class WorkshopService : IWorkshopService
@@ -128,6 +133,106 @@ public class WorkshopService : IWorkshopService
             }
 
             return workshopResponses;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<WorkshopDto>> GetWorkshopsAsync(
+        Guid? craftVillageId,
+        string? name,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var query = _unitOfWork.WorkshopRepository
+                .ActiveEntities
+                .AsNoTracking();
+
+            if (craftVillageId.HasValue)
+                query = query.Where(w => w.CraftVillageId == craftVillageId.Value);
+
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                var keyword = name.Trim();
+                query = query.Where(w => EF.Functions.Like(w.Name, $"%{keyword}%"));
+            }
+
+            var now = _timeService.SystemTimeNow;
+
+            var result = await query
+                .OrderBy(w => w.Name)
+                .Select(w => new WorkshopDto
+                {
+                    Name = w.Name,
+                    Description = w.Description,
+                    Content = w.Content,
+                    Status = w.Status,
+
+                    TicketTypes = w.TicketTypes.Select(tt => new TicketTypeRequestDto
+                    {
+                        Type = tt.Type,
+                        Name = tt.Name,
+                        Price = tt.Price,
+                        IsCombo = tt.IsCombo,
+                        DurationMinutes = tt.DurationMinutes,
+                        Content = tt.Content,
+                        WorkshopActivities = tt.WorkshopActivities
+                            .OrderBy(a => a.ActivityOrder)
+                            .Select(a => new WorkshopActivityRequestDto
+                            {
+                                Activity = a.Activity,
+                                Description = a.Description,
+                                StartHour = a.StartHour,
+                                EndHour = a.EndHour,
+                                ActivityOrder = a.ActivityOrder
+                            }).ToList()
+                    }).ToList(),
+
+                    Schedules = w.Schedules
+                        .OrderBy(s => s.StartTime)
+                        .Select(s => new WorkshopScheduleResponseDto
+                        {
+                            Id = s.Id,
+                            StartTime = s.StartTime,
+                            EndTime = s.EndTime,
+                            Capacity = s.Capacity,
+                            CurrentBooked = s.CurrentBooked,
+                            Status = s.Status,
+                            Notes = s.Notes
+                        }).ToList(),
+
+                    RecurringRules = w.RecurringRules
+                        .Select(rr => new RecurringRuleRequestDto
+                        {
+                            DaysOfWeek = rr.DaysOfWeek.ToList() ?? new List<DayOfWeek>(),
+                            StartDate = rr.StartDate,
+                            EndDate = rr.EndDate,
+                            Sessions = rr.Sessions.Select(s => new SessionRequestDto
+                            {
+                                StartTime = s.StartTime,
+                                EndTime = s.EndTime,
+                                Capacity = s.Capacity
+                            }).ToList()
+                        }).ToList(),
+
+                    Exceptions = w.Exceptions
+                        .Select(ex => new WorkshopExceptionRequestDto
+                        {
+                            Date = ex.Date,
+                            Reason = ex.Reason,
+                            IsActive = ex.IsActive
+                        }).ToList()
+                })
+                .ToListAsync(cancellationToken);
+
+            return result;
         }
         catch (CustomException)
         {
@@ -407,257 +512,257 @@ public class WorkshopService : IWorkshopService
         }
     }
 
-    public async Task<WorkshopResponseDto> ConfirmWorkshopAsync(Guid workshopId, ConfirmWorkshopDto dto)
-    {
-        var currentUserId = _userContextService.GetCurrentUserId();
-        var currentTime = _timeService.SystemTimeNow;
+    //public async Task<WorkshopResponseDto> ConfirmWorkshopAsync(Guid workshopId, ConfirmWorkshopDto dto)
+    //{
+    //    var currentUserId = _userContextService.GetCurrentUserId();
+    //    var currentTime = _timeService.SystemTimeNow;
 
-        var isValidRole = _userContextService.HasAnyRole(AppRole.MODERATOR, AppRole.ADMIN);
-        if (!isValidRole)
-            throw CustomExceptionFactory.CreateForbiddenError();
+    //    var isValidRole = _userContextService.HasAnyRole(AppRole.MODERATOR, AppRole.ADMIN);
+    //    if (!isValidRole)
+    //        throw CustomExceptionFactory.CreateForbiddenError();
 
-        var workshop = await _unitOfWork.WorkshopRepository
-            .ActiveEntities
-            .Include(w => w.WorkshopActivities)
-            .Include(w => w.WorkshopSchedules)
-            .FirstOrDefaultAsync(w => w.Id == workshopId)
-            ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
+    //    var workshop = await _unitOfWork.WorkshopRepository
+    //        .ActiveEntities
+    //        .Include(w => w.WorkshopActivities)
+    //        .Include(w => w.WorkshopSchedules)
+    //        .FirstOrDefaultAsync(w => w.Id == workshopId)
+    //        ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
 
-        // Validate
-        var maxDayOrder = workshop.WorkshopActivities.Any() ? workshop.WorkshopActivities.Max(a => a.DayOrder) : 0;
-        if (workshop.WorkshopSchedules.Count < maxDayOrder)
-            throw CustomExceptionFactory.CreateBadRequestError($"Không đủ lịch trình ({workshop.WorkshopSchedules.Count}) để đáp ứng DayOrder ({maxDayOrder}).");
+    //    // Validate
+    //    var maxDayOrder = workshop.WorkshopActivities.Any() ? workshop.WorkshopActivities.Max(a => a.DayOrder) : 0;
+    //    if (workshop.WorkshopSchedules.Count < maxDayOrder)
+    //        throw CustomExceptionFactory.CreateBadRequestError($"Không đủ lịch trình ({workshop.WorkshopSchedules.Count}) để đáp ứng DayOrder ({maxDayOrder}).");
 
-        workshop.Status = WorkshopStatus.Approved;
-        workshop.LastUpdatedTime = DateTimeOffset.UtcNow;
+    //    workshop.Status = WorkshopStatus.Approved;
+    //    workshop.LastUpdatedTime = DateTimeOffset.UtcNow;
 
-        await _unitOfWork.SaveAsync();
+    //    await _unitOfWork.SaveAsync();
 
-        return new WorkshopResponseDto
-        {
-            Id = workshop.Id,
-            Name = workshop.Name,
-            Description = workshop.Description,
-            Content = workshop.Content,
-            Status = workshop.Status,
-            StatusText = _enumService.GetEnumDisplayName<WorkshopStatus>(workshop.Status),
-            CraftVillageId = workshop.CraftVillageId
-        };
-    }
+    //    return new WorkshopResponseDto
+    //    {
+    //        Id = workshop.Id,
+    //        Name = workshop.Name,
+    //        Description = workshop.Description,
+    //        Content = workshop.Content,
+    //        Status = workshop.Status,
+    //        StatusText = _enumService.GetEnumDisplayName<WorkshopStatus>(workshop.Status),
+    //        CraftVillageId = workshop.CraftVillageId
+    //    };
+    //}
 
-    public async Task<WorkshopDetailsResponseDto> GetWorkshopDetailsAsync(Guid workshopId, Guid? scheduleId = null)
-    {
-        try
-        {
-            var isAdminOrModerator = _userContextService.HasAnyRoleOrAnonymous(AppRole.ADMIN, AppRole.MODERATOR);
-            var currentUserId = _userContextService.GetCurrentUserIdGuidOrAnonymous();
+    //public async Task<WorkshopDetailsResponseDto> GetWorkshopDetailsAsync(Guid workshopId, Guid? scheduleId = null)
+    //{
+    //    try
+    //    {
+    //        var isAdminOrModerator = _userContextService.HasAnyRoleOrAnonymous(AppRole.ADMIN, AppRole.MODERATOR);
+    //        var currentUserId = _userContextService.GetCurrentUserIdGuidOrAnonymous();
 
-            var query = _unitOfWork.WorkshopRepository.ActiveEntities
-                .Include(ws => ws.CraftVillage)
-                .Include(ws => ws.WorkshopActivities)
-                .Where(w => w.Id == workshopId);
+    //        var query = _unitOfWork.WorkshopRepository.ActiveEntities
+    //            .Include(ws => ws.CraftVillage)
+    //            .Include(ws => ws.WorkshopActivities)
+    //            .Where(w => w.Id == workshopId);
 
-            if (!isAdminOrModerator)
-            {
-                query = query.Where(w =>
-                    // Owner can access Draft, Pending, Rejected
-                    (w.CraftVillage.OwnerId == currentUserId && currentUserId != Guid.Empty)
-                    ||
-                    // Everyone can access Approved
-                    w.Status == WorkshopStatus.Approved
-                );
-            }
-            else
-            {
-                // Admins/Moderators can access Pending, Rejected, and Approved
-                query = query.Where(w =>
-                    w.Status == WorkshopStatus.Pending ||
-                    w.Status == WorkshopStatus.Rejected ||
-                    w.Status == WorkshopStatus.Approved
-                );
-            }
+    //        if (!isAdminOrModerator)
+    //        {
+    //            query = query.Where(w =>
+    //                // Owner can access Draft, Pending, Rejected
+    //                (w.CraftVillage.OwnerId == currentUserId && currentUserId != Guid.Empty)
+    //                ||
+    //                // Everyone can access Approved
+    //                w.Status == WorkshopStatus.Approved
+    //            );
+    //        }
+    //        else
+    //        {
+    //            // Admins/Moderators can access Pending, Rejected, and Approved
+    //            query = query.Where(w =>
+    //                w.Status == WorkshopStatus.Pending ||
+    //                w.Status == WorkshopStatus.Rejected ||
+    //                w.Status == WorkshopStatus.Approved
+    //            );
+    //        }
 
-            var workshop = await query
-                .Select(w => new
-                {
-                    Workshop = w,
-                    CraftVillageName = w.CraftVillage.Location.Name
-                })
-                .FirstOrDefaultAsync()
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
+    //        var workshop = await query
+    //            .Select(w => new
+    //            {
+    //                Workshop = w,
+    //                CraftVillageName = w.CraftVillage.Location.Name
+    //            })
+    //            .FirstOrDefaultAsync()
+    //            ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
 
-            var activeSchedules = await _unitOfWork.WorkshopScheduleRepository.ActiveEntities
-                .Where(s => s.WorkshopId == workshopId && !s.IsDeleted)
-                .ToListAsync();
+    //        var activeSchedules = await _unitOfWork.WorkshopScheduleRepository.ActiveEntities
+    //            .Where(s => s.WorkshopId == workshopId && !s.IsDeleted)
+    //            .ToListAsync();
 
-            var now = DateTime.UtcNow;
-            var activePromotions = await _unitOfWork.PromotionApplicableRepository.ActiveEntities
-                .Where(p => p.WorkshopId == workshopId
-                    && !p.IsDeleted
-                    && p.Promotion != null
-                    && p.Promotion.StartDate <= now
-                    && p.Promotion.EndDate >= now)
-                .Select(p => new PromotionDto
-                {
-                    Id = p.Promotion.Id,
-                    Name = p.Promotion.PromotionName,
-                    DiscountPercentage = p.Promotion.DiscountType == DiscountType.Percentage ? p.Promotion.DiscountValue : 0,
-                    StartDate = p.Promotion.StartDate,
-                    EndDate = p.Promotion.EndDate
-                })
-                .ToListAsync();
+    //        var now = DateTime.UtcNow;
+    //        var activePromotions = await _unitOfWork.PromotionApplicableRepository.ActiveEntities
+    //            .Where(p => p.WorkshopId == workshopId
+    //                && !p.IsDeleted
+    //                && p.Promotion != null
+    //                && p.Promotion.StartDate <= now
+    //                && p.Promotion.EndDate >= now)
+    //            .Select(p => new PromotionDto
+    //            {
+    //                Id = p.Promotion.Id,
+    //                Name = p.Promotion.PromotionName,
+    //                DiscountPercentage = p.Promotion.DiscountType == DiscountType.Percentage ? p.Promotion.DiscountValue : 0,
+    //                StartDate = p.Promotion.StartDate,
+    //                EndDate = p.Promotion.EndDate
+    //            })
+    //            .ToListAsync();
 
-            decimal adultPrice, childrenPrice;
-            if (scheduleId.HasValue)
-            {
-                var selectedSchedule = activeSchedules.FirstOrDefault(s => s.Id == scheduleId.Value);
-                if (selectedSchedule == null)
-                    throw CustomExceptionFactory.CreateNotFoundError("Schedule không tồn tại trong workshop này.");
+    //        decimal adultPrice, childrenPrice;
+    //        if (scheduleId.HasValue)
+    //        {
+    //            var selectedSchedule = activeSchedules.FirstOrDefault(s => s.Id == scheduleId.Value);
+    //            if (selectedSchedule == null)
+    //                throw CustomExceptionFactory.CreateNotFoundError("Schedule không tồn tại trong workshop này.");
 
-                adultPrice = selectedSchedule.AdultPrice;
-                childrenPrice = selectedSchedule.ChildrenPrice;
-            }
-            else
-            {
-                adultPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.AdultPrice) : 0m;
-                childrenPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.ChildrenPrice) : 0m;
-            }
+    //            adultPrice = selectedSchedule.AdultPrice;
+    //            childrenPrice = selectedSchedule.ChildrenPrice;
+    //        }
+    //        else
+    //        {
+    //            adultPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.AdultPrice) : 0m;
+    //            childrenPrice = activeSchedules.Any() ? activeSchedules.Min(s => s.ChildrenPrice) : 0m;
+    //        }
 
-            var isDiscount = activePromotions.Any();
-            var maxDiscount = isDiscount ? activePromotions.Max(p => p.DiscountPercentage) : 0;
-            var finalPrice = adultPrice * (1 - maxDiscount / 100);
+    //        var isDiscount = activePromotions.Any();
+    //        var maxDiscount = isDiscount ? activePromotions.Max(p => p.DiscountPercentage) : 0;
+    //        var finalPrice = adultPrice * (1 - maxDiscount / 100);
 
-            var reviews = await _unitOfWork.ReviewRepository.ActiveEntities
-                .Where(r => r.Booking.WorkshopId == workshopId && !r.IsDeleted)
-                .Include(r => r.User)
-                .Include(r => r.Booking)
-                .ToListAsync();
+    //        var reviews = await _unitOfWork.ReviewRepository.ActiveEntities
+    //            .Where(r => r.Booking.WorkshopId == workshopId && !r.IsDeleted)
+    //            .Include(r => r.User)
+    //            .Include(r => r.Booking)
+    //            .ToListAsync();
 
-            double averageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0.0;
-            int totalReviews = reviews.Count;
+    //        double averageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0.0;
+    //        int totalReviews = reviews.Count;
 
-            var reviewDtos = reviews.Select(r => new ReviewResponseDto
-            {
-                Id = r.Id,
-                Rating = r.Rating,
-                Comment = r.Comment,
-                CreatedAt = r.CreatedTime,
-                UserName = r.User?.FullName ?? "Unknown",
-                UserId = r.UserId,
-                BookingId = r.BookingId,
-                WorkshopId = r.Booking?.WorkshopId
-            }).ToList();
+    //        var reviewDtos = reviews.Select(r => new ReviewResponseDto
+    //        {
+    //            Id = r.Id,
+    //            Rating = r.Rating,
+    //            Comment = r.Comment,
+    //            CreatedAt = r.CreatedTime,
+    //            UserName = r.User?.FullName ?? "Unknown",
+    //            UserId = r.UserId,
+    //            BookingId = r.BookingId,
+    //            WorkshopId = r.Booking?.WorkshopId
+    //        }).ToList();
 
-            var medias = await GetMediaWithoutVideoByIdAsync(workshopId, cancellationToken: default);
+    //        var medias = await GetMediaWithoutVideoByIdAsync(workshopId, cancellationToken: default);
 
-            var response = new WorkshopDetailsResponseDto
-            {
-                WorkshopId = workshop.Workshop.Id,
-                Name = workshop.Workshop.Name,
-                Description = workshop.Workshop.Description,
-                Content = workshop.Workshop.Content,
-                CraftVillageId = workshop.Workshop.CraftVillageId,
-                CraftVillageName = workshop.CraftVillageName,
-                Status = workshop.Workshop.Status,
-                StatusText = _enumService.GetEnumDisplayName<WorkshopStatus>(workshop.Workshop.Status) ?? string.Empty,
-                Schedules = activeSchedules.Select(s => new ScheduleResponseDto
-                {
-                    ScheduleId = s.Id,
-                    StartTime = s.StartTime,
-                    EndTime = s.EndTime,
-                    MaxParticipant = s.MaxParticipant,
-                    CurrentBooked = s.CurrentBooked,
-                    AdultPrice = s.AdultPrice,
-                    ChildrenPrice = s.ChildrenPrice,
-                    Notes = s.Notes
-                }).ToList(),
-                Days = BuildDayDetails(workshop.Workshop),
-                AverageRating = Math.Round(averageRating, 2),
-                TotalReviews = totalReviews,
-                Reviews = reviewDtos,
-                Medias = medias ?? new List<MediaResponse>(),
-                Promotions = activePromotions
-            };
+    //        var response = new WorkshopDetailsResponseDto
+    //        {
+    //            WorkshopId = workshop.Workshop.Id,
+    //            Name = workshop.Workshop.Name,
+    //            Description = workshop.Workshop.Description,
+    //            Content = workshop.Workshop.Content,
+    //            CraftVillageId = workshop.Workshop.CraftVillageId,
+    //            CraftVillageName = workshop.CraftVillageName,
+    //            Status = workshop.Workshop.Status,
+    //            StatusText = _enumService.GetEnumDisplayName<WorkshopStatus>(workshop.Workshop.Status) ?? string.Empty,
+    //            Schedules = activeSchedules.Select(s => new ScheduleResponseDto
+    //            {
+    //                ScheduleId = s.Id,
+    //                StartTime = s.StartTime,
+    //                EndTime = s.EndTime,
+    //                MaxParticipant = s.MaxParticipant,
+    //                CurrentBooked = s.CurrentBooked,
+    //                AdultPrice = s.AdultPrice,
+    //                ChildrenPrice = s.ChildrenPrice,
+    //                Notes = s.Notes
+    //            }).ToList(),
+    //            Days = BuildDayDetails(workshop.Workshop),
+    //            AverageRating = Math.Round(averageRating, 2),
+    //            TotalReviews = totalReviews,
+    //            Reviews = reviewDtos,
+    //            Medias = medias ?? new List<MediaResponse>(),
+    //            Promotions = activePromotions
+    //        };
 
-            return response;
-        }
-        catch (CustomException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
+    //        return response;
+    //    }
+    //    catch (CustomException)
+    //    {
+    //        throw;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+    //    }
+    //}
 
-    public async Task<WorkshopResponseDto> ApproveWorkshopAsync(Guid workshopId, CancellationToken cancellationToken)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var currentUserId = _userContextService.GetCurrentUserId();
-            var currentTime = _timeService.SystemTimeNow;
-            var checkRole = _userContextService.HasAnyRole(AppRole.CRAFT_VILLAGE_OWNER);
-            if (!checkRole)
-                throw CustomExceptionFactory.CreateForbiddenError();
+    //public async Task<WorkshopResponseDto> ApproveWorkshopAsync(Guid workshopId, CancellationToken cancellationToken)
+    //{
+    //    using var transaction = await _unitOfWork.BeginTransactionAsync();
+    //    try
+    //    {
+    //        var currentUserId = _userContextService.GetCurrentUserId();
+    //        var currentTime = _timeService.SystemTimeNow;
+    //        var checkRole = _userContextService.HasAnyRole(AppRole.CRAFT_VILLAGE_OWNER);
+    //        if (!checkRole)
+    //            throw CustomExceptionFactory.CreateForbiddenError();
 
-            var workshop = await _unitOfWork.WorkshopRepository
-                .ActiveEntities
-                .Include(ws => ws.CraftVillage)
-                    .ThenInclude(cv => cv.Owner)
-                .FirstOrDefaultAsync(w => w.Id == workshopId, cancellationToken);
-            if (workshop == null)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("Workshop not found or not owned by user.");
-            }
+    //        var workshop = await _unitOfWork.WorkshopRepository
+    //            .ActiveEntities
+    //            .Include(ws => ws.CraftVillage)
+    //                .ThenInclude(cv => cv.Owner)
+    //            .FirstOrDefaultAsync(w => w.Id == workshopId, cancellationToken);
+    //        if (workshop == null)
+    //        {
+    //            throw CustomExceptionFactory.CreateNotFoundError("Workshop not found or not owned by user.");
+    //        }
 
-            if (workshop.Status != WorkshopStatus.Draft)
-            {
-                throw CustomExceptionFactory.CreateBadRequestError("Workshop is not in Draft status.");
-            }
+    //        if (workshop.Status != WorkshopStatus.Draft)
+    //        {
+    //            throw CustomExceptionFactory.CreateBadRequestError("Workshop is not in Draft status.");
+    //        }
 
-            workshop.Status = WorkshopStatus.Pending;
-            workshop.LastUpdatedBy = currentUserId;
-            workshop.LastUpdatedTime = currentTime;
-            _unitOfWork.WorkshopRepository.Update(workshop);
+    //        workshop.Status = WorkshopStatus.Pending;
+    //        workshop.LastUpdatedBy = currentUserId;
+    //        workshop.LastUpdatedTime = currentTime;
+    //        _unitOfWork.WorkshopRepository.Update(workshop);
 
-            var ownerEmail = workshop.CraftVillage.Owner.Email;
-            if (ownerEmail == null)
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("No user found to notify.");
-            }
-            await _emailService.SendEmailAsync(
-               new[] { ownerEmail },
-                "Cập nhật trạng thái workshop",
-                "Cập nhật trạng thái workshop"
-            );
+    //        var ownerEmail = workshop.CraftVillage.Owner.Email;
+    //        if (ownerEmail == null)
+    //        {
+    //            throw CustomExceptionFactory.CreateNotFoundError("No user found to notify.");
+    //        }
+    //        await _emailService.SendEmailAsync(
+    //           new[] { ownerEmail },
+    //            "Cập nhật trạng thái workshop",
+    //            "Cập nhật trạng thái workshop"
+    //        );
 
-            await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync(cancellationToken);
+    //        await _unitOfWork.SaveAsync();
+    //        await transaction.CommitAsync(cancellationToken);
 
-            return new WorkshopResponseDto
-            {
-                Id = workshop.Id,
-                Name = workshop.Name,
-                Description = workshop.Description,
-                Content = workshop.Content,
-                Status = workshop.Status,
-                StatusText = _enumService.GetEnumDisplayName<WorkshopStatus>(workshop.Status),
-                CraftVillageId = workshop.CraftVillageId
-            };
-        }
-        catch (CustomException)
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
+    //        return new WorkshopResponseDto
+    //        {
+    //            Id = workshop.Id,
+    //            Name = workshop.Name,
+    //            Description = workshop.Description,
+    //            Content = workshop.Content,
+    //            Status = workshop.Status,
+    //            StatusText = _enumService.GetEnumDisplayName<WorkshopStatus>(workshop.Status),
+    //            CraftVillageId = workshop.CraftVillageId
+    //        };
+    //    }
+    //    catch (CustomException)
+    //    {
+    //        await transaction.RollbackAsync();
+    //        throw;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        await transaction.RollbackAsync();
+    //        throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+    //    }
+    //}
 
     public async Task<WorkshopResponseDto> SubmitWorkshopForReviewAsync(Guid workshopId, CancellationToken cancellationToken)
     {
@@ -727,58 +832,58 @@ public class WorkshopService : IWorkshopService
         }
     }
 
-    public async Task DeleteWorkshopAsync(Guid workshopId)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var workshop = await _unitOfWork.WorkshopRepository
-                .ActiveEntities
-                .Include(w => w.WorkshopActivities)
-                .Include(w => w.WorkshopSchedules)
-                .Include(w => w.Bookings)
-                .ThenInclude(b => b.User)
-                .FirstOrDefaultAsync(w => w.Id == workshopId)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
+    //public async Task DeleteWorkshopAsync(Guid workshopId)
+    //{
+    //    using var transaction = await _unitOfWork.BeginTransactionAsync();
+    //    try
+    //    {
+    //        var workshop = await _unitOfWork.WorkshopRepository
+    //            .ActiveEntities
+    //            .Include(w => w.WorkshopActivities)
+    //            .Include(w => w.WorkshopSchedules)
+    //            .Include(w => w.Bookings)
+    //            .ThenInclude(b => b.User)
+    //            .FirstOrDefaultAsync(w => w.Id == workshopId)
+    //            ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
 
-            if (workshop.WorkshopSchedules.Any(s => s.CurrentBooked > 0))
-                throw new InvalidOperationException("Không thể xóa lịch trình đã có người đặt.");
-            if (workshop.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
-                throw new InvalidOperationException("Không thể xóa lịch trình đã có người đặt.");
-            // var remainingSchedules = workshop.WorkshopSchedules.Where(s => s.Id != scheduleId).Select(s => s.StartTime.Date).Distinct().ToList();
-            // var maxDayOrder = workshop.WorkshopActivities.Any() ? workshop.WorkshopActivities.Max(a => a.DayOrder) : 0;
-            // if (remainingSchedules.Count < maxDayOrder)
-            //     throw CustomExceptionFactory.CreateBadRequestError($"Không thể xóa schedule: Not enough remaining schedules ({remainingSchedules.Count}) to cover DayOrder ({maxDayOrder}).");
+    //        if (workshop.WorkshopSchedules.Any(s => s.CurrentBooked > 0))
+    //            throw new InvalidOperationException("Không thể xóa lịch trình đã có người đặt.");
+    //        if (workshop.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
+    //            throw new InvalidOperationException("Không thể xóa lịch trình đã có người đặt.");
+    //        // var remainingSchedules = workshop.WorkshopSchedules.Where(s => s.Id != scheduleId).Select(s => s.StartTime.Date).Distinct().ToList();
+    //        // var maxDayOrder = workshop.WorkshopActivities.Any() ? workshop.WorkshopActivities.Max(a => a.DayOrder) : 0;
+    //        // if (remainingSchedules.Count < maxDayOrder)
+    //        //     throw CustomExceptionFactory.CreateBadRequestError($"Không thể xóa schedule: Not enough remaining schedules ({remainingSchedules.Count}) to cover DayOrder ({maxDayOrder}).");
 
-            workshop.IsDeleted = true;
-            _unitOfWork.WorkshopRepository.Update(workshop);
-            await _unitOfWork.SaveAsync();
+    //        workshop.IsDeleted = true;
+    //        _unitOfWork.WorkshopRepository.Update(workshop);
+    //        await _unitOfWork.SaveAsync();
 
-            // if (workshop.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
-            // {
-            //     foreach (var booking in workshop.Bookings)
-            //     {
-            //         await _emailService.SendEmailAsync(
-            //             new[] { booking.User!.Email },
-            //             $"Cập nhật Workshop {workshop.Name}",
-            //             $"Lịch trình ngày {schedule.StartTime:dd/MM/yyyy} của workshop {workshop.Name} đã bị xóa. Vui lòng kiểm tra chi tiết."
-            //         );
-            //     }
-            // }
+    //        // if (workshop.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
+    //        // {
+    //        //     foreach (var booking in workshop.Bookings)
+    //        //     {
+    //        //         await _emailService.SendEmailAsync(
+    //        //             new[] { booking.User!.Email },
+    //        //             $"Cập nhật Workshop {workshop.Name}",
+    //        //             $"Lịch trình ngày {schedule.StartTime:dd/MM/yyyy} của workshop {workshop.Name} đã bị xóa. Vui lòng kiểm tra chi tiết."
+    //        //         );
+    //        //     }
+    //        // }
 
-            await transaction.CommitAsync();
-        }
-        catch (CustomException)
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
+    //        await transaction.CommitAsync();
+    //    }
+    //    catch (CustomException)
+    //    {
+    //        await transaction.RollbackAsync();
+    //        throw;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        await transaction.RollbackAsync();
+    //        throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+    //    }
+    //}
 
     #region WorkshopActivityService
     // public async Task<List<ActivityResponseDto>> CreateActivitiesAsync(Guid workshopId, List<CreateActivityDto> dtos)
@@ -1006,547 +1111,547 @@ public class WorkshopService : IWorkshopService
     //     };
     // }
 
-    public async Task<List<ActivityResponseDto>> UpdateActivitiesAsync(Guid workshopId, List<UpdateActivityRequestDto> dtos)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var workshop = await _unitOfWork.WorkshopRepository
-                .ActiveEntities
-                .Include(w => w.WorkshopActivities)
-                .Include(w => w.WorkshopSchedules)
-                .Include(w => w.Bookings)
-                .ThenInclude(b => b.User)
-                .FirstOrDefaultAsync(w => w.Id == workshopId)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
-
-            // Validate 
-            foreach (var dto in dtos)
-            {
-                if (dto.ActivityId.HasValue)
-                {
-                    if (!workshop.WorkshopActivities.Any(a => a.Id == dto.ActivityId && !a.IsDeleted))
-                        throw CustomExceptionFactory.CreateBadRequestError($"Activity với ID {dto.ActivityId} không tồn tại hoặc đã bị xóa.");
-                }
-                if (string.IsNullOrWhiteSpace(dto.Activity))
-                    throw CustomExceptionFactory.CreateBadRequestError($"Tên hoạt động là bắt buộc cho DayOrder {dto.DayOrder}.");
-                if (dto.DayOrder < 1)
-                    throw CustomExceptionFactory.CreateBadRequestError($"DayOrder phải là số dương cho hoạt động {dto.Activity}.");
-                if (dto.StartTime.HasValue && dto.EndTime.HasValue && dto.StartTime >= dto.EndTime)
-                    throw CustomExceptionFactory.CreateBadRequestError($"Thời gian kết thúc phải sau thời gian bắt đầu cho hoạt động {dto.Activity}.");
-            }
-
-            // lọc cái nào để thêm, update, delete
-            var existingActivities = workshop.WorkshopActivities.Where(a => !a.IsDeleted).ToList();
-            var providedActivityIds = dtos.Where(d => d.ActivityId.HasValue).Select(d => d.ActivityId!.Value).ToList();
-            var toDelete = existingActivities.Where(a => !providedActivityIds.Contains(a.Id)).ToList();
-            var toAdd = dtos.Where(d => !d.ActivityId.HasValue)
-                .Select(d => new WorkshopActivity
-                {
-                    WorkshopId = workshopId,
-                    Activity = d.Activity,
-                    Description = d.Description,
-                    StartTime = d.StartTime,
-                    EndTime = d.EndTime,
-                    Notes = d.Notes,
-                    DayOrder = d.DayOrder,
-                    IsDeleted = false
-                }).ToList();
-            var toUpdate = dtos.Where(d => d.ActivityId.HasValue).ToList();
-
-            var updateIds = toUpdate.Select(u => u.ActivityId.Value).ToHashSet();
-
-            var allActivities = existingActivities
-                .Where(a => !toDelete.Contains(a) && !updateIds.Contains(a.Id))
-                .Select(a => new { a.Id, a.StartTime, a.EndTime, a.DayOrder })
-                .Concat(toAdd.Select(a => new { Id = Guid.Empty, a.StartTime, a.EndTime, a.DayOrder }))
-                .Concat(toUpdate.Select(u => new { Id = u.ActivityId!.Value, u.StartTime, u.EndTime, u.DayOrder }))
-                .Where(a => a.StartTime.HasValue && a.EndTime.HasValue)
-                .GroupBy(a => a.DayOrder)
-                .ToList();
-
-            foreach (var group in allActivities)
-            {
-                var activitiesInDay = group.OrderBy(a => a.StartTime).ToList();
-                for (int i = 1; i < activitiesInDay.Count; i++)
-                {
-                    if (activitiesInDay[i].StartTime < activitiesInDay[i - 1].EndTime)
-                        throw CustomExceptionFactory.CreateBadRequestError($"Phát hiện thời gian trùng lặp trong DayOrder {group.Key}.");
-                }
-            }
-
-            // var maxDayOrder = Math.Max(
-            //     existingActivities.Any() ? existingActivities.Max(a => a.DayOrder) : 0,
-            //     toAdd.Any() ? toAdd.Max(a => a.DayOrder) : 0
-            // );
-            // maxDayOrder = Math.Max(
-            //     maxDayOrder,
-            //     toUpdate.Any() ? toUpdate.Max(u => u.DayOrder) : 0
-            // );
-            // var scheduleDates = workshop.WorkshopSchedules.Select(s => s.StartTime.Date).Distinct().Count();
-            // if (scheduleDates < maxDayOrder)
-            //     throw CustomExceptionFactory.CreateBadRequestError($"Không đủ lịch trình ({scheduleDates}) để đáp ứng DayOrder ({maxDayOrder}).");
-
-            // Apply changes in a transaction
-            var changes = new List<string>();
-
-            // delete
-            foreach (var activity in toDelete)
-            {
-                activity.IsDeleted = true;
-                activity.LastUpdatedTime = DateTimeOffset.UtcNow;
-                changes.Add($"Đã xóa hoạt động: {activity.Activity}");
-            }
-
-            // add  
-            foreach (var activity in toAdd)
-            {
-                await _unitOfWork.WorkshopActivityRepository.AddAsync(activity);
-                changes.Add($"Đã thêm hoạt động: {activity.Activity}");
-            }
-
-            // update
-            foreach (var dto in toUpdate)
-            {
-                var activity = existingActivities.First(a => a.Id == dto.ActivityId!.Value);
-                activity.Activity = dto.Activity;
-                activity.Description = dto.Description;
-                activity.StartTime = dto.StartTime;
-                activity.EndTime = dto.EndTime;
-                activity.Notes = dto.Notes;
-                activity.DayOrder = dto.DayOrder;
-                activity.LastUpdatedTime = DateTimeOffset.UtcNow;
-                changes.Add($"Đã cập nhật hoạt động: {dto.Activity}");
-            }
-
-            await _unitOfWork.SaveAsync();
-
-            if (workshop.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
-            {
-                var changeSummary = string.Join("\n", changes);
-                foreach (var booking in workshop.Bookings)
-                {
-                    await _emailService.SendEmailAsync(
-                        new[] { booking.User!.Email },
-                        $"Cập nhật Workshop {workshop.Name}",
-                        $"Workshop {workshop.Name} đã có các thay đổi sau:\n{changeSummary}\nVui lòng kiểm tra chi tiết."
-                    );
-                }
-            }
-
-            await transaction.CommitAsync();
-
-            var result = existingActivities
-                .Where(a => !a.IsDeleted)
-                .Select(a => new ActivityResponseDto
-                {
-                    ActivityId = a.Id,
-                    Activity = a.Activity,
-                    Description = a.Description,
-                    StartTime = a.StartTime,
-                    EndTime = a.EndTime,
-                    Notes = a.Notes,
-                    DayOrder = a.DayOrder
-                })
-                .Concat(toAdd.Select(a => new ActivityResponseDto
-                {
-                    ActivityId = a.Id,
-                    Activity = a.Activity,
-                    Description = a.Description,
-                    StartTime = a.StartTime,
-                    EndTime = a.EndTime,
-                    Notes = a.Notes,
-                    DayOrder = a.DayOrder
-                }))
-                .ToList();
-
-            return result;
-        }
-        catch (CustomException)
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
-    public async Task DeleteActivityAsync(Guid workshopId, Guid activityId)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var workshop = await _unitOfWork.WorkshopRepository
-                .ActiveEntities
-                .Include(w => w.WorkshopActivities)
-                .Include(w => w.Bookings)
-                .ThenInclude(b => b.User)
-                .FirstOrDefaultAsync(w => w.Id == workshopId)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
-
-            var activity = await _unitOfWork.WorkshopActivityRepository
-                .ActiveEntities
-                .FirstOrDefaultAsync(a => a.Id == activityId && a.WorkshopId == workshopId)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Activity");
-
-
-            _unitOfWork.WorkshopActivityRepository.Remove(activity);
-            await _unitOfWork.SaveAsync();
-
-            // Send notification if there are bookings
-            if (workshop.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
-            {
-                foreach (var booking in workshop.Bookings)
-                {
-                    await _emailService.SendEmailAsync(
-                        new[] { booking.User!.Email },
-                        $"Cập nhật Workshop {workshop.Name}",
-                        $"Hoạt động {activity.Activity} trong workshop {workshop.Name} đã được xóa. Vui lòng kiểm tra chi tiết."
-                    );
-                }
-            }
-
-            await transaction.CommitAsync();
-        }
-        catch (CustomException)
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
-    #endregion
-
-    #region WorkshopScheduleService
-
-    public async Task<List<ScheduleResponseDto>> CreateSchedulesAsync(Guid workshopId, List<CreateScheduleDto> dtos)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var workshop = await _unitOfWork.WorkshopRepository
-                .ActiveEntities
-                .Include(w => w.WorkshopActivities)
-                .Include(w => w.WorkshopSchedules)
-                .Include(w => w.Bookings)
-                    .ThenInclude(b => b.User)
-                .FirstOrDefaultAsync(w => w.Id == workshopId)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
-
-            var maxDayOrder = workshop.WorkshopActivities.Any() ? workshop.WorkshopActivities.Max(a => a.DayOrder) : 0;
-
-            // Validate 
-            foreach (var dto in dtos)
-            {
-                if (dto.StartTime >= dto.EndTime)
-                    throw CustomExceptionFactory.CreateBadRequestError($"Thời gian kết thúc phải sau thời gian bắt đầu cho lịch trình bắt đầu lúc {dto.StartTime}.");
-                if (dto.MaxParticipant <= 0)
-                    throw CustomExceptionFactory.CreateBadRequestError($"Số lượng người tham gia tối đa phải là số dương cho lịch trình bắt đầu lúc {dto.StartTime}.");
-                if (dto.AdultPrice < 0 || dto.ChildrenPrice < 0)
-                    throw CustomExceptionFactory.CreateBadRequestError($"Giá không được âm cho lịch trình bắt đầu lúc {dto.StartTime}.");
-
-                if (maxDayOrder > 0)
-                {
-                    var durationDays = (dto.EndTime.Date - dto.StartTime.Date).Days + 1;
-                    if (durationDays < maxDayOrder)
-                    {
-                        throw CustomExceptionFactory.CreateBadRequestError(
-                            $"Lịch trình từ {dto.StartTime} đến {dto.EndTime} chỉ có {durationDays} ngày, " +
-                            $"yêu cầu tối thiểu {maxDayOrder} ngày để đáp ứng các hoạt động."
-                        );
-                    }
-                }
-
-                ValidateScheduleConflicts(workshop.WorkshopSchedules, dto.StartTime, dto.EndTime);
-            }
-
-            // var newScheduleDates = dtos.Select(d => d.StartTime.Date).Distinct().ToList();
-            // var existingScheduleDates = workshop.WorkshopSchedules.Select(s => s.StartTime.Date).Distinct().ToList();
-            // var allScheduleDates = newScheduleDates.Concat(existingScheduleDates).Distinct().ToList();
-            // if (allScheduleDates.Count < maxDayOrder)
-            //     throw CustomExceptionFactory.CreateBadRequestError($"Không đủ ngày lịch trình ({allScheduleDates.Count}) để đáp ứng DayOrder ({maxDayOrder}).");
-
-            var schedules = dtos.Select(dto => new WorkshopSchedule
-            {
-                WorkshopId = workshopId,
-                StartTime = dto.StartTime,
-                EndTime = dto.EndTime,
-                MaxParticipant = dto.MaxParticipant,
-                AdultPrice = dto.AdultPrice,
-                ChildrenPrice = dto.ChildrenPrice,
-                Notes = dto.Notes
-            }).ToList();
-
-
-            foreach (var schedule in schedules)
-            {
-                await _unitOfWork.WorkshopScheduleRepository.AddAsync(schedule);
-            }
-            await _unitOfWork.SaveAsync();
-
-            if (workshop.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
-            {
-                foreach (var booking in workshop.Bookings)
-                {
-                    await _emailService.SendEmailAsync(
-                        new[] { booking.User!.Email },
-                        $"Cập nhật Workshop {workshop.Name}",
-                        $"Workshop {workshop.Name} có lịch trình mới. Vui lòng kiểm tra chi tiết."
-                    );
-                }
-            }
-
-            await transaction.CommitAsync();
-
-
-            return schedules.Select(s => new ScheduleResponseDto
-            {
-                ScheduleId = s.Id,
-                StartTime = s.StartTime,
-                EndTime = s.EndTime,
-                MaxParticipant = s.MaxParticipant,
-                CurrentBooked = s.CurrentBooked,
-                AdultPrice = s.AdultPrice,
-                ChildrenPrice = s.ChildrenPrice,
-                Notes = s.Notes
-            }).ToList();
-        }
-        catch (CustomException)
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
-    public async Task<List<ScheduleResponseDto>> GetSchedulesAsync(Guid workshopId)
-    {
-        var workshop = await _unitOfWork.WorkshopRepository
-            .ActiveEntities
-            .FirstOrDefaultAsync(w => w.Id == workshopId)
-            ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
-
-        var schedules = await _unitOfWork.WorkshopScheduleRepository
-            .ActiveEntities
-            .Where(s => s.WorkshopId == workshopId)
-            .Select(s => new ScheduleResponseDto
-            {
-                ScheduleId = s.Id,
-                StartTime = s.StartTime,
-                EndTime = s.EndTime,
-                MaxParticipant = s.MaxParticipant,
-                CurrentBooked = s.CurrentBooked,
-                AdultPrice = s.AdultPrice,
-                ChildrenPrice = s.ChildrenPrice,
-                Notes = s.Notes
-            })
-            .ToListAsync();
-
-        return schedules;
-    }
-
-    public async Task<ScheduleResponseDto> UpdateScheduleAsync(Guid workshopId, Guid scheduleId, CreateScheduleDto dto)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var workshop = await _unitOfWork.WorkshopRepository
-                .ActiveEntities
-                .Include(w => w.WorkshopActivities)
-                .Include(w => w.WorkshopSchedules)
-                .Include(w => w.Bookings)
-                    .ThenInclude(b => b.User)
-                .FirstOrDefaultAsync(w => w.Id == workshopId)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
-
-            var schedule = await _unitOfWork.WorkshopScheduleRepository
-                .ActiveEntities
-                .FirstOrDefaultAsync(s => s.Id == scheduleId && s.WorkshopId == workshopId)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Schedule");
-
-            // if (schedule.Bookings.Any(b => b.Status != BookingStatus.Pending))
-            if (schedule.Bookings.Any())
-                throw CustomExceptionFactory.CreateBadRequestError("Không thể cập nhật lịch trình đã có người đặt.");
-
-            if (dto.StartTime >= dto.EndTime)
-                throw CustomExceptionFactory.CreateBadRequestError("Thời gian kết thúc phải sau thời gian bắt đầu.");
-            if (dto.MaxParticipant <= 0)
-                throw CustomExceptionFactory.CreateBadRequestError("Số lượng người tham gia tối đa phải là số dương.");
-            if (dto.AdultPrice < 0 || dto.ChildrenPrice < 0)
-                throw CustomExceptionFactory.CreateBadRequestError("Giá không được âm.");
-
-            // check
-            // var otherSchedules = workshop.WorkshopSchedules.Where(s => s.Id != scheduleId).Select(s => s.StartTime.Date).Distinct().ToList();
-            // var allScheduleDates = otherSchedules.Concat(new[] { dto.StartTime.Date }).Distinct().ToList();
-            var maxDayOrder = workshop.WorkshopActivities.Any() ? workshop.WorkshopActivities.Max(a => a.DayOrder) : 0;
-            // if (allScheduleDates.Count < maxDayOrder)
-            //     throw CustomExceptionFactory.CreateBadRequestError($"Không đủ ngày lịch trình ({allScheduleDates.Count}) để đáp ứng DayOrder ({maxDayOrder}).");
-            if (maxDayOrder > 0)
-            {
-                var durationDays = (dto.EndTime.Date - dto.StartTime.Date).Days + 1;
-                if (durationDays < maxDayOrder)
-                {
-                    throw CustomExceptionFactory.CreateBadRequestError(
-                        $"Khoảng thời gian của lịch trình ({durationDays} ngày) không đủ để đáp ứng hoạt động yêu cầu {maxDayOrder} ngày."
-                    );
-                }
-            }
-
-            ValidateScheduleConflicts(workshop.WorkshopSchedules, dto.StartTime, dto.EndTime, schedule.Id);
-
-            schedule.StartTime = dto.StartTime;
-            schedule.EndTime = dto.EndTime;
-            schedule.MaxParticipant = dto.MaxParticipant;
-            schedule.AdultPrice = dto.AdultPrice;
-            schedule.ChildrenPrice = dto.ChildrenPrice;
-            schedule.Notes = dto.Notes;
-            schedule.LastUpdatedTime = DateTimeOffset.UtcNow;
-
-            await _unitOfWork.SaveAsync();
-
-            if (workshop.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
-            {
-                foreach (var booking in workshop.Bookings)
-                {
-                    await _emailService.SendEmailAsync(
-                        new[] { booking.User!.Email },
-                        $"Cập nhật Workshop {workshop.Name}",
-                        $"Lịch trình ngày {schedule.StartTime:dd/MM/yyyy} của workshop {workshop.Name} đã được cập nhật. Vui lòng kiểm tra chi tiết."
-                    );
-                }
-            }
-            workshop.Status = WorkshopStatus.Approved;
-            await _unitOfWork.SaveAsync();
-
-            await transaction.CommitAsync();
-
-            return new ScheduleResponseDto
-            {
-                ScheduleId = schedule.Id,
-                StartTime = schedule.StartTime,
-                EndTime = schedule.EndTime,
-                MaxParticipant = schedule.MaxParticipant,
-                CurrentBooked = schedule.CurrentBooked,
-                AdultPrice = schedule.AdultPrice,
-                ChildrenPrice = schedule.ChildrenPrice,
-                Notes = schedule.Notes
-            };
-        }
-        catch (CustomException)
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
-    public async Task DeleteScheduleAsync(Guid workshopId, Guid scheduleId)
-    {
-        using var transaction = await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var workshop = await _unitOfWork.WorkshopRepository
-                .ActiveEntities
-                .Include(w => w.WorkshopActivities)
-                .Include(w => w.WorkshopSchedules)
-                .Include(w => w.Bookings)
-                    .ThenInclude(b => b.User)
-                .FirstOrDefaultAsync(w => w.Id == workshopId)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
-
-            var schedule = await _unitOfWork.WorkshopScheduleRepository
-                .ActiveEntities
-                .FirstOrDefaultAsync(s => s.Id == scheduleId && s.WorkshopId == workshopId)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Schedule");
-
-            if (schedule.Bookings.Any())
-                throw CustomExceptionFactory.CreateBadRequestError("Không thể xóa lịch trình đã có người đặt.");
-
-            // var remainingSchedules = workshop.WorkshopSchedules.Where(s => s.Id != scheduleId).Select(s => s.StartTime.Date).Distinct().ToList();
-            // var maxDayOrder = workshop.WorkshopActivities.Any() ? workshop.WorkshopActivities.Max(a => a.DayOrder) : 0;
-            // if (remainingSchedules.Count < maxDayOrder)
-            //     throw CustomExceptionFactory.CreateBadRequestError($"Không thể xóa schedule: Not enough remaining schedules ({remainingSchedules.Count}) to cover DayOrder ({maxDayOrder}).");
-
-
-            _unitOfWork.WorkshopScheduleRepository.Remove(schedule);
-            await _unitOfWork.SaveAsync();
-
-            if (workshop.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
-            {
-                foreach (var booking in workshop.Bookings)
-                {
-                    await _emailService.SendEmailAsync(
-                        new[] { booking.User!.Email },
-                        $"Cập nhật Workshop {workshop.Name}",
-                        $"Lịch trình ngày {schedule.StartTime:dd/MM/yyyy} của workshop {workshop.Name} đã bị xóa. Vui lòng kiểm tra chi tiết."
-                    );
-                }
-            }
-
-            await transaction.CommitAsync();
-        }
-        catch (CustomException)
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
-    #endregion
-
-    private List<WorkshopDayDetail> BuildDayDetails(Workshop workshop)
-    {
-        var groupedByDay = workshop.WorkshopActivities
-            .Where(l => !l.IsDeleted)
-            .GroupBy(l => l.DayOrder)
-            .OrderBy(g => g.Key);
-
-        var dayDetails = new List<WorkshopDayDetail>();
-
-        foreach (var group in groupedByDay)
-        {
-            var activities = group.Select(ws => new WorkshopActivityDto
-            {
-                Id = ws.Id,
-                Activity = ws.Activity ?? "Unknown",
-                Description = ws.Description,
-                DayOrder = ws.DayOrder,
-                StartTime = ws.StartTime,
-                EndTime = ws.EndTime,
-                StartTimeFormatted = ws.StartTime?.ToString(@"hh\:mm") ?? "",
-                EndTimeFormatted = ws.EndTime?.ToString(@"hh\:mm") ?? "",
-            }).ToList();
-
-            dayDetails.Add(new WorkshopDayDetail
-            {
-                DayNumber = group.Key,
-                Activities = activities
-            });
-        }
-
-        return dayDetails;
-    }
+    //public async Task<List<ActivityResponseDto>> UpdateActivitiesAsync(Guid workshopId, List<UpdateActivityRequestDto> dtos)
+    //{
+    //    using var transaction = await _unitOfWork.BeginTransactionAsync();
+    //    try
+    //    {
+    //        var workshop = await _unitOfWork.WorkshopRepository
+    //            .ActiveEntities
+    //            .Include(w => w.WorkshopActivities)
+    //            .Include(w => w.WorkshopSchedules)
+    //            .Include(w => w.Bookings)
+    //            .ThenInclude(b => b.User)
+    //            .FirstOrDefaultAsync(w => w.Id == workshopId)
+    //            ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
+
+    //        // Validate 
+    //        foreach (var dto in dtos)
+    //        {
+    //            if (dto.ActivityId.HasValue)
+    //            {
+    //                if (!workshop.WorkshopActivities.Any(a => a.Id == dto.ActivityId && !a.IsDeleted))
+    //                    throw CustomExceptionFactory.CreateBadRequestError($"Activity với ID {dto.ActivityId} không tồn tại hoặc đã bị xóa.");
+    //            }
+    //            if (string.IsNullOrWhiteSpace(dto.Activity))
+    //                throw CustomExceptionFactory.CreateBadRequestError($"Tên hoạt động là bắt buộc cho DayOrder {dto.DayOrder}.");
+    //            if (dto.DayOrder < 1)
+    //                throw CustomExceptionFactory.CreateBadRequestError($"DayOrder phải là số dương cho hoạt động {dto.Activity}.");
+    //            if (dto.StartTime.HasValue && dto.EndTime.HasValue && dto.StartTime >= dto.EndTime)
+    //                throw CustomExceptionFactory.CreateBadRequestError($"Thời gian kết thúc phải sau thời gian bắt đầu cho hoạt động {dto.Activity}.");
+    //        }
+
+    //        // lọc cái nào để thêm, update, delete
+    //        var existingActivities = workshop.WorkshopActivities.Where(a => !a.IsDeleted).ToList();
+    //        var providedActivityIds = dtos.Where(d => d.ActivityId.HasValue).Select(d => d.ActivityId!.Value).ToList();
+    //        var toDelete = existingActivities.Where(a => !providedActivityIds.Contains(a.Id)).ToList();
+    //        var toAdd = dtos.Where(d => !d.ActivityId.HasValue)
+    //            .Select(d => new WorkshopActivity
+    //            {
+    //                WorkshopId = workshopId,
+    //                Activity = d.Activity,
+    //                Description = d.Description,
+    //                StartTime = d.StartTime,
+    //                EndTime = d.EndTime,
+    //                Notes = d.Notes,
+    //                DayOrder = d.DayOrder,
+    //                IsDeleted = false
+    //            }).ToList();
+    //        var toUpdate = dtos.Where(d => d.ActivityId.HasValue).ToList();
+
+    //        var updateIds = toUpdate.Select(u => u.ActivityId.Value).ToHashSet();
+
+    //        var allActivities = existingActivities
+    //            .Where(a => !toDelete.Contains(a) && !updateIds.Contains(a.Id))
+    //            .Select(a => new { a.Id, a.StartTime, a.EndTime, a.DayOrder })
+    //            .Concat(toAdd.Select(a => new { Id = Guid.Empty, a.StartTime, a.EndTime, a.DayOrder }))
+    //            .Concat(toUpdate.Select(u => new { Id = u.ActivityId!.Value, u.StartTime, u.EndTime, u.DayOrder }))
+    //            .Where(a => a.StartTime.HasValue && a.EndTime.HasValue)
+    //            .GroupBy(a => a.DayOrder)
+    //            .ToList();
+
+    //        foreach (var group in allActivities)
+    //        {
+    //            var activitiesInDay = group.OrderBy(a => a.StartTime).ToList();
+    //            for (int i = 1; i < activitiesInDay.Count; i++)
+    //            {
+    //                if (activitiesInDay[i].StartTime < activitiesInDay[i - 1].EndTime)
+    //                    throw CustomExceptionFactory.CreateBadRequestError($"Phát hiện thời gian trùng lặp trong DayOrder {group.Key}.");
+    //            }
+    //        }
+
+    //        // var maxDayOrder = Math.Max(
+    //        //     existingActivities.Any() ? existingActivities.Max(a => a.DayOrder) : 0,
+    //        //     toAdd.Any() ? toAdd.Max(a => a.DayOrder) : 0
+    //        // );
+    //        // maxDayOrder = Math.Max(
+    //        //     maxDayOrder,
+    //        //     toUpdate.Any() ? toUpdate.Max(u => u.DayOrder) : 0
+    //        // );
+    //        // var scheduleDates = workshop.WorkshopSchedules.Select(s => s.StartTime.Date).Distinct().Count();
+    //        // if (scheduleDates < maxDayOrder)
+    //        //     throw CustomExceptionFactory.CreateBadRequestError($"Không đủ lịch trình ({scheduleDates}) để đáp ứng DayOrder ({maxDayOrder}).");
+
+    //        // Apply changes in a transaction
+    //        var changes = new List<string>();
+
+    //        // delete
+    //        foreach (var activity in toDelete)
+    //        {
+    //            activity.IsDeleted = true;
+    //            activity.LastUpdatedTime = DateTimeOffset.UtcNow;
+    //            changes.Add($"Đã xóa hoạt động: {activity.Activity}");
+    //        }
+
+    //        // add  
+    //        foreach (var activity in toAdd)
+    //        {
+    //            await _unitOfWork.WorkshopActivityRepository.AddAsync(activity);
+    //            changes.Add($"Đã thêm hoạt động: {activity.Activity}");
+    //        }
+
+    //        // update
+    //        foreach (var dto in toUpdate)
+    //        {
+    //            var activity = existingActivities.First(a => a.Id == dto.ActivityId!.Value);
+    //            activity.Activity = dto.Activity;
+    //            activity.Description = dto.Description;
+    //            activity.StartTime = dto.StartTime;
+    //            activity.EndTime = dto.EndTime;
+    //            activity.Notes = dto.Notes;
+    //            activity.DayOrder = dto.DayOrder;
+    //            activity.LastUpdatedTime = DateTimeOffset.UtcNow;
+    //            changes.Add($"Đã cập nhật hoạt động: {dto.Activity}");
+    //        }
+
+    //        await _unitOfWork.SaveAsync();
+
+    //        if (workshop.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
+    //        {
+    //            var changeSummary = string.Join("\n", changes);
+    //            foreach (var booking in workshop.Bookings)
+    //            {
+    //                await _emailService.SendEmailAsync(
+    //                    new[] { booking.User!.Email },
+    //                    $"Cập nhật Workshop {workshop.Name}",
+    //                    $"Workshop {workshop.Name} đã có các thay đổi sau:\n{changeSummary}\nVui lòng kiểm tra chi tiết."
+    //                );
+    //            }
+    //        }
+
+    //        await transaction.CommitAsync();
+
+    //        var result = existingActivities
+    //            .Where(a => !a.IsDeleted)
+    //            .Select(a => new ActivityResponseDto
+    //            {
+    //                ActivityId = a.Id,
+    //                Activity = a.Activity,
+    //                Description = a.Description,
+    //                StartTime = a.StartTime,
+    //                EndTime = a.EndTime,
+    //                Notes = a.Notes,
+    //                DayOrder = a.DayOrder
+    //            })
+    //            .Concat(toAdd.Select(a => new ActivityResponseDto
+    //            {
+    //                ActivityId = a.Id,
+    //                Activity = a.Activity,
+    //                Description = a.Description,
+    //                StartTime = a.StartTime,
+    //                EndTime = a.EndTime,
+    //                Notes = a.Notes,
+    //                DayOrder = a.DayOrder
+    //            }))
+    //            .ToList();
+
+    //        return result;
+    //    }
+    //    catch (CustomException)
+    //    {
+    //        await transaction.RollbackAsync();
+    //        throw;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        await transaction.RollbackAsync();
+    //        throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+    //    }
+    //}
+
+    //public async Task DeleteActivityAsync(Guid workshopId, Guid activityId)
+    //{
+    //    using var transaction = await _unitOfWork.BeginTransactionAsync();
+    //    try
+    //    {
+    //        var workshop = await _unitOfWork.WorkshopRepository
+    //            .ActiveEntities
+    //            .Include(w => w.WorkshopActivities)
+    //            .Include(w => w.Bookings)
+    //            .ThenInclude(b => b.User)
+    //            .FirstOrDefaultAsync(w => w.Id == workshopId)
+    //            ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
+
+    //        var activity = await _unitOfWork.WorkshopActivityRepository
+    //            .ActiveEntities
+    //            .FirstOrDefaultAsync(a => a.Id == activityId && a.WorkshopId == workshopId)
+    //            ?? throw CustomExceptionFactory.CreateNotFoundError("Activity");
+
+
+    //        _unitOfWork.WorkshopActivityRepository.Remove(activity);
+    //        await _unitOfWork.SaveAsync();
+
+    //        // Send notification if there are bookings
+    //        if (workshop.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
+    //        {
+    //            foreach (var booking in workshop.Bookings)
+    //            {
+    //                await _emailService.SendEmailAsync(
+    //                    new[] { booking.User!.Email },
+    //                    $"Cập nhật Workshop {workshop.Name}",
+    //                    $"Hoạt động {activity.Activity} trong workshop {workshop.Name} đã được xóa. Vui lòng kiểm tra chi tiết."
+    //                );
+    //            }
+    //        }
+
+    //        await transaction.CommitAsync();
+    //    }
+    //    catch (CustomException)
+    //    {
+    //        await transaction.RollbackAsync();
+    //        throw;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        await transaction.RollbackAsync();
+    //        throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+    //    }
+    //}
+
+    //#endregion
+
+    //#region WorkshopScheduleService
+
+    //public async Task<List<ScheduleResponseDto>> CreateSchedulesAsync(Guid workshopId, List<CreateScheduleDto> dtos)
+    //{
+    //    using var transaction = await _unitOfWork.BeginTransactionAsync();
+    //    try
+    //    {
+    //        var workshop = await _unitOfWork.WorkshopRepository
+    //            .ActiveEntities
+    //            .Include(w => w.WorkshopActivities)
+    //            .Include(w => w.WorkshopSchedules)
+    //            .Include(w => w.Bookings)
+    //                .ThenInclude(b => b.User)
+    //            .FirstOrDefaultAsync(w => w.Id == workshopId)
+    //            ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
+
+    //        var maxDayOrder = workshop.WorkshopActivities.Any() ? workshop.WorkshopActivities.Max(a => a.DayOrder) : 0;
+
+    //        // Validate 
+    //        foreach (var dto in dtos)
+    //        {
+    //            if (dto.StartTime >= dto.EndTime)
+    //                throw CustomExceptionFactory.CreateBadRequestError($"Thời gian kết thúc phải sau thời gian bắt đầu cho lịch trình bắt đầu lúc {dto.StartTime}.");
+    //            if (dto.MaxParticipant <= 0)
+    //                throw CustomExceptionFactory.CreateBadRequestError($"Số lượng người tham gia tối đa phải là số dương cho lịch trình bắt đầu lúc {dto.StartTime}.");
+    //            if (dto.AdultPrice < 0 || dto.ChildrenPrice < 0)
+    //                throw CustomExceptionFactory.CreateBadRequestError($"Giá không được âm cho lịch trình bắt đầu lúc {dto.StartTime}.");
+
+    //            if (maxDayOrder > 0)
+    //            {
+    //                var durationDays = (dto.EndTime.Date - dto.StartTime.Date).Days + 1;
+    //                if (durationDays < maxDayOrder)
+    //                {
+    //                    throw CustomExceptionFactory.CreateBadRequestError(
+    //                        $"Lịch trình từ {dto.StartTime} đến {dto.EndTime} chỉ có {durationDays} ngày, " +
+    //                        $"yêu cầu tối thiểu {maxDayOrder} ngày để đáp ứng các hoạt động."
+    //                    );
+    //                }
+    //            }
+
+    //            ValidateScheduleConflicts(workshop.WorkshopSchedules, dto.StartTime, dto.EndTime);
+    //        }
+
+    //        // var newScheduleDates = dtos.Select(d => d.StartTime.Date).Distinct().ToList();
+    //        // var existingScheduleDates = workshop.WorkshopSchedules.Select(s => s.StartTime.Date).Distinct().ToList();
+    //        // var allScheduleDates = newScheduleDates.Concat(existingScheduleDates).Distinct().ToList();
+    //        // if (allScheduleDates.Count < maxDayOrder)
+    //        //     throw CustomExceptionFactory.CreateBadRequestError($"Không đủ ngày lịch trình ({allScheduleDates.Count}) để đáp ứng DayOrder ({maxDayOrder}).");
+
+    //        var schedules = dtos.Select(dto => new WorkshopSchedule
+    //        {
+    //            WorkshopId = workshopId,
+    //            StartTime = dto.StartTime,
+    //            EndTime = dto.EndTime,
+    //            MaxParticipant = dto.MaxParticipant,
+    //            AdultPrice = dto.AdultPrice,
+    //            ChildrenPrice = dto.ChildrenPrice,
+    //            Notes = dto.Notes
+    //        }).ToList();
+
+
+    //        foreach (var schedule in schedules)
+    //        {
+    //            await _unitOfWork.WorkshopScheduleRepository.AddAsync(schedule);
+    //        }
+    //        await _unitOfWork.SaveAsync();
+
+    //        if (workshop.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
+    //        {
+    //            foreach (var booking in workshop.Bookings)
+    //            {
+    //                await _emailService.SendEmailAsync(
+    //                    new[] { booking.User!.Email },
+    //                    $"Cập nhật Workshop {workshop.Name}",
+    //                    $"Workshop {workshop.Name} có lịch trình mới. Vui lòng kiểm tra chi tiết."
+    //                );
+    //            }
+    //        }
+
+    //        await transaction.CommitAsync();
+
+
+    //        return schedules.Select(s => new ScheduleResponseDto
+    //        {
+    //            ScheduleId = s.Id,
+    //            StartTime = s.StartTime,
+    //            EndTime = s.EndTime,
+    //            MaxParticipant = s.MaxParticipant,
+    //            CurrentBooked = s.CurrentBooked,
+    //            AdultPrice = s.AdultPrice,
+    //            ChildrenPrice = s.ChildrenPrice,
+    //            Notes = s.Notes
+    //        }).ToList();
+    //    }
+    //    catch (CustomException)
+    //    {
+    //        await transaction.RollbackAsync();
+    //        throw;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        await transaction.RollbackAsync();
+    //        throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+    //    }
+    //}
+
+    //public async Task<List<ScheduleResponseDto>> GetSchedulesAsync(Guid workshopId)
+    //{
+    //    var workshop = await _unitOfWork.WorkshopRepository
+    //        .ActiveEntities
+    //        .FirstOrDefaultAsync(w => w.Id == workshopId)
+    //        ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
+
+    //    var schedules = await _unitOfWork.WorkshopScheduleRepository
+    //        .ActiveEntities
+    //        .Where(s => s.WorkshopId == workshopId)
+    //        .Select(s => new ScheduleResponseDto
+    //        {
+    //            ScheduleId = s.Id,
+    //            StartTime = s.StartTime,
+    //            EndTime = s.EndTime,
+    //            MaxParticipant = s.MaxParticipant,
+    //            CurrentBooked = s.CurrentBooked,
+    //            AdultPrice = s.AdultPrice,
+    //            ChildrenPrice = s.ChildrenPrice,
+    //            Notes = s.Notes
+    //        })
+    //        .ToListAsync();
+
+    //    return schedules;
+    //}
+
+    //public async Task<ScheduleResponseDto> UpdateScheduleAsync(Guid workshopId, Guid scheduleId, CreateScheduleDto dto)
+    //{
+    //    using var transaction = await _unitOfWork.BeginTransactionAsync();
+    //    try
+    //    {
+    //        var workshop = await _unitOfWork.WorkshopRepository
+    //            .ActiveEntities
+    //            .Include(w => w.WorkshopActivities)
+    //            .Include(w => w.WorkshopSchedules)
+    //            .Include(w => w.Bookings)
+    //                .ThenInclude(b => b.User)
+    //            .FirstOrDefaultAsync(w => w.Id == workshopId)
+    //            ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
+
+    //        var schedule = await _unitOfWork.WorkshopScheduleRepository
+    //            .ActiveEntities
+    //            .FirstOrDefaultAsync(s => s.Id == scheduleId && s.WorkshopId == workshopId)
+    //            ?? throw CustomExceptionFactory.CreateNotFoundError("Schedule");
+
+    //        // if (schedule.Bookings.Any(b => b.Status != BookingStatus.Pending))
+    //        if (schedule.Bookings.Any())
+    //            throw CustomExceptionFactory.CreateBadRequestError("Không thể cập nhật lịch trình đã có người đặt.");
+
+    //        if (dto.StartTime >= dto.EndTime)
+    //            throw CustomExceptionFactory.CreateBadRequestError("Thời gian kết thúc phải sau thời gian bắt đầu.");
+    //        if (dto.MaxParticipant <= 0)
+    //            throw CustomExceptionFactory.CreateBadRequestError("Số lượng người tham gia tối đa phải là số dương.");
+    //        if (dto.AdultPrice < 0 || dto.ChildrenPrice < 0)
+    //            throw CustomExceptionFactory.CreateBadRequestError("Giá không được âm.");
+
+    //        // check
+    //        // var otherSchedules = workshop.WorkshopSchedules.Where(s => s.Id != scheduleId).Select(s => s.StartTime.Date).Distinct().ToList();
+    //        // var allScheduleDates = otherSchedules.Concat(new[] { dto.StartTime.Date }).Distinct().ToList();
+    //        var maxDayOrder = workshop.WorkshopActivities.Any() ? workshop.WorkshopActivities.Max(a => a.DayOrder) : 0;
+    //        // if (allScheduleDates.Count < maxDayOrder)
+    //        //     throw CustomExceptionFactory.CreateBadRequestError($"Không đủ ngày lịch trình ({allScheduleDates.Count}) để đáp ứng DayOrder ({maxDayOrder}).");
+    //        if (maxDayOrder > 0)
+    //        {
+    //            var durationDays = (dto.EndTime.Date - dto.StartTime.Date).Days + 1;
+    //            if (durationDays < maxDayOrder)
+    //            {
+    //                throw CustomExceptionFactory.CreateBadRequestError(
+    //                    $"Khoảng thời gian của lịch trình ({durationDays} ngày) không đủ để đáp ứng hoạt động yêu cầu {maxDayOrder} ngày."
+    //                );
+    //            }
+    //        }
+
+    //        ValidateScheduleConflicts(workshop.WorkshopSchedules, dto.StartTime, dto.EndTime, schedule.Id);
+
+    //        schedule.StartTime = dto.StartTime;
+    //        schedule.EndTime = dto.EndTime;
+    //        schedule.MaxParticipant = dto.MaxParticipant;
+    //        schedule.AdultPrice = dto.AdultPrice;
+    //        schedule.ChildrenPrice = dto.ChildrenPrice;
+    //        schedule.Notes = dto.Notes;
+    //        schedule.LastUpdatedTime = DateTimeOffset.UtcNow;
+
+    //        await _unitOfWork.SaveAsync();
+
+    //        if (workshop.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
+    //        {
+    //            foreach (var booking in workshop.Bookings)
+    //            {
+    //                await _emailService.SendEmailAsync(
+    //                    new[] { booking.User!.Email },
+    //                    $"Cập nhật Workshop {workshop.Name}",
+    //                    $"Lịch trình ngày {schedule.StartTime:dd/MM/yyyy} của workshop {workshop.Name} đã được cập nhật. Vui lòng kiểm tra chi tiết."
+    //                );
+    //            }
+    //        }
+    //        workshop.Status = WorkshopStatus.Approved;
+    //        await _unitOfWork.SaveAsync();
+
+    //        await transaction.CommitAsync();
+
+    //        return new ScheduleResponseDto
+    //        {
+    //            ScheduleId = schedule.Id,
+    //            StartTime = schedule.StartTime,
+    //            EndTime = schedule.EndTime,
+    //            MaxParticipant = schedule.MaxParticipant,
+    //            CurrentBooked = schedule.CurrentBooked,
+    //            AdultPrice = schedule.AdultPrice,
+    //            ChildrenPrice = schedule.ChildrenPrice,
+    //            Notes = schedule.Notes
+    //        };
+    //    }
+    //    catch (CustomException)
+    //    {
+    //        await transaction.RollbackAsync();
+    //        throw;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        await transaction.RollbackAsync();
+    //        throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+    //    }
+    //}
+
+    //public async Task DeleteScheduleAsync(Guid workshopId, Guid scheduleId)
+    //{
+    //    using var transaction = await _unitOfWork.BeginTransactionAsync();
+    //    try
+    //    {
+    //        var workshop = await _unitOfWork.WorkshopRepository
+    //            .ActiveEntities
+    //            .Include(w => w.WorkshopActivities)
+    //            .Include(w => w.WorkshopSchedules)
+    //            .Include(w => w.Bookings)
+    //                .ThenInclude(b => b.User)
+    //            .FirstOrDefaultAsync(w => w.Id == workshopId)
+    //            ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
+
+    //        var schedule = await _unitOfWork.WorkshopScheduleRepository
+    //            .ActiveEntities
+    //            .FirstOrDefaultAsync(s => s.Id == scheduleId && s.WorkshopId == workshopId)
+    //            ?? throw CustomExceptionFactory.CreateNotFoundError("Schedule");
+
+    //        if (schedule.Bookings.Any())
+    //            throw CustomExceptionFactory.CreateBadRequestError("Không thể xóa lịch trình đã có người đặt.");
+
+    //        // var remainingSchedules = workshop.WorkshopSchedules.Where(s => s.Id != scheduleId).Select(s => s.StartTime.Date).Distinct().ToList();
+    //        // var maxDayOrder = workshop.WorkshopActivities.Any() ? workshop.WorkshopActivities.Max(a => a.DayOrder) : 0;
+    //        // if (remainingSchedules.Count < maxDayOrder)
+    //        //     throw CustomExceptionFactory.CreateBadRequestError($"Không thể xóa schedule: Not enough remaining schedules ({remainingSchedules.Count}) to cover DayOrder ({maxDayOrder}).");
+
+
+    //        _unitOfWork.WorkshopScheduleRepository.Remove(schedule);
+    //        await _unitOfWork.SaveAsync();
+
+    //        if (workshop.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
+    //        {
+    //            foreach (var booking in workshop.Bookings)
+    //            {
+    //                await _emailService.SendEmailAsync(
+    //                    new[] { booking.User!.Email },
+    //                    $"Cập nhật Workshop {workshop.Name}",
+    //                    $"Lịch trình ngày {schedule.StartTime:dd/MM/yyyy} của workshop {workshop.Name} đã bị xóa. Vui lòng kiểm tra chi tiết."
+    //                );
+    //            }
+    //        }
+
+    //        await transaction.CommitAsync();
+    //    }
+    //    catch (CustomException)
+    //    {
+    //        await transaction.RollbackAsync();
+    //        throw;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        await transaction.RollbackAsync();
+    //        throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+    //    }
+    //}
+
+    //#endregion
+
+    //private List<WorkshopDayDetail> BuildDayDetails(Workshop workshop)
+    //{
+    //    var groupedByDay = workshop.WorkshopActivities
+    //        .Where(l => !l.IsDeleted)
+    //        .GroupBy(l => l.DayOrder)
+    //        .OrderBy(g => g.Key);
+
+    //    var dayDetails = new List<WorkshopDayDetail>();
+
+    //    foreach (var group in groupedByDay)
+    //    {
+    //        var activities = group.Select(ws => new WorkshopActivityDto
+    //        {
+    //            Id = ws.Id,
+    //            Activity = ws.Activity ?? "Unknown",
+    //            Description = ws.Description,
+    //            DayOrder = ws.DayOrder,
+    //            StartTime = ws.StartTime,
+    //            EndTime = ws.EndTime,
+    //            StartTimeFormatted = ws.StartTime?.ToString(@"hh\:mm") ?? "",
+    //            EndTimeFormatted = ws.EndTime?.ToString(@"hh\:mm") ?? "",
+    //        }).ToList();
+
+    //        dayDetails.Add(new WorkshopDayDetail
+    //        {
+    //            DayNumber = group.Key,
+    //            Activities = activities
+    //        });
+    //    }
+
+    //    return dayDetails;
+    //}
 
     #region Workshop Media
 
@@ -1734,3 +1839,4 @@ public class WorkshopService : IWorkshopService
     }
     #endregion
 }
+#endregion

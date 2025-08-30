@@ -13,6 +13,8 @@ public class CraftVillageMappingProfile : Profile
             .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
         CreateMap<CraftVillageUpdateWithMediaFileModel, CraftVillage>()
             .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
-        CreateMap<CraftVillageDataModel, CraftVillage>().ReverseMap();
+        // CreateMap<CraftVillageDataModel, CraftVillage>()
+        CreateMap<CraftVillage, CraftVillageDataModel>()
+            .ForMember(d => d.Workshop, opt => opt.Ignore()).ReverseMap();
     }
 }
