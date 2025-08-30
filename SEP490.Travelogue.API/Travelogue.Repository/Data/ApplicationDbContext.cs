@@ -31,9 +31,20 @@ public class ApplicationDbContext : DbContext
     // Craft Village Management
     public DbSet<CraftVillage> CraftVillages { get; set; }
     public DbSet<Workshop> Workshops { get; set; }
-    public DbSet<WorkshopSchedule> WorkshopSchedules { get; set; }
+    public DbSet<WorkshopTicketType> WorkshopTicketTypes { get; set; }
     public DbSet<WorkshopActivity> WorkshopActivities { get; set; }
+    public DbSet<WorkshopSchedule> WorkshopSchedules { get; set; }
     public DbSet<WorkshopMedia> WorkshopMedias { get; set; }
+    public DbSet<WorkshopRequest> WorkshopRequests { get; set; }
+    public DbSet<WorkshopMediaRequest> WorkshopMediaRequests { get; set; }
+    public DbSet<WorkshopActivityRequest> WorkshopActivityRequests { get; set; }
+    public DbSet<WorkshopRecurringRule> WorkshopRecurringRules { get; set; }
+    public DbSet<WorkshopRecurringRuleRequest> WorkshopRecurringRuleRequests { get; set; }
+    public DbSet<WorkshopSessionRule> WorkshopSessionRules { get; set; }
+    public DbSet<WorkshopSessionRequest> WorkshopSessionRequests { get; set; }
+    public DbSet<WorkshopException> WorkshopExceptions { get; set; }
+    public DbSet<WorkshopExceptionRequest> WorkshopExceptionRequests { get; set; }
+    public DbSet<WorkshopTicketTypeRequest> WorkshopTicketTypeRequests { get; set; }
     public DbSet<CraftVillageRequest> CraftVillageRequests { get; set; }
 
     // Cuisine Management
@@ -157,6 +168,13 @@ public class ApplicationDbContext : DbContext
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
                 v => JsonSerializer.Deserialize<List<MediaRequest>>(v, (JsonSerializerOptions?)null) ?? new List<MediaRequest>()
             );
+
+        modelBuilder.Entity<WorkshopRequest>()
+        .Property(e => e.Medias)
+        .HasConversion(
+            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v => JsonSerializer.Deserialize<List<MediaRequest>>(v, (JsonSerializerOptions?)null) ?? new List<MediaRequest>()
+        );
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes())
         {

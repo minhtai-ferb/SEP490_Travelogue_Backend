@@ -16,6 +16,7 @@ using Travelogue.Service.BusinessModels.TourGuideModels;
 using Travelogue.Service.BusinessModels.UserModels;
 using Travelogue.Service.BusinessModels.UserModels.Requests;
 using Travelogue.Service.BusinessModels.UserModels.Responses;
+using Travelogue.Service.BusinessModels.WorkshopModels;
 using Travelogue.Service.Commons.Const;
 using Travelogue.Service.Commons.Helpers;
 using Travelogue.Service.Commons.Implementations;
@@ -1318,35 +1319,122 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<CraftVillageRequestResponseDto> CreateCraftVillageRequestAsync(CreateCraftVillageRequestDto model, CancellationToken cancellationToken = default)
+    //public async Task<CraftVillageRequestResponseDto> CreateCraftVillageRequestAsync(CreateCraftVillageRequestDto model, CancellationToken cancellationToken = default)
+    //{
+    //    using var transaction = await _unitOfWork.BeginTransactionAsync();
+    //    try
+    //    {
+    //        var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+    //        var hasPermission = _userContextService.HasAnyRole(AppRole.USER);
+    //        if (!hasPermission)
+    //            throw CustomExceptionFactory.CreateForbiddenError();
+
+    //        var user = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId, cancellationToken);
+    //        if (user == null)
+    //        {
+    //            throw CustomExceptionFactory.CreateNotFoundError("User");
+    //        }
+
+    //        var district = await _unitOfWork.DistrictRepository
+    //            .ActiveEntities
+    //            .Where(d => d.Id == model.DistrictId)
+    //            .FirstOrDefaultAsync()
+    //            ?? throw CustomExceptionFactory.CreateNotFoundError("district");
+
+    //        var existingCraftVillage = await _unitOfWork.CraftVillageRepository
+    //            .ActiveEntities
+    //            .FirstOrDefaultAsync(cv => cv.OwnerId == user.Id);
+    //        if (existingCraftVillage != null)
+    //        {
+    //            throw CustomExceptionFactory.CreateBadRequestError("Bạn đã là chủ 1 làng nghề");
+    //        }
+
+    //        List<MediaRequest> medias = model.MediaDtos.ToMediaRequest();
+
+    //        var craftVillageRequest = new CraftVillageRequest
+    //        {
+    //            Name = model.Name,
+    //            Description = model.Description,
+    //            Content = model.Content,
+    //            Address = model.Address,
+    //            Latitude = model.Latitude,
+    //            Longitude = model.Longitude,
+    //            OpenTime = model.OpenTime,
+    //            CloseTime = model.CloseTime,
+    //            DistrictId = model.DistrictId,
+    //            OwnerId = currentUserId,
+    //            PhoneNumber = model.PhoneNumber,
+    //            Email = model.Email,
+    //            Website = model.Website,
+    //            WorkshopsAvailable = model.WorkshopsAvailable,
+    //            SignatureProduct = model.SignatureProduct,
+    //            YearsOfHistory = model.YearsOfHistory,
+    //            IsRecognizedByUnesco = model.IsRecognizedByUnesco,
+    //            Status = CraftVillageRequestStatus.Pending,
+    //            CreatedTime = DateTimeOffset.UtcNow,
+    //            LastUpdatedTime = DateTimeOffset.UtcNow,
+    //            CreatedBy = currentUserId.ToString(),
+    //            LastUpdatedBy = currentUserId.ToString(),
+    //            Medias = medias
+    //        };
+
+    //        await _unitOfWork.CraftVillageRequestRepository.AddAsync(craftVillageRequest);
+    //        await _unitOfWork.SaveAsync();
+    //        await transaction.CommitAsync();
+
+    //        var moderators = await _unitOfWork.UserRepository.GetUsersByRoleAsync(AppRole.MODERATOR);
+    //        foreach (var moderator in moderators)
+    //        {
+    //            await _emailService.SendEmailAsync(
+    //                new[] { moderator.Email },
+    //                "Yêu cầu duyệt làng nghề",
+    //                "Yêu cầu duyệt làng nghề"
+    //            );
+    //        }
+
+    //        var response = MapToCraftVillageRequestResponseDto(craftVillageRequest, user);
+
+    //        return response;
+    //    }
+    //    catch (CustomException)
+    //    {
+    //        await transaction.RollbackAsync(cancellationToken);
+    //        throw;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        await transaction.RollbackAsync(cancellationToken);
+    //        throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+    //    }
+    //}
+
+    public async Task<CraftVillageRequestResponseDto> CreateCraftVillageRequestAsync(
+        CreateCraftVillageRequestDto model,
+        CancellationToken cancellationToken = default)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
             var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
-            var hasPermission = _userContextService.HasAnyRole(AppRole.USER);
-            if (!hasPermission)
-                throw CustomExceptionFactory.CreateForbiddenError();
+            // var hasPermission = _userContextService.HasAnyRole(AppRole.USER);
+            // if (!hasPermission)
+            //     throw CustomExceptionFactory.CreateForbiddenError();
 
             var user = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId, cancellationToken);
             if (user == null)
-            {
                 throw CustomExceptionFactory.CreateNotFoundError("User");
-            }
 
             var district = await _unitOfWork.DistrictRepository
                 .ActiveEntities
                 .Where(d => d.Id == model.DistrictId)
-                .FirstOrDefaultAsync()
+                .FirstOrDefaultAsync(cancellationToken)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("district");
 
             var existingCraftVillage = await _unitOfWork.CraftVillageRepository
                 .ActiveEntities
-                .FirstOrDefaultAsync(cv => cv.OwnerId == user.Id);
+                .FirstOrDefaultAsync(cv => cv.OwnerId == user.Id, cancellationToken);
             if (existingCraftVillage != null)
-            {
                 throw CustomExceptionFactory.CreateBadRequestError("Bạn đã là chủ 1 làng nghề");
-            }
 
             List<MediaRequest> medias = model.MediaDtos.ToMediaRequest();
 
@@ -1377,22 +1465,112 @@ public class UserService : IUserService
                 Medias = medias
             };
 
+            // Nếu có workshop kèm theo
+            if (model.WorkshopsAvailable && model.Workshop != null)
+            {
+                var workshopDto = model.Workshop;
+
+                var workshopRequest = new WorkshopRequest
+                {
+                    Name = workshopDto.Name,
+                    Description = workshopDto.Description,
+                    Content = workshopDto.Content,
+                    Status = workshopDto.Status,
+                    CraftVillageId = craftVillageRequest.Id,
+                    CreatedTime = DateTimeOffset.UtcNow,
+                    LastUpdatedTime = DateTimeOffset.UtcNow,
+                    CreatedBy = currentUserId.ToString(),
+                    LastUpdatedBy = currentUserId.ToString(),
+
+                    TicketTypes = new List<WorkshopTicketTypeRequest>(),
+                    RecurringRules = new List<WorkshopRecurringRuleRequest>(),
+                    Exceptions = new List<WorkshopExceptionRequest>()
+                };
+
+                foreach (var ticketDto in workshopDto.TicketTypes ?? Enumerable.Empty<TicketTypeRequestDto>())
+                {
+                    var ticket = new WorkshopTicketTypeRequest
+                    {
+                        Type = ticketDto.Type,
+                        Name = ticketDto.Name,
+                        Price = ticketDto.Price,
+                        IsCombo = ticketDto.IsCombo,
+                        DurationMinutes = ticketDto.DurationMinutes,
+                        Content = ticketDto.Content,
+
+                        WorkshopActivities = new List<WorkshopActivityRequest>()
+                    };
+
+                    if (ticketDto.WorkshopActivities != null && ticketDto.WorkshopActivities.Any())
+                    {
+                        foreach (var actDto in ticketDto.WorkshopActivities)
+                        {
+                            ticket.WorkshopActivities.Add(new WorkshopActivityRequest
+                            {
+                                Activity = actDto.Activity,
+                                Description = actDto.Description,
+                                StartHour = actDto.StartHour,
+                                EndHour = actDto.EndHour,
+                                ActivityOrder = actDto.ActivityOrder
+                            });
+                        }
+                    }
+
+                    workshopRequest.TicketTypes.Add(ticket);
+                }
+
+                foreach (var ruleDto in workshopDto.RecurringRules ?? Enumerable.Empty<RecurringRuleRequestDto>())
+                {
+                    var rule = new WorkshopRecurringRuleRequest
+                    {
+                        DaysOfWeek = ruleDto.DaysOfWeek,
+                        StartDate = ruleDto.StartDate,
+                        EndDate = ruleDto.EndDate,
+                        Sessions = new List<WorkshopSessionRequest>()
+                    };
+
+                    foreach (var sessionDto in ruleDto.Sessions ?? Enumerable.Empty<SessionRequestDto>())
+                    {
+                        rule.Sessions.Add(new WorkshopSessionRequest
+                        {
+                            StartTime = sessionDto.StartTime,
+                            EndTime = sessionDto.EndTime,
+                            Capacity = sessionDto.Capacity
+                        });
+                    }
+
+                    workshopRequest.RecurringRules.Add(rule);
+                }
+
+                foreach (var exDto in workshopDto.Exceptions ?? Enumerable.Empty<WorkshopExceptionRequestDto>())
+                {
+                    workshopRequest.Exceptions.Add(new WorkshopExceptionRequest
+                    {
+                        Date = exDto.Date,
+                        Reason = exDto.Reason,
+                        IsActive = exDto.IsActive
+                    });
+                }
+
+                craftVillageRequest.Workshop = workshopRequest;
+            }
+
             await _unitOfWork.CraftVillageRequestRepository.AddAsync(craftVillageRequest);
             await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync();
+            await transaction.CommitAsync(cancellationToken);
 
+            // Gửi email cho moderator
             var moderators = await _unitOfWork.UserRepository.GetUsersByRoleAsync(AppRole.MODERATOR);
             foreach (var moderator in moderators)
             {
                 await _emailService.SendEmailAsync(
                     new[] { moderator.Email },
                     "Yêu cầu duyệt làng nghề",
-                    "Yêu cầu duyệt làng nghề"
+                    $"Người dùng {user.FullName} đã gửi yêu cầu đăng ký làng nghề"
                 );
             }
 
             var response = MapToCraftVillageRequestResponseDto(craftVillageRequest, user);
-
             return response;
         }
         catch (CustomException)
@@ -1483,73 +1661,96 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<List<CraftVillageRequestResponseDto>> GetCraftVillageRequestsAsync(CraftVillageRequestStatus? status, CancellationToken cancellationToken = default)
+    public async Task<List<CraftVillageRequestResponseDto>> GetCraftVillageRequestsAsync(
+        CraftVillageRequestStatus? status,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            var query = _unitOfWork.CraftVillageRequestRepository
-                .ActiveEntities
-                .AsQueryable();
+            IQueryable<CraftVillageRequest> baseQuery =
+                _unitOfWork.CraftVillageRequestRepository
+                    .ActiveEntities
+                    .AsNoTracking();
 
             if (status.HasValue)
-            {
-                query = query.Where(x => x.Status == status);
-            }
+                baseQuery = baseQuery.Where(x => x.Status == status.Value);
+
+            var query = baseQuery
+                .Include(x => x.Workshop)
+                    .ThenInclude(w => w.TicketTypes)
+                        .ThenInclude(tt => tt.WorkshopActivities)
+                .Include(x => x.Workshop)
+                    .ThenInclude(w => w.RecurringRules)
+                        .ThenInclude(rr => rr.Sessions)
+                .Include(x => x.Workshop)
+                    .ThenInclude(w => w.Exceptions)
+                .AsSplitQuery();
 
             var requests = await query.ToListAsync(cancellationToken);
-            var response = new List<CraftVillageRequestResponseDto>();
 
+            var response = new List<CraftVillageRequestResponseDto>(requests.Count);
             foreach (var request in requests)
             {
                 var user = await _unitOfWork.UserRepository.GetByIdAsync(request.OwnerId, cancellationToken);
-                var requestDto = MapToCraftVillageRequestResponseDto(request, user);
-                // requestDto.OwnerEmail = user.Email ?? string.Empty;
-                // requestDto.OwnerFullName = user.FullName ?? string.Empty;
 
-                requestDto.Medias = request.Medias.ToMediaDto();
-                response.Add(requestDto);
+                var dto = MapToCraftVillageRequestResponseDto(request, user);
+                dto.Medias = request.Medias.ToMediaDto();
+
+                dto.Workshop = MapWorkshopRequestToResponseDto(request.Workshop);
+
+                response.Add(dto);
             }
 
             return response;
         }
-        catch (CustomException)
-        {
-            throw;
-        }
+        catch (CustomException) { throw; }
         catch (Exception ex)
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
-    public async Task<CraftVillageRequestResponseDto> ReviewCraftVillageRequestAsync(Guid requestId, ReviewCraftVillageRequestDto model, CancellationToken cancellationToken = default)
+    public async Task<CraftVillageRequestResponseDto> ReviewCraftVillageRequestAsync(
+        Guid requestId,
+        ReviewCraftVillageRequestDto model,
+        CancellationToken cancellationToken = default)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
             var currentUserId = _userContextService.GetCurrentUserId();
 
-            var request = await _unitOfWork.CraftVillageRequestRepository.GetByIdAsync(requestId, cancellationToken);
+            var request = await _unitOfWork.CraftVillageRequestRepository
+                .ActiveEntities
+                .Include(x => x.Workshop)
+                    .ThenInclude(wr => wr.Exceptions)
+                .Include(x => x.Workshop)
+                    .ThenInclude(wr => wr.RecurringRules)
+                        .ThenInclude(wr => wr.Sessions)
+                .Include(x => x.Workshop)
+                    .ThenInclude(wr => wr.TicketTypes)
+                        .ThenInclude(wr => wr.WorkshopActivities)
+                .FirstOrDefaultAsync(x => x.Id == requestId);
             if (request == null)
-            {
                 throw CustomExceptionFactory.CreateBadRequestError("CraftVillage request");
-            }
 
             var user = await _unitOfWork.UserRepository.GetByIdAsync(request.OwnerId, cancellationToken);
             if (user == null)
-            {
                 throw CustomExceptionFactory.CreateBadRequestError("User");
-            }
 
             if (request.Status != CraftVillageRequestStatus.Pending)
                 throw CustomExceptionFactory.CreateBadRequestError("Không thể cập nhật yêu cầu đã xử lý");
 
+            // Cập nhật trạng thái yêu cầu
             request.Status = model.Status;
             request.RejectionReason = model.RejectionReason;
             request.ReviewedAt = DateTimeOffset.UtcNow;
             request.ReviewedBy = currentUserId;
             request.LastUpdatedTime = DateTimeOffset.UtcNow;
             request.LastUpdatedBy = currentUserId;
+
+            Guid? createdWorkshopId = null;
+
             if (model.Status == CraftVillageRequestStatus.Approved)
             {
                 var location = new Location
@@ -1567,7 +1768,6 @@ public class UserService : IUserService
                     CreatedBy = currentUserId,
                     LastUpdatedBy = currentUserId
                 };
-
                 await _unitOfWork.LocationRepository.AddAsync(location);
 
                 var craftVillage = new CraftVillage
@@ -1586,7 +1786,6 @@ public class UserService : IUserService
                     CreatedBy = currentUserId,
                     LastUpdatedBy = currentUserId
                 };
-
                 await _unitOfWork.CraftVillageRepository.AddAsync(craftVillage);
 
                 if (request.Medias != null && request.Medias.Any())
@@ -1606,29 +1805,234 @@ public class UserService : IUserService
                             CreatedBy = currentUserId,
                             LastUpdatedBy = currentUserId
                         };
-
                         await _unitOfWork.LocationMediaRepository.AddAsync(locationMedia);
                     }
                 }
 
                 var role = await _unitOfWork.RoleRepository.GetByNameAsync(AppRole.CRAFT_VILLAGE_OWNER);
                 if (role == null)
-                {
                     throw CustomExceptionFactory.CreateBadRequestError("CraftVillage role");
+
+                var hasRole = await _unitOfWork.UserRoleRepository.RoleExistsForUserAsync(request.OwnerId, role.Id);
+                if (!hasRole)
+                {
+                    var userRole = new UserRole { UserId = request.OwnerId, RoleId = role.Id };
+                    await _unitOfWork.UserRoleRepository.AddAsync(userRole);
                 }
 
-                var userRole = new UserRole
+                if (request.WorkshopsAvailable && request.Workshop != null)
                 {
-                    UserId = request.OwnerId,
-                    RoleId = role.Id
-                };
-                await _unitOfWork.UserRoleRepository.AddAsync(userRole);
+                    var wReq = request.Workshop;
+
+                    var workshop = new Workshop
+                    {
+                        Name = wReq.Name,
+                        Description = wReq.Description,
+                        Content = wReq.Content,
+                        Status = wReq.Status,
+                        CraftVillageId = craftVillage.Id,
+                        CreatedTime = DateTimeOffset.UtcNow,
+                        LastUpdatedTime = DateTimeOffset.UtcNow,
+                        CreatedBy = currentUserId,
+                        LastUpdatedBy = currentUserId
+                    };
+                    await _unitOfWork.WorkshopRepository.AddAsync(workshop);
+                    createdWorkshopId = workshop.Id;
+
+                    if (wReq.TicketTypes != null && wReq.TicketTypes.Any())
+                    {
+                        foreach (var tt in wReq.TicketTypes)
+                        {
+                            var ticket = new WorkshopTicketType
+                            {
+                                WorkshopId = workshop.Id,
+                                Type = tt.Type,
+                                Name = tt.Name,
+                                Price = tt.Price,
+                                IsCombo = tt.IsCombo,
+                                DurationMinutes = tt.DurationMinutes,
+                                Content = tt.Content,
+                                CreatedTime = DateTimeOffset.UtcNow,
+                                LastUpdatedTime = DateTimeOffset.UtcNow,
+                                CreatedBy = currentUserId,
+                                LastUpdatedBy = currentUserId
+                            };
+                            await _unitOfWork.WorkshopTicketTypeRepository.AddAsync(ticket);
+
+                            if (tt.WorkshopActivities != null && tt.WorkshopActivities.Any())
+                            {
+                                foreach (var act in tt.WorkshopActivities.OrderBy(a => a.ActivityOrder))
+                                {
+                                    var activity = new WorkshopActivity
+                                    {
+                                        WorkshopTicketTypeId = ticket.Id,
+                                        Activity = act.Activity,
+                                        Description = act.Description ?? string.Empty,
+                                        StartHour = act.StartHour,
+                                        EndHour = act.EndHour,
+                                        ActivityOrder = act.ActivityOrder,
+                                        CreatedTime = DateTimeOffset.UtcNow,
+                                        LastUpdatedTime = DateTimeOffset.UtcNow,
+                                        CreatedBy = currentUserId,
+                                        LastUpdatedBy = currentUserId
+                                    };
+                                    await _unitOfWork.WorkshopActivityRepository.AddAsync(activity);
+                                }
+                            }
+                        }
+                    }
+
+                    if (wReq.RecurringRules != null && wReq.RecurringRules.Any())
+                    {
+                        foreach (var rr in wReq.RecurringRules)
+                        {
+                            var rule = new WorkshopRecurringRule
+                            {
+                                WorkshopId = workshop.Id,
+                                DaysOfWeek = rr.DaysOfWeek ?? new List<DayOfWeek>(),
+                                StartDate = rr.StartDate,
+                                EndDate = rr.EndDate,
+                                CreatedTime = DateTimeOffset.UtcNow,
+                                LastUpdatedTime = DateTimeOffset.UtcNow,
+                                CreatedBy = currentUserId,
+                                LastUpdatedBy = currentUserId
+                            };
+                            await _unitOfWork.WorkshopRecurringRuleRepository.AddAsync(rule);
+
+                            if (rr.Sessions != null && rr.Sessions.Any())
+                            {
+                                foreach (var s in rr.Sessions)
+                                {
+                                    var sessionRule = new WorkshopSessionRule
+                                    {
+                                        RecurringRuleId = rule.Id,
+                                        StartTime = s.StartTime,
+                                        EndTime = s.EndTime,
+                                        Capacity = s.Capacity,
+                                        CreatedTime = DateTimeOffset.UtcNow,
+                                        LastUpdatedTime = DateTimeOffset.UtcNow,
+                                        CreatedBy = currentUserId,
+                                        LastUpdatedBy = currentUserId
+                                    };
+                                    await _unitOfWork.WorkshopSessionRuleRepository.AddAsync(sessionRule);
+                                }
+                            }
+                        }
+                    }
+
+                    if (wReq.Exceptions != null && wReq.Exceptions.Any())
+                    {
+                        foreach (var ex in wReq.Exceptions)
+                        {
+                            var exMain = new WorkshopException
+                            {
+                                WorkshopId = workshop.Id,
+                                Date = ex.Date,
+                                Reason = ex.Reason,
+                                IsActive = ex.IsActive,
+                                CreatedTime = DateTimeOffset.UtcNow,
+                                LastUpdatedTime = DateTimeOffset.UtcNow,
+                                CreatedBy = currentUserId,
+                                LastUpdatedBy = currentUserId
+                            };
+                            await _unitOfWork.WorkshopExceptionRepository.AddAsync(exMain);
+                        }
+                    }
+
+                    var today = DateTime.UtcNow.Date;
+                    var generationHorizonDays = 90;
+
+                    if (wReq.RecurringRules != null && wReq.RecurringRules.Any())
+                    {
+                        var exceptionDates = (wReq.Exceptions ?? new List<WorkshopExceptionRequest>())
+                                             .Where(e => e.IsActive)
+                                             .Select(e => e.Date.Date)
+                                             .ToHashSet();
+
+                        foreach (var rr in wReq.RecurringRules)
+                        {
+                            if (rr.Sessions == null || rr.Sessions.Count == 0) continue;
+
+                            var startDate = rr.StartDate.Date < today ? today : rr.StartDate.Date;
+                            var endDate = (rr.EndDate?.Date) ?? today.AddDays(generationHorizonDays);
+
+                            var days = rr.DaysOfWeek ?? new List<DayOfWeek>();
+                            if (days.Count == 0) continue;
+
+                            for (var d = startDate; d <= endDate; d = d.AddDays(1))
+                            {
+                                if (!days.Contains(d.DayOfWeek)) continue;
+
+                                if (exceptionDates.Contains(d)) continue;
+
+                                foreach (var s in rr.Sessions)
+                                {
+                                    var start = d.Add(s.StartTime);
+                                    var end = d.Add(s.EndTime);
+
+                                    if (end <= start)
+                                    {
+                                        end = start.AddMinutes(1);
+                                    }
+
+                                    var exists = await _unitOfWork.WorkshopScheduleRepository.ActiveEntities
+                                        .AnyAsync(x =>
+                                            x.WorkshopId == workshop.Id &&
+                                            x.StartTime == start &&
+                                            x.EndTime == end,
+                                            cancellationToken);
+
+                                    if (exists) continue;
+
+                                    var schedule = new WorkshopSchedule
+                                    {
+                                        WorkshopId = workshop.Id,
+                                        StartTime = start,
+                                        EndTime = end,
+                                        Capacity = s.Capacity > 0 ? s.Capacity : 1,
+                                        CurrentBooked = 0,
+                                        Status = ScheduleStatus.Active,
+                                        Notes = null,
+                                        CreatedTime = DateTimeOffset.UtcNow,
+                                        LastUpdatedTime = DateTimeOffset.UtcNow,
+                                        CreatedBy = currentUserId,
+                                        LastUpdatedBy = currentUserId
+                                    };
+
+                                    await _unitOfWork.WorkshopScheduleRepository.AddAsync(schedule);
+                                }
+                            }
+                        }
+                    }
+
+                    if (wReq.Medias != null && wReq.Medias.Any())
+                    {
+                        foreach (var media in wReq.Medias)
+                        {
+                            var workshopMedia = new WorkshopMedia
+                            {
+                                WorkshopId = workshop.Id,
+                                MediaUrl = media.MediaUrl,
+                                FileName = Path.GetFileName(media.MediaUrl),
+                                FileType = Path.GetExtension(media.MediaUrl),
+                                SizeInBytes = 0,
+                                IsThumbnail = media.IsThumbnail,
+                                CreatedTime = DateTimeOffset.UtcNow,
+                                LastUpdatedTime = DateTimeOffset.UtcNow,
+                                CreatedBy = currentUserId,
+                                LastUpdatedBy = currentUserId
+                            };
+                            await _unitOfWork.WorkshopMediaRepository.AddAsync(workshopMedia);
+                        }
+                    }
+                }
             }
 
             _unitOfWork.CraftVillageRequestRepository.Update(request);
             await _unitOfWork.SaveAsync();
-            await transaction.CommitAsync();
+            await transaction.CommitAsync(cancellationToken);
 
+            // Email thông báo
             if (model.Status == CraftVillageRequestStatus.Approved)
             {
                 await _emailService.SendEmailAsync(
@@ -1637,13 +2041,12 @@ public class UserService : IUserService
                     "Yêu cầu duyệt làng nghề được chấp nhận"
                 );
             }
-
-            if (model.Status == CraftVillageRequestStatus.Rejected)
+            else if (model.Status == CraftVillageRequestStatus.Rejected)
             {
                 await _emailService.SendEmailAsync(
                     new[] { user.Email },
                     "Yêu cầu duyệt làng nghề đã bị từ chối",
-                    "Yêu cầu duyệt làng nghề được từ chối"
+                    model.RejectionReason ?? "Yêu cầu bị từ chối"
                 );
             }
 
@@ -1665,88 +2068,131 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<CraftVillageRequestResponseDto> GetCraftVillageRequestAsync(Guid requestId, CancellationToken cancellationToken = default)
+    public async Task<CraftVillageRequestResponseDto> GetCraftVillageRequestAsync(
+        Guid requestId,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            var request = await _unitOfWork.CraftVillageRequestRepository.GetByIdAsync(requestId, cancellationToken);
+            var request = await _unitOfWork.CraftVillageRequestRepository
+                .ActiveEntities
+                .AsNoTracking()
+                .Include(r => r.Workshop)
+                    .ThenInclude(w => w.TicketTypes)
+                        .ThenInclude(tt => tt.WorkshopActivities)
+                .Include(r => r.Workshop)
+                    .ThenInclude(w => w.RecurringRules)
+                        .ThenInclude(rr => rr.Sessions)
+                .Include(r => r.Workshop)
+                    .ThenInclude(w => w.Exceptions)
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(r => r.Id == requestId, cancellationToken);
+
             if (request == null)
-            {
-                throw CustomExceptionFactory.CreateBadRequestError("CraftVillage request");
-            }
+                throw CustomExceptionFactory.CreateNotFoundError("CraftVillage request");
 
             var user = await _unitOfWork.UserRepository.GetByIdAsync(request.OwnerId, cancellationToken);
+
             var response = MapToCraftVillageRequestResponseDto(request, user);
             response.OwnerEmail = user?.Email ?? string.Empty;
             response.OwnerFullName = user?.FullName ?? string.Empty;
+            response.Medias = request.Medias.ToMediaDto();
+            response.Workshop = MapWorkshopRequestToResponseDto(request.Workshop);
 
             return response;
         }
-        catch (CustomException)
-        {
-            throw;
-        }
+        catch (CustomException) { throw; }
         catch (Exception ex)
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
-    public async Task<PagedResult<CraftVillageRequestResponseDto>> GetMyCraftVillageRequestsAsync(CraftVillageRequestStatus? status, int pageNumber, int pageSize, CancellationToken cancellationToken = default)
+    public async Task<PagedResult<CraftVillageRequestResponseDto>> GetMyCraftVillageRequestsAsync(
+        CraftVillageRequestStatus? status,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
 
-            var query = _unitOfWork.CraftVillageRequestRepository
-                 .ActiveEntities
-                 .Where(r => r.OwnerId == currentUserId)
-                 .OrderByDescending(r => r.CreatedTime)
-                 .AsQueryable();
+            if (pageNumber <= 0) pageNumber = 1;
+            if (pageSize <= 0) pageSize = 10;
+
+            var baseQuery = _unitOfWork.CraftVillageRequestRepository
+                .ActiveEntities
+                .Where(r => r.OwnerId == currentUserId)
+                .AsNoTracking()
+                .Include(r => r.Workshop)
+                    .ThenInclude(w => w.TicketTypes)
+                        .ThenInclude(tt => tt.WorkshopActivities)
+                .Include(r => r.Workshop)
+                    .ThenInclude(w => w.RecurringRules)
+                        .ThenInclude(rr => rr.Sessions)
+                .Include(r => r.Workshop)
+                    .ThenInclude(w => w.Exceptions)
+                .AsSplitQuery();
 
             if (status.HasValue)
+                baseQuery = baseQuery.Where(x => x.Status == status.Value);
+
+            var query = baseQuery.OrderByDescending(r => r.CreatedTime);
+
+            var totalCount = await query.CountAsync(cancellationToken);
+            var items = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            var owner = await _unitOfWork.UserRepository.GetByIdAsync(currentUserId, cancellationToken);
+
+            var response = new List<CraftVillageRequestResponseDto>(items.Count);
+            foreach (var request in items)
             {
-                query = query.Where(x => x.Status == status);
+                var dto = MapToCraftVillageRequestResponseDto(request, owner);
+                dto.OwnerEmail = owner?.Email ?? string.Empty;
+                dto.OwnerFullName = owner?.FullName ?? string.Empty;
+                dto.Medias = request.Medias.ToMediaDto();
+                dto.Workshop = MapWorkshopRequestToResponseDto(request.Workshop);
+                response.Add(dto);
             }
-
-            var requests = await query.ToListAsync(cancellationToken);
-            var response = new List<CraftVillageRequestResponseDto>();
-
-            foreach (var request in requests)
-            {
-                var user = await _unitOfWork.UserRepository.GetByIdAsync(request.OwnerId, cancellationToken);
-                var requestDto = MapToCraftVillageRequestResponseDto(request, user);
-                // requestDto.OwnerEmail = user.Email ?? string.Empty;
-                // requestDto.OwnerFullName = user.FullName ?? string.Empty;
-                response.Add(requestDto);
-            }
-
-            // return response;
 
             return new PagedResult<CraftVillageRequestResponseDto>
             {
                 Items = response,
-                TotalCount = query.Count(),
+                TotalCount = totalCount,
                 PageNumber = pageNumber,
                 PageSize = pageSize
             };
         }
+        catch (CustomException) { throw; }
         catch (Exception ex)
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
-    public async Task<CraftVillageRequestResponseDto> GetLatestCraftVillageRequestsAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<CraftVillageRequestResponseDto> GetLatestCraftVillageRequestsAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            var query = _unitOfWork.CraftVillageRequestRepository
-            .ActiveEntities
-            .AsQueryable();
-
-            var latestRequest = await query
+            var latestRequest = await _unitOfWork.CraftVillageRequestRepository
+                .ActiveEntities
+                .AsNoTracking()
                 .Where(x => x.OwnerId == userId)
+                .Include(r => r.Workshop)
+                    .ThenInclude(w => w.TicketTypes)
+                        .ThenInclude(tt => tt.WorkshopActivities)
+                .Include(r => r.Workshop)
+                    .ThenInclude(w => w.RecurringRules)
+                        .ThenInclude(rr => rr.Sessions)
+                .Include(r => r.Workshop)
+                    .ThenInclude(w => w.Exceptions)
+                .AsSplitQuery()
                 .OrderByDescending(x => x.CreatedTime)
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -1754,12 +2200,16 @@ public class UserService : IUserService
                 return null;
 
             var user = await _unitOfWork.UserRepository.GetByIdAsync(latestRequest.OwnerId, cancellationToken);
+
             var response = MapToCraftVillageRequestResponseDto(latestRequest, user);
             response.OwnerEmail = user?.Email ?? string.Empty;
             response.OwnerFullName = user?.FullName ?? string.Empty;
+            response.Medias = latestRequest.Medias.ToMediaDto();
+            response.Workshop = MapWorkshopRequestToResponseDto(latestRequest.Workshop);
 
             return response;
         }
+        catch (CustomException) { throw; }
         catch (Exception ex)
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
@@ -1854,6 +2304,74 @@ public class UserService : IUserService
             ReviewedAt = request.ReviewedAt,
             ReviewedBy = request.ReviewedBy,
             Medias = request.Medias.ToMediaDto()
+        };
+    }
+
+    private static WorkshopRequestResponseDto? MapWorkshopRequestToResponseDto(WorkshopRequest? src)
+    {
+        if (src is null) return null;
+
+        return new WorkshopRequestResponseDto
+        {
+            Id = src.Id,
+            CraftVillageRequestId = src.CraftVillageId,
+            Name = src.Name,
+            Description = src.Description,
+            Content = src.Content,
+            Status = src.Status,
+            CreatedTime = src.CreatedTime,
+            LastUpdatedTime = src.LastUpdatedTime,
+            CreatedBy = src.CreatedBy,
+            LastUpdatedBy = src.LastUpdatedBy,
+
+            TicketTypes = (src.TicketTypes ?? Enumerable.Empty<WorkshopTicketTypeRequest>())
+                .Select(tt => new TicketTypeRequestResponseDto
+                {
+                    Id = tt.Id,
+                    Type = tt.Type,
+                    Name = tt.Name,
+                    Price = tt.Price,
+                    IsCombo = tt.IsCombo,
+                    DurationMinutes = tt.DurationMinutes,
+                    Content = tt.Content,
+                    WorkshopActivities = (tt.WorkshopActivities ?? Enumerable.Empty<WorkshopActivityRequest>())
+                        .OrderBy(a => a.ActivityOrder)
+                        .Select(a => new WorkshopActivityRequestResponseDto
+                        {
+                            Id = a.Id,
+                            Activity = a.Activity,
+                            Description = a.Description,
+                            StartHour = a.StartHour,
+                            EndHour = a.EndHour,
+                            ActivityOrder = a.ActivityOrder
+                        }).ToList()
+                }).ToList(),
+
+            RecurringRules = (src.RecurringRules ?? Enumerable.Empty<WorkshopRecurringRuleRequest>())
+                .Select(rr => new RecurringRuleRequestResponseDto
+                {
+                    Id = rr.Id,
+                    DaysOfWeek = rr.DaysOfWeek ?? new List<DayOfWeek>(),
+                    StartDate = rr.StartDate,
+                    EndDate = rr.EndDate,
+                    Sessions = (rr.Sessions ?? Enumerable.Empty<WorkshopSessionRequest>())
+                        .Select(s => new SessionRequestResponseDto
+                        {
+                            Id = s.Id,
+                            StartTime = s.StartTime,
+                            EndTime = s.EndTime,
+                            Capacity = s.Capacity
+                        }).ToList()
+                }).ToList(),
+
+            Exceptions = (src.Exceptions ?? Enumerable.Empty<WorkshopExceptionRequest>())
+                .Select(ex => new WorkshopExceptionRequestResponseDto
+                {
+                    Id = ex.Id,
+                    Date = ex.Date,
+                    Reason = ex.Reason,
+                    IsActive = ex.IsActive
+                }).ToList()
         };
     }
 

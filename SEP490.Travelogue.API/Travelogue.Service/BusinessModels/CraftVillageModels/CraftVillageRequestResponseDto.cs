@@ -1,5 +1,6 @@
 using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.MediaModel;
+using Travelogue.Service.BusinessModels.WorkshopModels;
 
 namespace Travelogue.Service.BusinessModels.CraftVillageModels;
 
@@ -32,4 +33,5 @@ public class CraftVillageRequestResponseDto
     public DateTimeOffset? ReviewedAt { get; set; }
     public string? ReviewedBy { get; set; }
     public List<MediaDto> Medias { get; set; } = new();
+    public WorkshopRequestResponseDto? Workshop { get; set; }
 }

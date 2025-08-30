@@ -25,4 +25,5 @@ public sealed class CraftVillage : BaseEntity
 
     [ForeignKey("OwnerId")]
     public User Owner { get; set; } = null!;
+    public ICollection<Workshop> Workshops { get; set; } = new List<Workshop>();
 }

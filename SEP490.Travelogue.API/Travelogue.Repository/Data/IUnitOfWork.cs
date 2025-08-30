@@ -51,6 +51,10 @@ public interface IUnitOfWork //: IDisposable
     IRefundRequestRepository RefundRequestRepository { get; }
     ICommissionSettingsRepository CommissionSettingsRepository { get; }
     ICommissionRateRepository CommissionRateRepository { get; }
+    IWorkshopExceptionRepository WorkshopExceptionRepository { get; }
+    IWorkshopSessionRuleRepository WorkshopSessionRuleRepository { get; }
+    IWorkshopRecurringRuleRepository WorkshopRecurringRuleRepository { get; }
+    IWorkshopTicketTypeRepository WorkshopTicketTypeRepository { get; }
 
     IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity;
     void Save();
