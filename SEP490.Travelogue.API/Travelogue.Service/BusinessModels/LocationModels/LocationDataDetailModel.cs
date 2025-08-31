@@ -12,6 +12,8 @@ public class LocationDataDetailModel : BaseDataModel
     public string? Description { get; set; }
     public string? Content { get; set; }
     public string? Address { get; set; }
+    public double MinPrice { get; set; }
+    public double MaxPrice { get; set; }
     public double Latitude { get; set; }
     public double Longitude { get; set; }
     public double Rating { get; set; } = 0;

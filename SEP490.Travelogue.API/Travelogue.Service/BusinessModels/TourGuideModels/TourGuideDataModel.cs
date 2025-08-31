@@ -7,6 +7,7 @@ public class TourGuideDataModel
     public Guid Id { get; set; }
     public string Email { get; set; }
     public string UserName { get; set; }
+    public int MaxParticipants { get; set; } = 5;
     public Gender Sex { get; set; }
     public string SexText
     {
