@@ -108,6 +108,27 @@ public class UserController : ControllerBase
         ));
     }
 
+    [HttpPatch("enable-user-role/{userId}/{roleId}")]
+    public async Task<IActionResult> EnableUserRoleAsync(Guid userId, Guid roleId, CancellationToken ct = default)
+    {
+        var response = await _userService.EnableUserRoleAsync(userId, roleId, ct);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+        ));
+    }
+
+    [HttpPatch("disable-user-role/{userId}/{roleId}")]
+    public async Task<IActionResult> DisableUserRoleAsync(Guid userId, Guid roleId, CancellationToken ct = default)
+    {
+        var response = await _userService.DisableUserRoleAsync(userId, roleId, ct);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+        ));
+    }
+
+
     ///// <summary>
     ///// Upload ảnh lên Cloudinary --> link ảnh cho api sau
     ///// </summary>

@@ -45,6 +45,8 @@ public interface IUserService
     Task<bool> RemoveUserFromRole(Guid userId, Guid roleId, CancellationToken cancellationToken);
     Task<bool> SendFeedbackAsync(FeedbackModel model, CancellationToken cancellationToken);
     Task<UserManageResponse> GetUserManageAsync(Guid userId, CancellationToken ct = default);
+    Task<bool> EnableUserRoleAsync(Guid userId, Guid roleId, CancellationToken ct = default);
+    Task<bool> DisableUserRoleAsync(Guid userId, Guid roleId, CancellationToken ct = default);
     Task<TourGuideRequestResponseDto> CreateTourGuideRequestAsync(CreateTourGuideRequestDto model, CancellationToken cancellationToken = default);
     Task<List<TourGuideRequestResponseDto>> GetTourGuideRequestsAsync(TourGuideRequestStatus? status, CancellationToken cancellationToken = default);
     Task<TourGuideRequestResponseDto> ReviewTourGuideRequestAsync(Guid requestId, ReviewTourGuideRequestDto model, CancellationToken cancellationToken = default);
@@ -966,6 +968,91 @@ public class UserService : IUserService
         finally
         {
             //  _unitOfWork.Dispose();
+        }
+    }
+
+    public async Task<bool> DisableUserRoleAsync(Guid userId, Guid roleId, CancellationToken ct = default)
+    {
+        var currentUserId = _userContextService.GetCurrentUserIdGuid();
+
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var user = await _unitOfWork.UserRepository.ActiveEntities
+                .FirstOrDefaultAsync(u => u.Id == userId, ct)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("User");
+
+            var role = await _unitOfWork.RoleRepository.ActiveEntities
+                .FirstOrDefaultAsync(r => r.Id == roleId, ct)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Role");
+
+            var userRole = await _unitOfWork.UserRoleRepository.Entities
+                .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RoleId == role.Id, ct)
+                ?? throw CustomExceptionFactory.CreateBadRequestError("User chưa gán role này.");
+
+            if (!userRole.IsActive)
+                return true;
+
+            if (string.Equals(role.Name, AppRole.ADMIN, StringComparison.OrdinalIgnoreCase))
+            {
+                var otherActiveAdmins = await _unitOfWork.UserRoleRepository.Entities
+                    .CountAsync(ur => ur.RoleId == role.Id && ur.IsActive && ur.UserId != userId, ct);
+
+                if (otherActiveAdmins == 0)
+                    throw CustomExceptionFactory.CreateBadRequestError("Phải có 1 admin tồn tại");
+            }
+
+            userRole.IsActive = false;
+            userRole.LastUpdatedBy = currentUserId.ToString();
+            userRole.LastUpdatedTime = DateTimeOffset.UtcNow;
+            _unitOfWork.UserRoleRepository.Update(userRole);
+
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(ct);
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
+    }
+
+    public async Task<bool> EnableUserRoleAsync(Guid userId, Guid roleId, CancellationToken ct = default)
+    {
+        var currentUserId = _userContextService.GetCurrentUserIdGuid();
+
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var user = await _unitOfWork.UserRepository.ActiveEntities
+                .FirstOrDefaultAsync(u => u.Id == userId, ct)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("User");
+
+            var role = await _unitOfWork.RoleRepository.ActiveEntities
+                .FirstOrDefaultAsync(r => r.Id == roleId, ct)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Role");
+
+            var userRole = await _unitOfWork.UserRoleRepository.Entities
+                .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RoleId == role.Id, ct)
+                ?? throw CustomExceptionFactory.CreateBadRequestError("User chưa gán role này.");
+
+            if (userRole.IsActive)
+                return true;
+
+            userRole.IsActive = true;
+            userRole.LastUpdatedBy = currentUserId.ToString();
+            userRole.LastUpdatedTime = DateTimeOffset.UtcNow;
+            _unitOfWork.UserRoleRepository.Update(userRole);
+
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(ct);
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
         }
     }
 
