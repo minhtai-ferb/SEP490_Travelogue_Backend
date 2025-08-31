@@ -83,14 +83,14 @@ public class TripPlansController : ControllerBase
     public async Task<IActionResult> GetTripPlanDetail(Guid id)
     {
         var result = await _tripPlanService.GetTripPlanByIdAsync(id, new CancellationToken());
-        return Ok(ResponseModel<TripPlanDetailResponse>.OkResponseModel(
+        return Ok(ResponseModel<TripPlanDetailResponseDto>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "trip plan")
         ));
     }
 
     /// <summary>
-    /// Lấy danh sách trip plan với phân trang và tìm kiếm theo tiêu đề
+    /// Lấy danh sách trip plan với phân trang và tìm kiếm theo tiêu đề của người đang đăng nhập
     /// </summary>
     /// <param name="title"></param>
     /// <param name="pageNumber"></param>
@@ -100,6 +100,23 @@ public class TripPlansController : ControllerBase
     public async Task<IActionResult> GetTripPlan(string? title, int pageNumber = 1, int pageSize = 10)
     {
         var result = await _tripPlanService.GetPagedTripPlanWithSearchAsync(title, pageNumber, pageSize, new CancellationToken());
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "trip plan")
+        ));
+    }
+
+    /// <summary>
+    /// Lấy danh sách trip plan với phân trang và tìm kiếm theo tiêu đề 
+    /// </summary>
+    /// <param name="title"></param>
+    /// <param name="pageNumber"></param>
+    /// <param name="pageSize"></param>
+    /// <returns></returns>
+    [HttpGet("page")]
+    public async Task<IActionResult> GetTripPlanPage(string? title)
+    {
+        var result = await _tripPlanService.GetPagedTripPlanPageAsync(title, new CancellationToken());
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "trip plan")

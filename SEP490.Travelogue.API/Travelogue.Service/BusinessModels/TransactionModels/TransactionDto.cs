@@ -13,7 +13,7 @@ public class TransactionDto : BaseDataModel
     public bool IsSystem { get; set; } = false;
     public SystemTransactionKind? SystemKind { get; set; }
     public string? SystemKindText { get; set; }
-    public PaymentChannel Channel { get; set; }
+    public PaymentChannel? Channel { get; set; }
     public string? PaymentChannelText { get; set; }
 
     public string? AccountNumber { get; set; }
