@@ -28,6 +28,10 @@ public interface ITourService
     Task<List<TourScheduleResponseDto>> CreateSchedulesAsync(Guid tourId, List<CreateTourScheduleDto> dtos);
     Task<TourScheduleResponseDto> UpdateScheduleAsync(Guid tourId, Guid scheduleId, CreateTourScheduleDto dto);
     Task DeleteScheduleAsync(Guid tourId, Guid scheduleId);
+    Task<ScheduleValidationResult> ValidateAsync(
+        Guid tourId,
+        CreateTourScheduleDto dto,
+        CancellationToken cancellationToken = default);
 
     Task AddTourGuideToScheduleAsync(Guid tourScheduleId, Guid guideId);
     Task RemoveTourGuideAsync(Guid tourScheduleId, Guid guideId);
@@ -1435,6 +1439,143 @@ public class TourService : ITourService
     #endregion
 
     #region TourSchedule
+
+    public async Task<ScheduleValidationResult> ValidateAsync(
+        Guid tourId,
+        CreateTourScheduleDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        var result = ScheduleValidationResult.Ok();
+
+        try
+        {
+            var tour = await _unitOfWork.TourRepository
+                .ActiveEntities
+                .Include(t => t.TourSchedules)
+                .Include(t => t.TourPlanLocations)
+                    .ThenInclude(p => p.WorkshopDetail)
+                .FirstOrDefaultAsync(t => t.Id == tourId, cancellationToken);
+
+            if (tour == null)
+            {
+                result.AddError("Tour không tồn tại.");
+                return result;
+            }
+
+            // validate base data
+            if (dto.DepartureDate.Date < DateTime.UtcNow.Date)
+                result.AddError($"Ngày khởi hành phải sau ngày hôm nay: {dto.DepartureDate:dd/MM/yyyy}.");
+
+            if (dto.MaxParticipant <= 0)
+                result.AddError($"Số lượng người tham gia phải lớn hơn 0: {dto.DepartureDate:dd/MM/yyyy}.");
+
+            if (dto.AdultPrice < 0 || dto.ChildrenPrice < 0)
+                result.AddError($"Giá không được âm: {dto.DepartureDate:dd/MM/yyyy}.");
+
+            var activePlans = tour.TourPlanLocations?.Where(l => !l.IsDeleted).ToList() ?? new();
+            if (!activePlans.Any())
+                result.AddError("Tour chưa có lịch trình chi tiết, không thể tạo schedule.");
+
+            if (activePlans.Any())
+            {
+                var maxDayOrder = activePlans.Max(l => l.DayOrder);
+                if (tour.TotalDays != maxDayOrder)
+                    result.AddError($"Không đủ lịch trình ({tour.TotalDays} ngày) để bao phủ Ngày thứ {maxDayOrder}.");
+            }
+
+            var duplicateDate = tour.TourSchedules
+                .Where(s => !s.IsDeleted)
+                .Any(s => s.DepartureDate.Date == dto.DepartureDate.Date);
+            if (duplicateDate)
+                result.AddError($"Đã tồn tại lịch khởi hành vào ngày {dto.DepartureDate:dd/MM/yyyy} cho tour này.");
+
+            if (!result.IsValid) return result;
+
+            // có Workshop -> validate giá + khớp schedule + đủ chỗ
+            var planWorkshops = activePlans
+                .Where(p => p.ActivityType == ActivityType.Workshop
+                            && p.WorkshopDetail != null
+                            && !p.WorkshopDetail!.IsDeleted)
+                .ToList();
+
+            if (planWorkshops.Any())
+            {
+                // giá
+                var minRequired = await ComputeTotalWorkshopPriceAsync(planWorkshops, cancellationToken);
+                if (dto.AdultPrice < minRequired)
+                    result.AddError($"Giá người lớn ({dto.AdultPrice:n0}) phải ≥ tổng giá Workshop trong kế hoạch ({minRequired:n0}).");
+                if (dto.ChildrenPrice < minRequired)
+                    result.AddError($"Giá trẻ em ({dto.ChildrenPrice:n0}) phải ≥ tổng giá Workshop trong kế hoạch ({minRequired:n0}).");
+
+                // schedule, slot
+                foreach (var p in planWorkshops)
+                {
+                    var wd = p.WorkshopDetail!;
+                    var (winStart, winEnd) = ComputePlanWindow(dto.DepartureDate, p.DayOrder, p.StartTime, p.EndTime);
+
+                    var ws = await _unitOfWork.WorkshopScheduleRepository.ActiveEntities
+                        .AsNoTracking()
+                        .Where(s => s.WorkshopId == wd.WorkshopId && s.Status == ScheduleStatus.Active)
+                        .Where(s =>
+                            s.StartTime.Date >= winStart.Date.AddDays(-1) &&
+                            s.StartTime.Date <= winEnd.Date.AddDays(1))
+                        .Where(s => s.StartTime < winEnd && s.EndTime > winStart)
+                        .OrderBy(s => s.StartTime)
+                        .FirstOrDefaultAsync(cancellationToken);
+
+                    if (ws == null)
+                    {
+                        result.AddError(
+                            $"Không tìm thấy lịch workshop phù hợp cho Ngày {p.DayOrder} ({winStart:dd/MM HH:mm}–{winEnd:dd/MM HH:mm}).");
+                        continue;
+                    }
+
+                    var available = ws.Capacity - ws.CurrentBooked;
+                    if (available < dto.MaxParticipant)
+                    {
+                        result.AddError(
+                            $"Workshop {ws.StartTime:dd/MM HH:mm} chỉ còn {available} chỗ, không đủ cho {dto.MaxParticipant} khách ở Ngày {p.DayOrder}.");
+                    }
+                }
+            }
+
+            // tour guide
+            if (dto.TourGuideId == Guid.Empty)
+            {
+                result.AddError("TourGuideId là bắt buộc.");
+            }
+            else
+            {
+                var guide = await _unitOfWork.TourGuideRepository
+                    .ActiveEntities
+                    .Include(g => g.TourGuideSchedules)
+                    .FirstOrDefaultAsync(g => g.Id == dto.TourGuideId, cancellationToken);
+
+                if (guide == null)
+                {
+                    result.AddError("Không tìm thấy hướng dẫn viên.");
+                }
+                else
+                {
+                    var tourStart = dto.DepartureDate.Date;
+                    var tourEndExcl = dto.DepartureDate.Date.AddDays(tour.TotalDays);
+
+                    var conflict = guide.TourGuideSchedules
+                        .Where(s => !s.IsDeleted && s.BookingId != null)
+                        .Any(s => s.Date.Date >= tourStart && s.Date.Date < tourEndExcl);
+
+                    if (conflict)
+                        result.AddError($"Hướng dẫn viên không sẵn sàng trong khoảng {tourStart:yyyy-MM-dd} đến {tourEndExcl.AddDays(-1):yyyy-MM-dd}.");
+                }
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return ScheduleValidationResult.Fail($"Lỗi kiểm tra dữ liệu: {ex.Message}");
+        }
+    }
 
     public async Task<List<TourScheduleResponseDto>> CreateSchedulesAsync(Guid tourId, List<CreateTourScheduleDto> dtos)
     {
@@ -2892,6 +3033,56 @@ public class TourService : ITourService
             .ToListAsync();
 
         return prices.Sum();
+    }
+
+    private async Task<decimal> ComputeTotalWorkshopPriceAsync(
+        List<TourPlanLocation> planWorkshops,
+        CancellationToken ct)
+    {
+        decimal total = 0m;
+
+        var chosenTicketIds = planWorkshops
+            .Select(p => p.WorkshopDetail!.WorkshopTicketTypeId)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToList();
+
+        var missingPriceWorkshopIds = planWorkshops
+            .Where(p => !p.WorkshopDetail!.WorkshopTicketTypeId.HasValue)
+            .Select(p => p.WorkshopDetail!.WorkshopId)
+            .Distinct()
+            .ToList();
+
+        var priceByTicketId = await _unitOfWork.WorkshopTicketTypeRepository
+            .ActiveEntities
+            .Where(tt => chosenTicketIds.Contains(tt.Id))
+            .Select(tt => new { tt.Id, tt.Price })
+            .ToDictionaryAsync(x => x.Id, x => x.Price, ct);
+
+        var minPriceByWorkshopId = await _unitOfWork.WorkshopTicketTypeRepository
+            .ActiveEntities
+            .Where(tt => missingPriceWorkshopIds.Contains(tt.WorkshopId))
+            .GroupBy(tt => tt.WorkshopId)
+            .Select(g => new { WorkshopId = g.Key, MinPrice = g.Min(x => x.Price) })
+            .ToDictionaryAsync(x => x.WorkshopId, x => x.MinPrice, ct);
+
+        foreach (var p in planWorkshops)
+        {
+            var wd = p.WorkshopDetail!;
+            if (wd.WorkshopTicketTypeId.HasValue)
+            {
+                if (priceByTicketId.TryGetValue(wd.WorkshopTicketTypeId.Value, out var price))
+                    total += price;
+            }
+            else
+            {
+                if (minPriceByWorkshopId.TryGetValue(wd.WorkshopId, out var minPrice))
+                    total += minPrice;
+            }
+        }
+
+        return total;
     }
 
     #endregion

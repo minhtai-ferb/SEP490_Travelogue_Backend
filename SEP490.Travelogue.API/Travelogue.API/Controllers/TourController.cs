@@ -391,6 +391,16 @@ public class TourController : ControllerBase
         }
     }
 
+    [HttpPost("tour-schedules/validate")]
+    public async Task<IActionResult> ValidateScheduleAsync(Guid tourId, [FromBody] CreateTourScheduleDto dto, CancellationToken cancellationToken)
+    {
+        var result = await _tourService.ValidateAsync(tourId, dto);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "tour schedule")
+        ));
+    }
+
     /// <summary>
     /// Xóa lịch trình của tour
     /// </summary>
