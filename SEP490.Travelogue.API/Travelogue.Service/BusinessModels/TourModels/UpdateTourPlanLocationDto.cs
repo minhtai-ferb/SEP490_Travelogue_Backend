@@ -19,12 +19,8 @@ public class UpdateTourPlanLocationDto
     public string? Notes { get; set; }
     public float TravelTimeFromPrev { get; set; }
     public float DistanceFromPrev { get; set; }
-    public float EstimatedStartTime { get; set; }
-    public float EstimatedEndTime { get; set; }
 
     public Guid? WorkshopId { get; set; }
     public Guid? WorkshopTicketTypeId { get; set; }
     public Guid? WorkshopSessionRuleId { get; set; }
-    public TimeSpan? PreferredStartTime { get; set; }
-    public TimeSpan? PreferredEndTime { get; set; }
 }

@@ -14,6 +14,4 @@ public class TourPlanLocationResponseDto
     public string? Notes { get; set; }
     public float TravelTimeFromPrev { get; set; }
     public float DistanceFromPrev { get; set; }
-    public float EstimatedStartTime { get; set; }
-    public float EstimatedEndTime { get; set; }
 }

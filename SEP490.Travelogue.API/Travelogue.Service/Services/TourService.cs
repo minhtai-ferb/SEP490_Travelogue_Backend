@@ -1098,8 +1098,6 @@ public class TourService : ITourService
                     Notes = d.Notes,
                     TravelTimeFromPrev = d.TravelTimeFromPrev,
                     DistanceFromPrev = d.DistanceFromPrev,
-                    EstimatedStartTime = d.EstimatedStartTime,
-                    EstimatedEndTime = d.EstimatedEndTime,
                     ActivityType = d.ActivityType,
                     IsActive = true,
                     IsDeleted = false,
@@ -1205,9 +1203,6 @@ public class TourService : ITourService
                             a.StartTime == dto.StartTime &&
                             a.EndTime == dto.EndTime);
 
-                        var plannedStart = dto.PreferredStartTime ?? dto.StartTime;
-                        var plannedEnd = dto.PreferredEndTime ?? dto.EndTime;
-
                         var tplw = new TourPlanLocationWorkshop
                         {
                             Id = Guid.NewGuid(),
@@ -1215,8 +1210,6 @@ public class TourService : ITourService
                             WorkshopId = dto.WorkshopId.Value,
                             WorkshopTicketTypeId = dto.WorkshopTicketTypeId,
                             WorkshopSessionRuleId = dto.WorkshopSessionRuleId,
-                            PlannedStartTime = plannedStart,
-                            PlannedEndTime = plannedEnd,
                             Notes = dto.Notes,
                             CreatedBy = userId.ToString(),
                             CreatedTime = DateTimeOffset.UtcNow,
@@ -1238,8 +1231,6 @@ public class TourService : ITourService
                         tourPlanLocation.ActivityType = dto.ActivityType;
                         tourPlanLocation.TravelTimeFromPrev = dto.TravelTimeFromPrev;
                         tourPlanLocation.DistanceFromPrev = dto.DistanceFromPrev;
-                        tourPlanLocation.EstimatedStartTime = dto.EstimatedStartTime;
-                        tourPlanLocation.EstimatedEndTime = dto.EstimatedEndTime;
                         tourPlanLocation.LastUpdatedTime = DateTimeOffset.UtcNow;
                         _unitOfWork.TourPlanLocationRepository.Update(tourPlanLocation);
                         changes.Add($"Đã cập nhật địa điểm: {dto.LocationId}");
@@ -1286,9 +1277,6 @@ public class TourService : ITourService
                                     throw CustomExceptionFactory.CreateBadRequestError("Session rule không thuộc workshop đã chọn.");
                             }
 
-                            var plannedStart = dto.PreferredStartTime ?? dto.StartTime;
-                            var plannedEnd = dto.PreferredEndTime ?? dto.EndTime;
-
                             if (tourPlanLocation.WorkshopDetail == null || tourPlanLocation.WorkshopDetail.IsDeleted)
                             {
                                 var tplw = new TourPlanLocationWorkshop
@@ -1298,8 +1286,6 @@ public class TourService : ITourService
                                     WorkshopId = dto.WorkshopId.Value,
                                     WorkshopTicketTypeId = dto.WorkshopTicketTypeId,
                                     WorkshopSessionRuleId = dto.WorkshopSessionRuleId,
-                                    PlannedStartTime = plannedStart,
-                                    PlannedEndTime = plannedEnd,
                                     Notes = dto.Notes,
                                     CreatedBy = userId.ToString(),
                                     CreatedTime = DateTimeOffset.UtcNow,
@@ -1314,8 +1300,6 @@ public class TourService : ITourService
                                 d.WorkshopId = dto.WorkshopId.Value;
                                 d.WorkshopTicketTypeId = dto.WorkshopTicketTypeId;
                                 d.WorkshopSessionRuleId = dto.WorkshopSessionRuleId;
-                                d.PlannedStartTime = plannedStart;
-                                d.PlannedEndTime = plannedEnd;
                                 d.Notes = dto.Notes;
                                 d.IsDeleted = false;
                                 d.LastUpdatedBy = userId.ToString();
@@ -1371,8 +1355,6 @@ public class TourService : ITourService
                     Notes = l.Notes,
                     TravelTimeFromPrev = l.TravelTimeFromPrev,
                     DistanceFromPrev = l.DistanceFromPrev,
-                    EstimatedStartTime = l.EstimatedStartTime,
-                    EstimatedEndTime = l.EstimatedEndTime,
                 })
                 .Concat(toAdd.Select(l => new TourPlanLocationResponseDto
                 {
@@ -1386,8 +1368,6 @@ public class TourService : ITourService
                     Notes = l.Notes,
                     TravelTimeFromPrev = l.TravelTimeFromPrev,
                     DistanceFromPrev = l.DistanceFromPrev,
-                    EstimatedStartTime = l.EstimatedStartTime,
-                    EstimatedEndTime = l.EstimatedEndTime,
                 }))
                 .ToList();
 
@@ -1423,8 +1403,6 @@ public class TourService : ITourService
                     l.Notes,
                     l.TravelTimeFromPrev,
                     l.DistanceFromPrev,
-                    l.EstimatedStartTime,
-                    l.EstimatedEndTime
                 })
                 .ToListAsync();
 
@@ -1440,8 +1418,6 @@ public class TourService : ITourService
                 Notes = l.Notes,
                 TravelTimeFromPrev = l.TravelTimeFromPrev,
                 DistanceFromPrev = l.DistanceFromPrev,
-                EstimatedStartTime = l.EstimatedStartTime,
-                EstimatedEndTime = l.EstimatedEndTime,
             }).ToList();
 
             return result;
@@ -1564,10 +1540,8 @@ public class TourService : ITourService
                 foreach (var p in planWorkshops)
                 {
                     var wd = p.WorkshopDetail!;
-                    var plannedStart = wd.PlannedStartTime ?? p.StartTime;
-                    var plannedEnd = wd.PlannedEndTime ?? p.EndTime;
 
-                    var (winStart, winEnd) = ComputePlanWindow(dto.DepartureDate, p.DayOrder, plannedStart, plannedEnd);
+                    var (winStart, winEnd) = ComputePlanWindow(dto.DepartureDate, p.DayOrder, p.StartTime, p.EndTime);
 
                     var ws = await _unitOfWork.WorkshopScheduleRepository.ActiveEntities
                         .AsNoTracking()
@@ -1582,7 +1556,7 @@ public class TourService : ITourService
                     if (ws == null)
                     {
                         throw CustomExceptionFactory.CreateBadRequestError(
-                            $"Không tìm thấy lịch workshop phù hợp cho Ngày {p.DayOrder} (cửa sổ {winStart:dd/MM HH:mm}–{winEnd:dd/MM HH:mm}).");
+                            $"Không tìm thấy lịch workshop phù hợp cho Ngày {p.DayOrder} ({winStart:dd/MM HH:mm}–{winEnd:dd/MM HH:mm}).");
                     }
 
                     var available = ws.Capacity - ws.CurrentBooked;
@@ -1823,10 +1797,8 @@ public class TourService : ITourService
             foreach (var p in planWorkshops)
             {
                 var wd = p.WorkshopDetail!;
-                var plannedStart = wd.PlannedStartTime ?? p.StartTime;
-                var plannedEnd = wd.PlannedEndTime ?? p.EndTime;
 
-                var (winStart, winEnd) = ComputePlanWindow(dto.DepartureDate, p.DayOrder, plannedStart, plannedEnd);
+                var (winStart, winEnd) = ComputePlanWindow(dto.DepartureDate, p.DayOrder, p.StartTime, p.EndTime);
 
                 var ws = await _unitOfWork.WorkshopScheduleRepository.ActiveEntities
                     .AsNoTracking()
@@ -1841,7 +1813,7 @@ public class TourService : ITourService
                 if (ws == null)
                 {
                     throw CustomExceptionFactory.CreateBadRequestError(
-                        $"Không tìm thấy lịch workshop phù hợp cho Ngày {p.DayOrder} (cửa sổ {winStart:dd/MM HH:mm}–{winEnd:dd/MM HH:mm}).");
+                        $"Không tìm thấy lịch workshop phù hợp cho Ngày {p.DayOrder} ({winStart:dd/MM HH:mm}–{winEnd:dd/MM HH:mm}).");
                 }
 
                 var available = ws.Capacity - ws.CurrentBooked;
@@ -2369,8 +2341,6 @@ public class TourService : ITourService
                     ImageUrl = imageUrl,
                     TravelTimeFromPrev = l.TravelTimeFromPrev,
                     DistanceFromPrev = l.DistanceFromPrev,
-                    EstimatedStartTime = l.EstimatedStartTime,
-                    EstimatedEndTime = l.EstimatedEndTime,
                 };
 
                 if (l.ActivityType == ActivityType.Workshop && l.WorkshopDetail != null)
