@@ -14,8 +14,8 @@ public sealed class TourGuide : BaseEntity
     public decimal Price { get; set; }
     public string? Introduction { get; set; }
 
-    // [Range(1, 6)]
-    // public int MaxParticipants { get; set; } = 5;
+    [Range(1, 6)]
+    public int MaxParticipants { get; set; } = 5;
 
     [Required]
     public Guid UserId { get; set; }

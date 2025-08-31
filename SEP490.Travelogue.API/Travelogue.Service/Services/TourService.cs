@@ -490,6 +490,7 @@ public class TourService : ITourService
                     Description = tour.Description,
                     Content = tour.Content,
                     TransportType = tour.TransportType,
+                    IsTourWorkshop = tour.IsTourWorkshop,
                     StayInfo = tour.StayInfo,
                     PickupAddress = tour.PickupAddress,
                     TotalDays = tour.TotalDays,
@@ -700,6 +701,7 @@ public class TourService : ITourService
                 Description = tour.Description,
                 Content = tour.Content,
                 TransportType = tour.TransportType,
+                IsTourWorkshop = tour.IsTourWorkshop,
                 StayInfo = tour.StayInfo,
                 PickupAddress = tour.PickupAddress,
                 TotalDays = tour.TotalDays,
@@ -904,6 +906,7 @@ public class TourService : ITourService
                 Description = tour.Description,
                 Content = tour.Content,
                 TransportType = tour.TransportType,
+                IsTourWorkshop = tour.IsTourWorkshop,
                 StayInfo = tour.StayInfo,
                 PickupAddress = tour.PickupAddress,
                 TotalDays = tour.TotalDays,
@@ -1321,6 +1324,14 @@ public class TourService : ITourService
                             }
                         }
                     }
+
+                    bool hasWorkshopAfter =
+                        tour.TourPlanLocations.Any(l => !l.IsDeleted && l.ActivityType == ActivityType.Workshop)
+                        || toAdd.Any(l => l.ActivityType == ActivityType.Workshop);
+
+                    tour.IsTourWorkshop = hasWorkshopAfter;
+
+                    _unitOfWork.TourRepository.Update(tour);
 
                     await _unitOfWork.SaveAsync();
 
@@ -2420,6 +2431,7 @@ public class TourService : ITourService
                 AverageRating = tg.TourGuide.Rating,
                 Price = tg.TourGuide.Price,
                 Introduction = tg.TourGuide.Introduction,
+                MaxParticipants = tg.TourGuide.MaxParticipants,
                 AvatarUrl = tg.TourGuide.User.AvatarUrl,
             })
             .DistinctBy(g => g.Id)
@@ -2442,6 +2454,7 @@ public class TourService : ITourService
                 AverageRating = tg.TourGuide.Rating,
                 Price = tg.TourGuide.Price,
                 Introduction = tg.TourGuide.Introduction,
+                MaxParticipants = tg.TourGuide.MaxParticipants,
                 AvatarUrl = tg.TourGuide.User.AvatarUrl,
             })
             .DistinctBy(g => g.Id)
@@ -2522,6 +2535,7 @@ public class TourService : ITourService
                     Description = tour.Description,
                     Content = tour.Content,
                     TransportType = tour.TransportType,
+                    IsTourWorkshop = tour.IsTourWorkshop,
                     StayInfo = tour.StayInfo,
                     PickupAddress = tour.PickupAddress,
                     TotalDays = tour.TotalDays,

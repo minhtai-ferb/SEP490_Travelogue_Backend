@@ -31,7 +31,7 @@ dotnet ef migrations add <MigrationName> --startup-project <StartupProjectPath>
 ```bash
 dotnet ef migrations add InitDb --startup-project ../Travelogue.API
 dotnet ef migrations add BookingParticipant --startup-project ../Travelogue.API
-dotnet ef migrations add EndDateCommission --startup-project ../Travelogue.API/Travelogue.API.csproj
+dotnet ef migrations add LocationPrice --startup-project ../Travelogue.API/Travelogue.API.csproj
 
 ```
 

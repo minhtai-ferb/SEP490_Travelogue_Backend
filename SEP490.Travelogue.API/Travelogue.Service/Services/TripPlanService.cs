@@ -306,6 +306,8 @@ public class TripPlanService : ITripPlanService
                 LocationId = tpl.LocationId,
                 Type = _enumService.GetEnumDisplayName<LocationType>(location.LocationType),
                 Name = location.Name,
+                MinPrice = location.MinPrice,
+                MaxPrice = location.MaxPrice,
                 Description = location.Description,
                 Address = location.Address,
                 StartTime = tpl.StartTime,

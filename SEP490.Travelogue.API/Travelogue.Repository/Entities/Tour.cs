@@ -20,6 +20,8 @@ public sealed class Tour : BaseEntity
 
     public int TotalDays { get; set; }
 
+    public bool IsTourWorkshop { get; set; } = false;
+
     public TourStatus Status { get; set; } = TourStatus.Draft;
     public TourType? TourType { get; set; }
 
