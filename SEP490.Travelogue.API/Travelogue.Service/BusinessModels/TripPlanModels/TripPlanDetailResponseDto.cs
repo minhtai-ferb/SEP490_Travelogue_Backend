@@ -1,8 +1,12 @@
-﻿using Travelogue.Repository.Entities.Enums;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Service.BusinessModels.TripPlanModels;
-
-public class TripPlanDetailResponse
+public class TripPlanDetailResponseDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
@@ -10,11 +14,16 @@ public class TripPlanDetailResponse
     public string? PickupAddress { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
+    public string? ImageUrl { get; set; }
     public int TotalDays { get; set; }
+    public Guid UserId { get; set; }
+    public string OwnerName { get; set; } = string.Empty;
     public TripPlanStatus? Status { get; set; }
     public string? StatusText { get; set; }
     public List<TripDayDetail> Days { get; set; } = new List<TripDayDetail>();
 }
+
+
 
 public class TripDayDetail
 {

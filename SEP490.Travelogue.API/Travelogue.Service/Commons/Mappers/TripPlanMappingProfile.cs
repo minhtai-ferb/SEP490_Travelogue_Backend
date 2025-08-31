@@ -12,5 +12,6 @@ public class TripPlanMappingProfile : Profile
         CreateMap<TripPlanUpdateModel, TripPlan>()
             .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
         CreateMap<TripPlanResponseDto, TripPlan>().ReverseMap();
+        CreateMap<TripPlanDetailResponseDto, TripPlan>().ReverseMap();
     }
 }
