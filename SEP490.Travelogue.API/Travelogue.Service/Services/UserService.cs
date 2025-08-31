@@ -29,7 +29,7 @@ public interface IUserService
     Task<UserResponseModel> CreateUserAsync(CreateUserDto model, CancellationToken cancellationToken = default);
     Task<UserResponseModel> AssignModeratorRoleAsync(Guid userId, UpdateUserRoleDto model, CancellationToken cancellationToken = default);
     Task<UserResponseModel> GetUserByIdAsync(Guid id, CancellationToken cancellationToken);
-    Task<List<UserResponseModel>> GetAllUsersAsync(string? searchFullName = null, string? role = null, CancellationToken cancellationToken = default);
+    Task<List<UserManageResponse>> GetAllUsersAsync(string? searchFullName = null, string? role = null, CancellationToken cancellationToken = default);
     Task<PagedResult<UserResponseModel>> GetPagedUsersAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<PagedResult<UserResponseModel>> GetPagedUsersAsync(string? email, string? phoneNumber, string? fullName, int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<bool> BlockUserAsync(Guid userId);
@@ -225,15 +225,22 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<List<UserResponseModel>> GetAllUsersAsync(string? searchFullName = null, string? role = null, CancellationToken cancellationToken = default)
+    public async Task<List<UserManageResponse>> GetAllUsersAsync(string? searchFullName = null, string? role = null, CancellationToken cancellationToken = default)
     {
         try
         {
+            //var currentUserId = _userContextService.GetCurrentUserId();
+            //var currentTime = _timeService.SystemTimeNow;
+
+            //var isValidRole = _userContextService.HasAnyRole(AppRole.MODERATOR, AppRole.ADMIN);
+            //if (!isValidRole)
+            //    throw CustomExceptionFactory.CreateForbiddenError();
+
             var users = await _unitOfWork.UserRepository.GetAllAsync(cancellationToken);
 
             if (users == null || !users.Any())
             {
-                return new List<UserResponseModel>();
+                return new List<UserManageResponse>();
             }
 
             if (!string.IsNullOrEmpty(searchFullName))
@@ -257,7 +264,7 @@ public class UserService : IUserService
 
             if (!users.Any())
             {
-                return new List<UserResponseModel>();
+                return new List<UserManageResponse>();
             }
 
             var userDataModels = _mapper.Map<List<UserResponseModel>>(users);
