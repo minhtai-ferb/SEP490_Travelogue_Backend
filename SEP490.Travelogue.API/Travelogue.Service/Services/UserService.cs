@@ -45,6 +45,7 @@ public interface IUserService
     Task<bool> RemoveUserFromRole(Guid userId, Guid roleId, CancellationToken cancellationToken);
     Task<bool> SendFeedbackAsync(FeedbackModel model, CancellationToken cancellationToken);
     Task<UserManageResponse> GetUserManageAsync(Guid userId, CancellationToken ct = default);
+    Task<List<UserManageResponse>> GetAllUserManageAsync(CancellationToken ct = default);
     Task<bool> EnableUserRoleAsync(Guid userId, Guid roleId, CancellationToken ct = default);
     Task<bool> DisableUserRoleAsync(Guid userId, Guid roleId, CancellationToken ct = default);
     Task<TourGuideRequestResponseDto> CreateTourGuideRequestAsync(CreateTourGuideRequestDto model, CancellationToken cancellationToken = default);
@@ -956,6 +957,202 @@ public class UserService : IUserService
             };
 
             return response;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+        finally
+        {
+            //  _unitOfWork.Dispose();
+        }
+    }
+
+    public async Task<List<UserManageResponse>> GetAllUserManageAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var users = await _unitOfWork.UserRepository.ActiveEntities
+                .Include(u => u.Wallet)
+                .Include(u => u.UserRoles)!.ThenInclude(ur => ur.Role)
+                .Include(u => u.BankAccounts)
+                .ToListAsync(ct);
+
+            var userIds = users.Select(u => u.Id).ToList();
+
+            var guides = await _unitOfWork.TourGuideRepository.ActiveEntities
+                .Where(g => userIds.Contains(g.UserId))
+                .Include(g => g.Certifications)
+                .ToListAsync(ct);
+            var guidesByUser = guides.ToLookup(g => g.UserId);
+
+            var villages = await _unitOfWork.CraftVillageRepository.ActiveEntities
+                .Where(cv => userIds.Contains(cv.OwnerId))
+                .ToListAsync(ct);
+            var villagesByOwner = villages.ToLookup(cv => cv.OwnerId);
+
+            var guideRatings = await _unitOfWork.ReviewRepository.ActiveEntities
+                .Where(r => r.Booking.TourGuideId.HasValue)
+                .Select(r => new { r.Booking.TourGuideId, r.Rating })
+                .ToListAsync(ct);
+
+            var ratingAggs = guideRatings
+                .GroupBy(x => x.TourGuideId!.Value)
+                .Select(g => new
+                {
+                    TourGuideId = g.Key,
+                    Avg = (int)Math.Round(g.Average(x => (double)x.Rating)),
+                    Total = g.Count()
+                })
+                .ToList();
+
+            var walletIds = users.Where(u => u.Wallet != null).Select(u => u.Wallet!.Id).ToList();
+            var allTx = await _unitOfWork.TransactionEntryRepository.ActiveEntities
+                .Where(t => t.WalletId.HasValue && walletIds.Contains(t.WalletId.Value))
+                .OrderByDescending(t => t.CreatedTime)
+                .ToListAsync(ct);
+
+            var result = new List<UserManageResponse>();
+
+            foreach (var u in users)
+            {
+                var roleDtos = (u.UserRoles ?? Array.Empty<UserRole>())
+                    .Where(ur => ur.Role != null)
+                    .Select(ur => new RoleManageDto
+                    {
+                        Name = ur.Role!.Name,
+                        CreatedAt = ur.Role.CreatedTime.UtcDateTime,
+                        IsActive = !ur.Role.IsDeleted
+                    })
+                    .ToList();
+
+                // Bank accounts
+                var bankAccounts = (u.BankAccounts ?? Enumerable.Empty<BankAccount>())
+                    .Select(b => new BankAccountDto
+                    {
+                        Id = b.Id,
+                        BankName = b.BankName,
+                        BankAccountNumber = b.BankAccountNumber,
+                        BankOwnerName = b.BankOwnerName,
+                        CreatedAt = b.CreatedAt,
+                        IsDefault = b.IsDefault
+                    })
+                    .ToList();
+
+                var txDtos = (u.Wallet != null
+                        ? allTx.Where(t => t.WalletId == u.Wallet.Id)
+                        : Enumerable.Empty<TransactionEntry>())
+                    .Select(t => new TransactionDto
+                    {
+                        Id = t.Id,
+                        WalletId = t.WalletId,
+                        UserId = t.UserId,
+                        IsSystem = t.IsSystem,
+                        SystemKind = t.SystemKind,
+                        SystemKindText = t.SystemKind.HasValue ? _enumService.GetEnumDisplayName<SystemTransactionKind>(t.SystemKind.Value) : null,
+                        Channel = t.Channel,
+                        PaymentChannelText = t.Channel.HasValue ? _enumService.GetEnumDisplayName<PaymentChannel>(t.Channel.Value) : null,
+                        AccountNumber = t.AccountNumber,
+                        PaidAmount = t.PaidAmount,
+                        PaymentReference = t.PaymentReference,
+                        TransactionDateTime = t.TransactionDateTime,
+                        CounterAccountBankId = t.CounterAccountBankId,
+                        CounterAccountName = t.CounterAccountName,
+                        CounterAccountNumber = t.CounterAccountNumber,
+                        Currency = t.Currency,
+                        PaymentLinkId = t.PaymentLinkId,
+                        PaymentStatus = t.PaymentStatus,
+                        PaymentStatusText = t.PaymentStatus.HasValue ? _enumService.GetEnumDisplayName<PaymentStatus>(t.PaymentStatus.Value) : null,
+                        Status = t.Status,
+                        StatusText = _enumService.GetEnumDisplayName<TransactionStatus>(t.Status),
+                        Type = t.Type,
+                        TypeText = _enumService.GetEnumDisplayName<TransactionType>(t.Type),
+                        TransactionDirection = t.TransactionDirection,
+                        TransactionDirectionText = _enumService.GetEnumDisplayName<TransactionDirection>(t.TransactionDirection),
+                        Reason = t.Reason,
+                        Method = t.Method
+                    })
+                    .ToList();
+
+                // tour guide
+                TourGuideInfo? tourGuideInfo = null;
+                var firstGuide = guidesByUser[u.Id].FirstOrDefault();
+                if (firstGuide != null)
+                {
+                    var agg = ratingAggs.FirstOrDefault(a => a.TourGuideId == firstGuide.Id);
+                    tourGuideInfo = new TourGuideInfo
+                    {
+                        Id = firstGuide.Id,
+                        Rating = agg?.Avg ?? 0,
+                        TotalReviews = agg?.Total ?? 0,
+                        Price = firstGuide.Price,
+                        Introduction = firstGuide.Introduction,
+                        Certifications = (firstGuide.Certifications ?? Enumerable.Empty<Certification>())
+                            .Select(c => new CertificationDto
+                            {
+                                Name = c.Name,
+                                CertificateUrl = c.CertificateUrl
+                            })
+                            .ToList()
+                    };
+                }
+
+                // lang nghe
+                CraftVillagesInfo? craftInfo = null;
+                var firstCv = villagesByOwner[u.Id].FirstOrDefault();
+                if (firstCv != null)
+                {
+                    craftInfo = new CraftVillagesInfo
+                    {
+                        Id = firstCv.Id,
+                        PhoneNumber = firstCv.PhoneNumber,
+                        Email = firstCv.Email,
+                        Website = firstCv.Website,
+                        SignatureProduct = firstCv.SignatureProduct,
+                        YearsOfHistory = firstCv.YearsOfHistory,
+                        IsRecognizedByUnesco = firstCv.IsRecognizedByUnesco,
+                        WorkshopsAvailable = firstCv.WorkshopsAvailable,
+                        LocationId = firstCv.LocationId
+                    };
+                }
+
+                // response
+                result.Add(new UserManageResponse
+                {
+                    Id = u.Id,
+                    Email = u.Email,
+                    UserName = u.FullName,
+                    EmailConfirmed = u.EmailConfirmed,
+                    PhoneNumber = u.PhoneNumber,
+                    PhoneNumberConfirmed = u.PhoneNumberConfirmed,
+                    FullName = u.FullName,
+                    AvatarUrl = u.AvatarUrl ?? u.ProfilePictureUrl,
+                    Roles = roleDtos,
+                    Sex = u.Sex,
+                    GenderText = _enumService.GetEnumDisplayName<Gender>(u.Sex),
+                    Address = u.Address,
+                    IsEmailVerified = u.IsEmailVerified,
+                    LockoutEnd = u.LockoutEnd,
+                    BankAccounts = bankAccounts,
+                    Wallet = new WalletDto
+                    {
+                        UserWalletAmount = u.Wallet?.Balance ?? 0m,
+                        TransactionDtos = txDtos
+                    },
+                    TourGuideInfo = tourGuideInfo,
+                    CraftVillagesInfo = craftInfo,
+                    CreatedBy = u.CreatedBy,
+                    LastUpdatedBy = u.LastUpdatedBy,
+                    CreatedTime = u.CreatedTime,
+                    LastUpdatedTime = u.LastUpdatedTime
+                });
+            }
+
+            return result;
         }
         catch (CustomException)
         {

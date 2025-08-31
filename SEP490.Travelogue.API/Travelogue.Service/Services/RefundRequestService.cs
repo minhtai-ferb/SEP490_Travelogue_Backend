@@ -63,11 +63,16 @@ public class RefundRequestService : IRefundRequestService
                 throw CustomExceptionFactory.CreateBadRequestError("Booking không đủ điều kiện hoàn tiền.");
             }
 
-            // thời gian hoàn tiền trước 48 tiếng
+            if (booking.Status == BookingStatus.CancelledUnpaid)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError("Booking không đủ điều kiện hoàn tiền.");
+            }
+
+            // thời gian hoàn tiền trước 24 tiếng
             if (booking.Status == BookingStatus.Confirmed)
             {
                 var hoursBefore = (booking.StartDate - DateTime.UtcNow).TotalHours;
-                if (hoursBefore < 48)
+                if (hoursBefore < 24)
                     throw CustomExceptionFactory.CreateBadRequestError("Không thể hoàn tiền do hủy quá sát giờ.");
             }
 
