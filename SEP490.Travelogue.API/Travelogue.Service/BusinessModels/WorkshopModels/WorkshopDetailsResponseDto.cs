@@ -28,10 +28,10 @@ public class WorkshopDetailsResponseDto
 public class WorkshopDayDetail
 {
     public int DayNumber { get; set; }
-    public List<WorkshopActivityDto> Activities { get; set; } = new List<WorkshopActivityDto>();
+    public List<WorkshopActivityDtoOLD> Activities { get; set; } = new List<WorkshopActivityDtoOLD>();
 }
 
-public class WorkshopActivityDto
+public class WorkshopActivityDtoOLD
 {
     public Guid Id { get; set; }
     public string Activity { get; set; } = string.Empty;
