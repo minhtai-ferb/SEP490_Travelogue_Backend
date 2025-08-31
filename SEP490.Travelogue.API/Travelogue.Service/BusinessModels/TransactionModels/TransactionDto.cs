@@ -10,6 +10,12 @@ public class TransactionDto : BaseDataModel
     public Guid? WalletId { get; set; }
     public Guid? UserId { get; set; }
 
+    public bool IsSystem { get; set; } = false;
+    public SystemTransactionKind? SystemKind { get; set; }
+    public string? SystemKindText { get; set; }
+    public PaymentChannel Channel { get; set; }
+    public string? PaymentChannelText { get; set; }
+
     public string? AccountNumber { get; set; }
     public decimal? PaidAmount { get; set; }
     public string? PaymentLinkId { get; set; }
@@ -26,7 +32,7 @@ public class TransactionDto : BaseDataModel
 
     // payos
     public string? PaymentReference { get; set; }
-    public DateTime? TransactionDateTime { get; set; }
+    public DateTimeOffset? TransactionDateTime { get; set; }
     public string? CounterAccountBankId { get; set; }
     public string? CounterAccountName { get; set; }
     public string? CounterAccountNumber { get; set; }

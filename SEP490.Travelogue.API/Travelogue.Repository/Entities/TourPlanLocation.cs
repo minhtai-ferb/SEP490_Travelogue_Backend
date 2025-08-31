@@ -24,8 +24,6 @@ public sealed class TourPlanLocation : BaseEntity
     public string? Notes { get; set; }
     public float TravelTimeFromPrev { get; set; }
     public float DistanceFromPrev { get; set; }
-    public float EstimatedStartTime { get; set; }
-    public float EstimatedEndTime { get; set; }
 
     public Tour Tour { get; set; } = null!;
     public Location Location { get; set; } = null!;

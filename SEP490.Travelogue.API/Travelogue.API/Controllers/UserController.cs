@@ -147,7 +147,7 @@ public class UserController : ControllerBase
     public async Task<IActionResult> GetAllUsers(string? searchFullName = null, string? role = null)
     {
         var users = await _userService.GetAllUsersAsync(searchFullName, role);
-        return Ok(ResponseModel<List<UserManageResponse>>.OkResponseModel(
+        return Ok(ResponseModel<List<UserResponseModel>>.OkResponseModel(
             data: users,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "user")
         ));

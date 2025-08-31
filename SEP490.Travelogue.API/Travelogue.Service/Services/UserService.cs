@@ -29,7 +29,7 @@ public interface IUserService
     Task<UserResponseModel> CreateUserAsync(CreateUserDto model, CancellationToken cancellationToken = default);
     Task<UserResponseModel> AssignModeratorRoleAsync(Guid userId, UpdateUserRoleDto model, CancellationToken cancellationToken = default);
     Task<UserResponseModel> GetUserByIdAsync(Guid id, CancellationToken cancellationToken);
-    Task<List<UserManageResponse>> GetAllUsersAsync(string? searchFullName = null, string? role = null, CancellationToken cancellationToken = default);
+    Task<List<UserResponseModel>> GetAllUsersAsync(string? searchFullName = null, string? role = null, CancellationToken cancellationToken = default);
     Task<PagedResult<UserResponseModel>> GetPagedUsersAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<PagedResult<UserResponseModel>> GetPagedUsersAsync(string? email, string? phoneNumber, string? fullName, int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<bool> BlockUserAsync(Guid userId);
@@ -225,7 +225,7 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<List<UserManageResponse>> GetAllUsersAsync(string? searchFullName = null, string? role = null, CancellationToken cancellationToken = default)
+    public async Task<List<UserResponseModel>> GetAllUsersAsync(string? searchFullName = null, string? role = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -240,7 +240,7 @@ public class UserService : IUserService
 
             if (users == null || !users.Any())
             {
-                return new List<UserManageResponse>();
+                return new List<UserResponseModel>();
             }
 
             if (!string.IsNullOrEmpty(searchFullName))
@@ -264,7 +264,7 @@ public class UserService : IUserService
 
             if (!users.Any())
             {
-                return new List<UserManageResponse>();
+                return new List<UserResponseModel>();
             }
 
             var userDataModels = _mapper.Map<List<UserResponseModel>>(users);
