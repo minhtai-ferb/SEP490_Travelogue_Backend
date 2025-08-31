@@ -17,6 +17,7 @@ public class UserManageResponse : BaseDataModel
     public string? AvatarUrl { get; set; }
     public List<RoleManageDto> Roles { get; set; }
     public Gender Sex { get; set; }
+    public string? GenderText { get; set; }
     public string? Address { get; set; }
     public bool? IsEmailVerified { get; set; }
     public DateTimeOffset? LockoutEnd { get; set; }
@@ -33,10 +34,11 @@ public class RoleManageDto
     public bool IsActive { get; set; }
 }
 
-public class WalletDto { 
+public class WalletDto
+{
     public decimal UserWalletAmount { get; set; }
     public List<TransactionDto> TransactionDtos { get; set; } = new();
-} 
+}
 
 public class TourGuideInfo
 {
@@ -45,13 +47,13 @@ public class TourGuideInfo
     public decimal Price { get; set; }
     public string? Introduction { get; set; }
     public int TotalReviews { get; set; }
-    public CertificationDto Certification { get; set; }
+    public List<CertificationDto> Certifications { get; set; } = new();
 }
 
 public class CraftVillagesInfo
 {
     public Guid Id { get; set; }
-    public string PhoneNumber { get; set; }
+    public string? PhoneNumber { get; set; }
     public string? Email { get; set; }
     public string? Website { get; set; }
     public string? SignatureProduct { get; set; }

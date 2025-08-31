@@ -12,7 +12,7 @@ public sealed class TransactionEntry : BaseEntity
 
     public bool IsSystem { get; set; } = false;
     public SystemTransactionKind? SystemKind { get; set; }
-    public PaymentChannel Channel { get; set; }
+    public PaymentChannel? Channel { get; set; }
 
     public string? Description { get; set; }
     public PaymentStatus? PaymentStatus { get; set; }

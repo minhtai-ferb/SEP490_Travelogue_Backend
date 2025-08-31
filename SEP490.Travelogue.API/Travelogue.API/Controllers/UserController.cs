@@ -98,6 +98,16 @@ public class UserController : ControllerBase
         ));
     }
 
+    [HttpGet("user-detail")]
+    public async Task<IActionResult> GetUserManageAsync(Guid userId, CancellationToken ct = default)
+    {
+        var response = await _userService.GetUserManageAsync(userId, ct);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+        ));
+    }
+
     ///// <summary>
     ///// Upload ảnh lên Cloudinary --> link ảnh cho api sau
     ///// </summary>
