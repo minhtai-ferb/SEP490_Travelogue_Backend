@@ -1187,6 +1187,7 @@ public class LocationService : ILocationService
                     .ActiveEntities
                     .AsNoTracking()
                     .Where(w => w.CraftVillageId == craftVillage.Id)
+                    .Include(w => w.Medias)
                     .Include(w => w.TicketTypes).ThenInclude(tt => tt.WorkshopActivities)
                     .Include(w => w.RecurringRules).ThenInclude(rr => rr.Sessions)
                     .Include(w => w.Exceptions)
@@ -1196,7 +1197,7 @@ public class LocationService : ILocationService
                 var workshopEntity = await workshopQuery.FirstOrDefaultAsync();
 
                 locationDataModel.CraftVillage.Workshop = workshopEntity != null
-                    ? MapWorkshopToRequestDto(workshopEntity)
+                    ? MapWorkshopToDetailDto(workshopEntity)
                     : null;
             }
 
@@ -2626,6 +2627,111 @@ public class LocationService : ILocationService
                     IsActive = ex.IsActive
                 }).ToList() ?? new List<WorkshopExceptionRequestDto>()
         };
+    }
+
+    private static WorkshopDetailDto MapWorkshopToDetailDto(Workshop w)
+    {
+        var dto = new WorkshopDetailDto
+        {
+            Id = w.Id,
+
+            Name = w.Name,
+            Description = w.Description,
+            Content = w.Content,
+            Status = w.Status,
+
+            CraftVillageId = w.CraftVillageId,
+            LocationId = w.CraftVillage?.LocationId ?? Guid.Empty,
+            CraftVillageName = w.CraftVillage?.Location?.Name ?? string.Empty,
+
+            // Medias (ảnh từ WorkshopMedia)
+            Medias = (w.Medias ?? Enumerable.Empty<WorkshopMedia>())
+                .Select(m => new MediaResponse
+                {
+                    MediaUrl = m.MediaUrl,
+                    IsThumbnail = m.IsThumbnail
+                })
+                .ToList(),
+
+            TicketTypes = (w.TicketTypes ?? Enumerable.Empty<WorkshopTicketType>())
+                .Select(tt => new WorkshopTicketTypeDto
+                {
+                    Id = tt.Id,
+                    WorkshopId = tt.WorkshopId,
+                    Type = tt.Type,
+                    Name = tt.Name,
+                    Price = tt.Price,
+                    IsCombo = tt.IsCombo,
+                    DurationMinutes = tt.DurationMinutes,
+                    Content = tt.Content,
+                    Activities = (tt.WorkshopActivities ?? Enumerable.Empty<WorkshopActivity>())
+                        .OrderBy(a => a.ActivityOrder)
+                        .Select(a => new WorkshopActivityDto
+                        {
+                            Id = a.Id,
+                            WorkshopTicketTypeId = a.WorkshopTicketTypeId,
+                            Activity = a.Activity,
+                            Description = a.Description,
+                            DurationMinutes = a.DurationMinutes,
+                            ActivityOrder = a.ActivityOrder
+                        })
+                        .ToList()
+                })
+                .ToList(),
+
+            Schedules = (w.Schedules ?? Enumerable.Empty<WorkshopSchedule>())
+                .OrderBy(s => s.StartTime)
+                .Select(s => new WorkshopScheduleDto
+                {
+                    Id = s.Id,
+                    WorkshopId = s.WorkshopId,
+                    StartTime = s.StartTime,
+                    EndTime = s.EndTime,
+                    Capacity = s.Capacity,
+                    CurrentBooked = s.CurrentBooked,
+                    Notes = s.Notes,
+                    Status = s.Status
+                })
+                .ToList(),
+
+            RecurringRules = (w.RecurringRules ?? Enumerable.Empty<WorkshopRecurringRule>())
+                .Select(rr =>
+                {
+                    var days = rr.DaysOfWeek ?? new List<DayOfWeek>();
+                    var daysText = days.Select(d => d.ToString()).ToList();
+                    return new WorkshopRecurringRuleDto
+                    {
+                        Id = rr.Id,
+                        WorkshopId = rr.WorkshopId,
+                        DaysOfWeek = days,
+                        DaysOfWeekText = daysText,
+                        DaysOfWeekDisplay = string.Join(", ", daysText),
+                        Sessions = (rr.Sessions ?? Enumerable.Empty<WorkshopSessionRule>())
+                            .Select(s => new WorkshopSessionRuleDto
+                            {
+                                Id = s.Id,
+                                RecurringRuleId = s.RecurringRuleId,
+                                StartTime = s.StartTime,
+                                EndTime = s.EndTime,
+                                Capacity = s.Capacity
+                            })
+                            .ToList()
+                    };
+                })
+                .ToList(),
+
+            Exceptions = (w.Exceptions ?? Enumerable.Empty<WorkshopException>())
+                .Select(ex => new WorkshopExceptionDto
+                {
+                    Id = ex.Id,
+                    WorkshopId = ex.WorkshopId,
+                    Date = ex.Date,
+                    Reason = ex.Reason
+                })
+                .ToList()
+        };
+
+        return dto;
     }
 
 

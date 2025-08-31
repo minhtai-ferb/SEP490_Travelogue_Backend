@@ -3,7 +3,7 @@ using Travelogue.Service.BusinessModels.MediaModel;
 
 namespace Travelogue.Service.BusinessModels.WorkshopModels;
 
-public class WorkshopResponseDto
+public class WorkshopResponseDtoOLD
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
