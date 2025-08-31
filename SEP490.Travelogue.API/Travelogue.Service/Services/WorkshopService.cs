@@ -16,17 +16,17 @@ namespace Travelogue.Service.Services;
 
 public interface IWorkshopService
 {
-    Task<List<WorkshopResponseDto>> GetFilteredWorkshopsAsync(string? name, Guid? craftVillageId, CancellationToken cancellationToken);
-    Task<List<WorkshopResponseDto>> ModeratorGetFilteredWorkshopsAsync(FilterWorkshop filter, CancellationToken cancellationToken);
-    Task<WorkshopResponseDto> CreateWorkshopAsync(CreateWorkshopDto dto);
-    Task<WorkshopResponseDto> UpdateWorkshopAsync(Guid workshopId, UpdateWorkshopDto dto);
-    Task<WorkshopResponseDto> SubmitWorkshopForReviewAsync(Guid workshopId, CancellationToken cancellationToken);
-    Task<List<WorkshopDto>> GetWorkshopsAsync(
+    Task<List<WorkshopResponseDtoOLD>> GetFilteredWorkshopsAsync(string? name, Guid? craftVillageId, CancellationToken cancellationToken);
+    Task<List<WorkshopResponseDtoOLD>> ModeratorGetFilteredWorkshopsAsync(FilterWorkshop filter, CancellationToken cancellationToken);
+    Task<WorkshopResponseDtoOLD> CreateWorkshopAsync(CreateWorkshopDto dto);
+    Task<WorkshopResponseDtoOLD> UpdateWorkshopAsync(Guid workshopId, UpdateWorkshopDto dto);
+    Task<WorkshopResponseDtoOLD> SubmitWorkshopForReviewAsync(Guid workshopId, CancellationToken cancellationToken);
+    Task<List<WorkshopDetailDto>> GetWorkshopsAsync(
         Guid? craftVillageId,
         string? name,
         CancellationToken cancellationToken = default);
 
-    Task<WorkshopDto> GetWorkshopByIdAsync(Guid workshopId, CancellationToken cancellationToken = default);
+    Task<WorkshopDetailDto> GetWorkshopByIdAsync(Guid workshopId, CancellationToken cancellationToken = default);
 
     //// Task<WorkshopResponseDto> ConfirmWorkshopAsync(Guid workshopId, ConfirmWorkshopDto dto);
     //Task DeleteWorkshopAsync(Guid workshopId);
@@ -65,7 +65,7 @@ public class WorkshopService : IWorkshopService
         _enumService = enumService;
     }
 
-    public async Task<List<WorkshopResponseDto>> GetFilteredWorkshopsAsync(string? name, Guid? craftVillageId, CancellationToken cancellationToken)
+    public async Task<List<WorkshopResponseDtoOLD>> GetFilteredWorkshopsAsync(string? name, Guid? craftVillageId, CancellationToken cancellationToken)
     {
         try
         {
@@ -93,7 +93,7 @@ public class WorkshopService : IWorkshopService
 
             if (!workshopItems.Any())
             {
-                return new List<WorkshopResponseDto>();
+                return new List<WorkshopResponseDtoOLD>();
             }
 
             var workshopIds = workshopItems.Select(w => w.Id).ToList();
@@ -103,7 +103,7 @@ public class WorkshopService : IWorkshopService
                 .Where(r => r.Booking.WorkshopId.HasValue && workshopIds.Contains(r.Booking.WorkshopId.Value))
                 .ToListAsync(cancellationToken);
 
-            var workshopResponses = new List<WorkshopResponseDto>();
+            var workshopResponses = new List<WorkshopResponseDtoOLD>();
 
             foreach (var workshop in workshopItems)
             {
@@ -116,7 +116,7 @@ public class WorkshopService : IWorkshopService
 
                 var medias = await GetMediaWithoutVideoByIdAsync(workshop.Id, cancellationToken: default);
 
-                var response = new WorkshopResponseDto
+                var response = new WorkshopResponseDtoOLD
                 {
                     Id = workshop.Id,
                     Name = workshop.Name ?? string.Empty,
@@ -146,7 +146,7 @@ public class WorkshopService : IWorkshopService
         }
     }
 
-    public async Task<List<WorkshopDto>> GetWorkshopsAsync(
+    public async Task<List<WorkshopDetailDto>> GetWorkshopsAsync(
         Guid? craftVillageId,
         string? name,
         CancellationToken cancellationToken = default)
@@ -166,55 +166,75 @@ public class WorkshopService : IWorkshopService
                 query = query.Where(w => EF.Functions.Like(w.Name, $"%{keyword}%"));
             }
 
-            var now = _timeService.SystemTimeNow;
-
             var result = await query
                 .OrderBy(w => w.Name)
-                .Select(w => new WorkshopDto
+                .Select(w => new WorkshopDetailDto
                 {
+                    Id = w.Id,
                     Name = w.Name,
                     Description = w.Description,
                     Content = w.Content,
                     Status = w.Status,
 
-                    TicketTypes = w.TicketTypes.Select(tt => new TicketTypeRequestDto
-                    {
-                        Type = tt.Type,
-                        Name = tt.Name,
-                        Price = tt.Price,
-                        IsCombo = tt.IsCombo,
-                        DurationMinutes = tt.DurationMinutes,
-                        Content = tt.Content,
-                        WorkshopActivities = tt.WorkshopActivities
-                            .OrderBy(a => a.ActivityOrder)
-                            .Select(a => new WorkshopActivityRequestDto
-                            {
-                                Activity = a.Activity,
-                                Description = a.Description,
-                                DurationMinutes = a.DurationMinutes,
-                                ActivityOrder = a.ActivityOrder
-                            }).ToList()
-                    }).ToList(),
+                    CraftVillageId = w.CraftVillageId,
+                    LocationId = w.CraftVillage.LocationId,
+                    CraftVillageName = w.CraftVillage.Location.Name,
+
+                    Medias = w.Medias
+                        .Select(m => new MediaResponse
+                        {
+                            MediaUrl = m.MediaUrl,
+                            IsThumbnail = m.IsThumbnail
+                        }).ToList(),
+
+                    TicketTypes = w.TicketTypes
+                        .Select(tt => new WorkshopTicketTypeDto
+                        {
+                            Id = tt.Id,
+                            WorkshopId = tt.WorkshopId,
+                            Type = tt.Type,
+                            Name = tt.Name,
+                            Price = tt.Price,
+                            IsCombo = tt.IsCombo,
+                            DurationMinutes = tt.DurationMinutes,
+                            Content = tt.Content,
+                            Activities = tt.WorkshopActivities
+                                .OrderBy(a => a.ActivityOrder)
+                                .Select(a => new WorkshopActivityDto
+                                {
+                                    Id = a.Id,
+                                    WorkshopTicketTypeId = a.WorkshopTicketTypeId,
+                                    Activity = a.Activity,
+                                    Description = a.Description,
+                                    DurationMinutes = a.DurationMinutes,
+                                    ActivityOrder = a.ActivityOrder
+                                }).ToList()
+                        }).ToList(),
 
                     Schedules = w.Schedules
                         .OrderBy(s => s.StartTime)
-                        .Select(s => new WorkshopScheduleResponseDto
+                        .Select(s => new WorkshopScheduleDto
                         {
                             Id = s.Id,
+                            WorkshopId = s.WorkshopId,
                             StartTime = s.StartTime,
                             EndTime = s.EndTime,
                             Capacity = s.Capacity,
                             CurrentBooked = s.CurrentBooked,
-                            Status = s.Status,
-                            Notes = s.Notes
+                            Notes = s.Notes,
+                            Status = s.Status
                         }).ToList(),
 
                     RecurringRules = w.RecurringRules
-                        .Select(rr => new RecurringRuleRequestDto
+                        .Select(rr => new WorkshopRecurringRuleDto
                         {
-                            DaysOfWeek = rr.DaysOfWeek.ToList() ?? new List<DayOfWeek>(),
-                            Sessions = rr.Sessions.Select(s => new SessionRequestDto
+                            Id = rr.Id,
+                            WorkshopId = rr.WorkshopId,
+                            DaysOfWeek = rr.DaysOfWeek,
+                            Sessions = rr.Sessions.Select(s => new WorkshopSessionRuleDto
                             {
+                                Id = s.Id,
+                                RecurringRuleId = s.RecurringRuleId,
                                 StartTime = s.StartTime,
                                 EndTime = s.EndTime,
                                 Capacity = s.Capacity
@@ -222,45 +242,28 @@ public class WorkshopService : IWorkshopService
                         }).ToList(),
 
                     Exceptions = w.Exceptions
-                        .Select(ex => new WorkshopExceptionRequestDto
+                        .Select(ex => new WorkshopExceptionDto
                         {
+                            Id = ex.Id,
+                            WorkshopId = ex.WorkshopId,
                             Date = ex.Date,
-                            Reason = ex.Reason,
-                            IsActive = ex.IsActive
+                            Reason = ex.Reason
                         }).ToList()
                 })
+                .AsSplitQuery()
                 .ToListAsync(cancellationToken);
 
+            foreach (var ws in result)
+            {
+                foreach (var rr in ws.RecurringRules)
+                {
+                    var list = rr.DaysOfWeek?.Select(d => d.ToString()).ToList() ?? new List<string>();
+                    rr.DaysOfWeekText = list;
+                    rr.DaysOfWeekDisplay = string.Join(", ", list);
+                }
+            }
+
             return result;
-        }
-        catch (CustomException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
-        }
-    }
-
-    public async Task<WorkshopDto> GetWorkshopByIdAsync(Guid workshopId, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var query = _unitOfWork.WorkshopRepository
-                .ActiveEntities
-                .AsNoTracking()
-                .Where(w => w.Id == workshopId)
-                .Include(w => w.TicketTypes).ThenInclude(tt => tt.WorkshopActivities)
-                .Include(w => w.RecurringRules).ThenInclude(rr => rr.Sessions)
-                .Include(w => w.Exceptions)
-                .Include(w => w.Schedules)
-                .AsSplitQuery();
-
-            var entity = await query.FirstOrDefaultAsync(cancellationToken)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
-
-            return MapWorkshopEntityToDto(entity);
         }
         catch (CustomException) { throw; }
         catch (Exception ex)
@@ -269,8 +272,119 @@ public class WorkshopService : IWorkshopService
         }
     }
 
+    public async Task<WorkshopDetailDto> GetWorkshopByIdAsync(
+        Guid workshopId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var dto = await _unitOfWork.WorkshopRepository
+                .ActiveEntities
+                .AsNoTracking()
+                .Where(w => w.Id == workshopId)
+                .Select(w => new WorkshopDetailDto
+                {
+                    Id = w.Id,
+                    Name = w.Name,
+                    Description = w.Description,
+                    Content = w.Content,
+                    Status = w.Status,
 
-    public async Task<List<WorkshopResponseDto>> ModeratorGetFilteredWorkshopsAsync(FilterWorkshop filter, CancellationToken cancellationToken)
+                    CraftVillageId = w.CraftVillageId,
+                    LocationId = w.CraftVillage.LocationId,
+                    CraftVillageName = w.CraftVillage.Location.Name,
+
+                    Medias = w.Medias
+                        .Select(m => new MediaResponse
+                        {
+                            MediaUrl = m.MediaUrl,
+                            IsThumbnail = m.IsThumbnail
+                        }).ToList(),
+
+                    TicketTypes = w.TicketTypes
+                        .Select(tt => new WorkshopTicketTypeDto
+                        {
+                            Id = tt.Id,
+                            WorkshopId = tt.WorkshopId,
+                            Type = tt.Type,
+                            Name = tt.Name,
+                            Price = tt.Price,
+                            IsCombo = tt.IsCombo,
+                            DurationMinutes = tt.DurationMinutes,
+                            Content = tt.Content,
+                            Activities = tt.WorkshopActivities
+                                .OrderBy(a => a.ActivityOrder)
+                                .Select(a => new WorkshopActivityDto
+                                {
+                                    Id = a.Id,
+                                    WorkshopTicketTypeId = a.WorkshopTicketTypeId,
+                                    Activity = a.Activity,
+                                    Description = a.Description,
+                                    DurationMinutes = a.DurationMinutes,
+                                    ActivityOrder = a.ActivityOrder
+                                }).ToList()
+                        }).ToList(),
+
+                    Schedules = w.Schedules
+                        .OrderBy(s => s.StartTime)
+                        .Select(s => new WorkshopScheduleDto
+                        {
+                            Id = s.Id,
+                            WorkshopId = s.WorkshopId,
+                            StartTime = s.StartTime,
+                            EndTime = s.EndTime,
+                            Capacity = s.Capacity,
+                            CurrentBooked = s.CurrentBooked,
+                            Notes = s.Notes,
+                            Status = s.Status
+                        }).ToList(),
+
+                    RecurringRules = w.RecurringRules
+                        .Select(rr => new WorkshopRecurringRuleDto
+                        {
+                            Id = rr.Id,
+                            WorkshopId = rr.WorkshopId,
+                            DaysOfWeek = rr.DaysOfWeek,
+                            Sessions = rr.Sessions.Select(s => new WorkshopSessionRuleDto
+                            {
+                                Id = s.Id,
+                                RecurringRuleId = s.RecurringRuleId,
+                                StartTime = s.StartTime,
+                                EndTime = s.EndTime,
+                                Capacity = s.Capacity
+                            }).ToList()
+                        }).ToList(),
+
+                    Exceptions = w.Exceptions
+                        .Select(ex => new WorkshopExceptionDto
+                        {
+                            Id = ex.Id,
+                            WorkshopId = ex.WorkshopId,
+                            Date = ex.Date,
+                            Reason = ex.Reason
+                        }).ToList()
+                })
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Workshop");
+
+            foreach (var rr in dto.RecurringRules)
+            {
+                var list = rr.DaysOfWeek?.Select(d => d.ToString()).ToList() ?? new List<string>();
+                rr.DaysOfWeekText = list;
+                rr.DaysOfWeekDisplay = string.Join(", ", list);
+            }
+
+            return dto;
+        }
+        catch (CustomException) { throw; }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<WorkshopResponseDtoOLD>> ModeratorGetFilteredWorkshopsAsync(FilterWorkshop filter, CancellationToken cancellationToken)
     {
         try
         {
@@ -303,7 +417,7 @@ public class WorkshopService : IWorkshopService
 
             if (!workshopItems.Any())
             {
-                return new List<WorkshopResponseDto>();
+                return new List<WorkshopResponseDtoOLD>();
             }
 
             var workshopIds = workshopItems.Select(w => w.Id).ToList();
@@ -313,7 +427,7 @@ public class WorkshopService : IWorkshopService
                 .Where(r => r.Booking.WorkshopId.HasValue && workshopIds.Contains(r.Booking.WorkshopId.Value))
                 .ToListAsync(cancellationToken);
 
-            var workshopResponses = new List<WorkshopResponseDto>();
+            var workshopResponses = new List<WorkshopResponseDtoOLD>();
 
             foreach (var workshop in workshopItems)
             {
@@ -326,7 +440,7 @@ public class WorkshopService : IWorkshopService
 
                 var medias = await GetMediaWithoutVideoByIdAsync(workshop.Id, cancellationToken: default);
 
-                workshopResponses.Add(new WorkshopResponseDto
+                workshopResponses.Add(new WorkshopResponseDtoOLD
                 {
                     Id = workshop.Id,
                     Name = workshop.Name ?? string.Empty,
@@ -354,7 +468,7 @@ public class WorkshopService : IWorkshopService
         }
     }
 
-    public async Task<WorkshopResponseDto> CreateWorkshopAsync(CreateWorkshopDto dto)
+    public async Task<WorkshopResponseDtoOLD> CreateWorkshopAsync(CreateWorkshopDto dto)
     {
         try
         {
@@ -413,7 +527,7 @@ public class WorkshopService : IWorkshopService
                 await _unitOfWork.SaveAsync();
             }
 
-            return new WorkshopResponseDto
+            return new WorkshopResponseDtoOLD
             {
                 Id = workshop.Id,
                 Name = workshop.Name,
@@ -443,7 +557,7 @@ public class WorkshopService : IWorkshopService
         }
     }
 
-    public async Task<WorkshopResponseDto> UpdateWorkshopAsync(Guid workshopId, UpdateWorkshopDto dto)
+    public async Task<WorkshopResponseDtoOLD> UpdateWorkshopAsync(Guid workshopId, UpdateWorkshopDto dto)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
@@ -515,7 +629,7 @@ public class WorkshopService : IWorkshopService
             }
 
             await transaction.CommitAsync();
-            return new WorkshopResponseDto
+            return new WorkshopResponseDtoOLD
             {
                 Id = workshop.Id,
                 Name = workshop.Name,
@@ -790,7 +904,7 @@ public class WorkshopService : IWorkshopService
     //    }
     //}
 
-    public async Task<WorkshopResponseDto> SubmitWorkshopForReviewAsync(Guid workshopId, CancellationToken cancellationToken)
+    public async Task<WorkshopResponseDtoOLD> SubmitWorkshopForReviewAsync(Guid workshopId, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
@@ -835,7 +949,7 @@ public class WorkshopService : IWorkshopService
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);
 
-            return new WorkshopResponseDto
+            return new WorkshopResponseDtoOLD
             {
                 Id = workshop.Id,
                 Name = workshop.Name,

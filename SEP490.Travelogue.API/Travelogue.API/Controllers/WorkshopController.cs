@@ -55,7 +55,7 @@ public class WorkshopController : ControllerBase
     public async Task<IActionResult> ModeratorGetFilteredWorkshopsAsync([FromQuery] FilterWorkshop filter, CancellationToken cancellationToken)
     {
         var result = await _workshopService.ModeratorGetFilteredWorkshopsAsync(filter, cancellationToken);
-        return Ok(ResponseModel<List<WorkshopResponseDto>>.OkResponseModel(
+        return Ok(ResponseModel<List<WorkshopResponseDtoOLD>>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "workshops")
         ));
@@ -68,7 +68,7 @@ public class WorkshopController : ControllerBase
     /// <param name="cancellationToken">Token để hủy thao tác</param>
     /// <returns>Thông tin workshop đã tạo</returns>
     [HttpPost]
-    [ProducesResponseType(typeof(ResponseModel<WorkshopResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseModel<WorkshopResponseDtoOLD>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CreateWorkshop([FromBody] CreateWorkshopDto model, CancellationToken cancellationToken)
@@ -76,7 +76,7 @@ public class WorkshopController : ControllerBase
         try
         {
             var result = await _workshopService.CreateWorkshopAsync(model);
-            return Ok(ResponseModel<WorkshopResponseDto>.OkResponseModel(
+            return Ok(ResponseModel<WorkshopResponseDtoOLD>.OkResponseModel(
                 data: result,
                 message: ResponseMessageHelper.FormatMessage(ResponseMessages.CREATE_SUCCESS, "workshop")
             ));
@@ -99,7 +99,7 @@ public class WorkshopController : ControllerBase
     /// <param name="cancellationToken">Token để hủy thao tác</param>
     /// <returns>Thông tin workshop đã cập nhật</returns>
     [HttpPut("{workshopId}")]
-    [ProducesResponseType(typeof(ResponseModel<WorkshopResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseModel<WorkshopResponseDtoOLD>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ResponseModel<object>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> UpdateWorkshop(Guid workshopId, [FromBody] UpdateWorkshopDto model, CancellationToken cancellationToken)
@@ -107,7 +107,7 @@ public class WorkshopController : ControllerBase
         try
         {
             var result = await _workshopService.UpdateWorkshopAsync(workshopId, model);
-            return Ok(ResponseModel<WorkshopResponseDto>.OkResponseModel(
+            return Ok(ResponseModel<WorkshopResponseDtoOLD>.OkResponseModel(
                 data: result,
                 message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "workshop")
             ));
@@ -157,7 +157,7 @@ public class WorkshopController : ControllerBase
     public async Task<IActionResult> SubmitWorkshopForReviewAsync(Guid workshopId, CancellationToken cancellationToken)
     {
         var result = await _workshopService.SubmitWorkshopForReviewAsync(workshopId, cancellationToken);
-        return Ok(ResponseModel<WorkshopResponseDto>.OkResponseModel(
+        return Ok(ResponseModel<WorkshopResponseDtoOLD>.OkResponseModel(
             data: result,
             message: "Workshop submitted for review successfully."
         ));
