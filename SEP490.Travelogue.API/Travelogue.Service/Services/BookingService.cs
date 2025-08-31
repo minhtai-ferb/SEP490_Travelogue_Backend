@@ -436,6 +436,14 @@ public class BookingService : IBookingService
                 .FirstOrDefaultAsync(g => g.Id == dto.TourGuideId)
                 ?? throw CustomExceptionFactory.CreateNotFoundError("tour guide");
 
+            int requestedCount = dto.Participants?.Count ?? 0;
+
+            if (requestedCount > tourGuide.MaxParticipants)
+            {
+                throw CustomExceptionFactory.CreateBadRequestError(
+                    $"Số người yêu cầu ({requestedCount}) vượt quá sức chứa của hướng dẫn viên (tối đa {tourGuide.MaxParticipants}). ");
+            }
+
             var numberOfDays = (dto.EndDate.Date - dto.StartDate.Date).Days + 1;
 
             // tour guide có rảnh vào ngày đó kh
@@ -758,17 +766,62 @@ public class BookingService : IBookingService
             switch (existingBooking.BookingType)
             {
                 case BookingType.Tour:
-                    if (existingBooking.TourScheduleId == null)
-                        throw CustomExceptionFactory.CreateBadRequestError("TourScheduleId không tồn tại trong booking tour.");
+                    {
+                        if (!existingBooking.TourScheduleId.HasValue)
+                            throw CustomExceptionFactory.CreateBadRequestError("TourScheduleId không tồn tại trong booking tour.");
 
-                    var tourSchedule = await _unitOfWork.TourScheduleRepository
-                        .ActiveEntities
-                        .FirstOrDefaultAsync(ts => ts.Id == existingBooking.TourScheduleId)
-                        ?? throw CustomExceptionFactory.CreateNotFoundError("tour schedule");
+                        var tourSchedule = await _unitOfWork.TourScheduleRepository
+                            .ActiveEntities
+                            .FirstOrDefaultAsync(ts => ts.Id == existingBooking.TourScheduleId.Value)
+                            ?? throw CustomExceptionFactory.CreateNotFoundError("tour schedule");
 
-                    tourSchedule.CurrentBooked += totalParticipants;
-                    _unitOfWork.TourScheduleRepository.Update(tourSchedule);
-                    break;
+                        // số chỗ của tour
+                        if (tourSchedule.CurrentBooked + totalParticipants > tourSchedule.MaxParticipant)
+                            throw CustomExceptionFactory.CreateBadRequestError("Tour không còn đủ số lượng chỗ bạn yêu cầu.");
+
+                        var tswLinks = await _unitOfWork.TourScheduleWorkshopRepository
+                            .ActiveEntities
+                            .Where(x => x.TourScheduleId == tourSchedule.Id)
+                            .ToListAsync();
+
+                        if (!tswLinks.Any())
+                        {
+                            tourSchedule.CurrentBooked += totalParticipants;
+                            _unitOfWork.TourScheduleRepository.Update(tourSchedule);
+                            break;
+                        }
+
+                        var workshopScheduleIds = tswLinks.Select(x => x.WorkshopScheduleId).Distinct().ToList();
+
+                        var workshopSchedules = await _unitOfWork.WorkshopScheduleRepository
+                            .ActiveEntities
+                            .Where(ws => workshopScheduleIds.Contains(ws.Id) && ws.Status == ScheduleStatus.Active)
+                            .ToListAsync();
+
+                        if (workshopSchedules.Count != workshopScheduleIds.Count)
+                            throw CustomExceptionFactory.CreateBadRequestError("Không tìm thấy đầy đủ WorkshopSchedule cần thiết.");
+
+                        // số chỗ của workshop
+                        foreach (var ws in workshopSchedules)
+                        {
+                            var available = ws.Capacity - ws.CurrentBooked;
+                            if (available < totalParticipants)
+                                throw CustomExceptionFactory.CreateBadRequestError(
+                                    $"Lịch workshop {ws.StartTime:dd/MM HH:mm} chỉ còn {available} chỗ, " +
+                                    $"không đủ cho {totalParticipants} khách.");
+                        }
+
+                        tourSchedule.CurrentBooked += totalParticipants;
+                        _unitOfWork.TourScheduleRepository.Update(tourSchedule);
+
+                        foreach (var ws in workshopSchedules)
+                        {
+                            ws.CurrentBooked += totalParticipants;
+                            _unitOfWork.WorkshopScheduleRepository.Update(ws);
+                        }
+
+                        break;
+                    }
 
                 case BookingType.Workshop:
                     if (existingBooking.WorkshopScheduleId == null)
@@ -892,7 +945,12 @@ public class BookingService : IBookingService
             var order = new TransactionEntry
             {
                 // BookingId = existingBooking.Id,
+                UserId = existingBooking.UserId,
                 AccountNumber = paymentResponse.Data.AccountNumber,
+                IsSystem = false,
+                SystemKind = SystemTransactionKind.IncomingTourPayment,
+                Channel = PaymentChannel.Bank,
+                TransactionDirection = TransactionDirection.Debit,
                 PaidAmount = paymentResponse.Data.Amount,
                 PaymentReference = paymentResponse.Data.Reference,
                 TransactionDateTime = transactionDateTime,
@@ -909,6 +967,33 @@ public class BookingService : IBookingService
             };
 
             await _unitOfWork.TransactionEntryRepository.AddAsync(order);
+
+            var systemTransaction = new TransactionEntry
+            {
+                Id = Guid.NewGuid(),
+                UserId = null,
+                WalletId = null,
+                AccountNumber = paymentResponse.Data.AccountNumber,
+                IsSystem = false,
+                SystemKind = SystemTransactionKind.IncomingTourPayment,
+                Channel = PaymentChannel.Bank,
+                TransactionDirection = TransactionDirection.Debit,
+                PaidAmount = paymentResponse.Data.Amount,
+                PaymentReference = paymentResponse.Data.Reference,
+                TransactionDateTime = transactionDateTime,
+                CounterAccountBankId = paymentResponse.Data.CounterAccountBankId,
+                CounterAccountName = paymentResponse.Data.CounterAccountName,
+                CounterAccountNumber = paymentResponse.Data.CounterAccountNumber,
+                Currency = paymentResponse.Data.Currency,
+                PaymentLinkId = paymentResponse.Data.PaymentLinkId,
+                PaymentStatus = PaymentStatus.Success,
+                CreatedBy = currentUserId,
+                CreatedTime = currentTime,
+                LastUpdatedBy = currentUserId,
+                LastUpdatedTime = currentTime
+            };
+
+            await _unitOfWork.TransactionEntryRepository.AddAsync(systemTransaction);
             await _unitOfWork.SaveAsync();
 
             var bookingsToUpdate = await _unitOfWork.BookingRepository.Entities

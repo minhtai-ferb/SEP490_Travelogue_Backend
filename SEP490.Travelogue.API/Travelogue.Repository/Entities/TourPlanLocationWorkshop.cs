@@ -19,8 +19,5 @@ public sealed class TourPlanLocationWorkshop : BaseEntity
     public Guid? WorkshopSessionRuleId { get; set; }
     public WorkshopSessionRule? WorkshopSessionRule { get; set; }
 
-    public TimeSpan? PlannedStartTime { get; set; }
-    public TimeSpan? PlannedEndTime { get; set; }
-
     public string? Notes { get; set; }
 }

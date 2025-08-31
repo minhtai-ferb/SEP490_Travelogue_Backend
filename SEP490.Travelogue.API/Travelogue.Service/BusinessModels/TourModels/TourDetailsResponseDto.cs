@@ -64,8 +64,6 @@ public class TourActivity
     public string? ImageUrl { get; set; }
     public float TravelTimeFromPrev { get; set; }
     public float DistanceFromPrev { get; set; }
-    public float EstimatedStartTime { get; set; }
-    public float EstimatedEndTime { get; set; }
     public TourActivityWorkshopInfo? Workshop { get; set; }
     // public decimal? Rating { get; set; }
 }

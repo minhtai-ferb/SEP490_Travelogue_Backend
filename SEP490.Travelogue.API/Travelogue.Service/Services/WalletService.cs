@@ -20,6 +20,8 @@ public interface IWalletService
     Task<List<WithdrawalRequestDto>> GetMyWithdrawalRequestAsync(MyWithdrawalRequestFilterDto filterDto);
     Task ApproveAsync(Guid requestId, string proofImageUrl, string? adminNote);
     Task RejectAsync(Guid requestId, string reason);
+    Task<List<TransactionDto>> GetTransactionsByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<List<TransactionDto>> GetAllTransactionsAsync(CancellationToken cancellationToken = default);
 }
 
 public class WalletService : IWalletService
@@ -77,6 +79,11 @@ public class WalletService : IWalletService
                 Id = t.Id,
                 WalletId = t.WalletId,
                 UserId = t.UserId,
+                IsSystem = t.IsSystem,
+                SystemKind = t.SystemKind,
+                SystemKindText = _enumService.GetEnumDisplayName<TransactionStatus>(t.SystemKind),
+                Channel = t.Channel,
+                PaymentChannelText = _enumService.GetEnumDisplayName<TransactionStatus>(t.SystemKind),
                 AccountNumber = t.AccountNumber,
                 PaidAmount = t.PaidAmount,
                 PaymentReference = t.PaymentReference,
@@ -102,6 +109,58 @@ public class WalletService : IWalletService
         {
             throw;
         }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<TransactionDto>> GetTransactionsByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var wallet = await _unitOfWork.WalletRepository
+                .ActiveEntities
+                .AsNoTracking()
+                .FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
+
+            Guid? walletId = wallet?.Id;
+
+            var query = _unitOfWork.TransactionEntryRepository
+                .ActiveEntities
+                .AsNoTracking()
+                .Where(t => t.UserId == userId
+                            || (walletId.HasValue && t.WalletId == walletId.Value))
+                .OrderByDescending(t => t.CreatedTime);
+
+            var transactions = await query.ToListAsync(cancellationToken);
+
+            return transactions.Select(MapTransactionToDto).ToList();
+        }
+        catch (CustomException) { throw; }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+
+    public async Task<List<TransactionDto>> GetAllTransactionsAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (!_userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR))
+                throw CustomExceptionFactory.CreateForbiddenError();
+
+            var transactions = await _unitOfWork.TransactionEntryRepository
+                .ActiveEntities
+                .AsNoTracking()
+                .OrderByDescending(t => t.CreatedTime)
+                .ToListAsync(cancellationToken);
+
+            return transactions.Select(MapTransactionToDto).ToList();
+        }
+        catch (CustomException) { throw; }
         catch (Exception ex)
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
@@ -321,8 +380,11 @@ public class WalletService : IWalletService
                 WalletId = request.Wallet.Id,
                 UserId = request.Wallet.UserId,
                 PaidAmount = request.Amount,
+                IsSystem = false,
+                SystemKind = SystemTransactionKind.Withdrawal,
+                Channel = PaymentChannel.Wallet,
                 Type = TransactionType.Withdrawal,
-                TransactionDirection = TransactionDirection.Debit,
+                TransactionDirection = TransactionDirection.Credit,
                 Status = TransactionStatus.Completed,
                 PaymentStatus = PaymentStatus.Success,
                 Description = $"Rút tiền cho yêu cầu {request.Id}",
@@ -331,22 +393,25 @@ public class WalletService : IWalletService
                 Currency = "VND"
             };
 
-            // var systemTransaction = new TransactionEntry
-            // {
-            //     Id = Guid.NewGuid(),
-            //     WalletId = null, 
-            //     UserId = null,  
-            //     PaidAmount = request.Amount,
-            //     Type = TransactionType.Withdrawal,
-            //     TransactionDirection = TransactionDirection.Debit,
-            //     Status = TransactionStatus.Completed,
-            //     PaymentStatus = PaymentStatus.Success,
-            //     Description = $"Hệ thống chi tiền cho yêu cầu rút {request.Id} của user {request.Wallet.User.FullName}",
-            //     Method = "BankTransfer",
-            //     TransactionDateTime = currentTime.UtcDateTime,
-            //     Currency = "VND"
-            // };
-            // await _unitOfWork.TransactionEntryRepository.AddAsync(systemTransaction);
+            var systemTransaction = new TransactionEntry
+            {
+                Id = Guid.NewGuid(),
+                WalletId = null,
+                UserId = null,
+                IsSystem = true,
+                SystemKind = SystemTransactionKind.Withdrawal,
+                Channel = PaymentChannel.Wallet,
+                PaidAmount = request.Amount,
+                Type = TransactionType.Withdrawal,
+                TransactionDirection = TransactionDirection.Debit,
+                Status = TransactionStatus.Completed,
+                PaymentStatus = PaymentStatus.Success,
+                Description = $"Hệ thống chi tiền cho yêu cầu rút {request.Id} của user {request.Wallet.User.FullName}",
+                Method = "BankTransfer",
+                TransactionDateTime = currentTime.UtcDateTime,
+                Currency = "VND"
+            };
+            await _unitOfWork.TransactionEntryRepository.AddAsync(systemTransaction);
 
             await _unitOfWork.TransactionEntryRepository.AddAsync(withdrawalTransaction);
 
@@ -394,5 +459,51 @@ public class WalletService : IWalletService
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
+    }
+
+    private TransactionDto MapTransactionToDto(TransactionEntry t)
+    {
+        return new TransactionDto
+        {
+            Id = t.Id,
+            WalletId = t.WalletId,
+            UserId = t.UserId,
+
+            // hệ thống
+            IsSystem = t.IsSystem,
+            SystemKind = t.SystemKind,
+            SystemKindText = _enumService.GetEnumDisplayName<SystemTransactionKind>(t.SystemKind),
+
+            // kênh thanh toán
+            Channel = t.Channel,
+            PaymentChannelText = _enumService.GetEnumDisplayName<PaymentChannel>(t.Channel),
+
+            // payos/bank fields
+            AccountNumber = t.AccountNumber,
+            PaidAmount = t.PaidAmount,
+            PaymentReference = t.PaymentReference,
+            TransactionDateTime = t.TransactionDateTime,
+            CounterAccountBankId = t.CounterAccountBankId,
+            CounterAccountName = t.CounterAccountName,
+            CounterAccountNumber = t.CounterAccountNumber,
+            Currency = t.Currency,
+            PaymentLinkId = t.PaymentLinkId,
+
+            // trạng thái
+            PaymentStatus = t.PaymentStatus,
+            PaymentStatusText = _enumService.GetEnumDisplayName<PaymentStatus>(t.PaymentStatus),
+            Status = t.Status,
+            StatusText = _enumService.GetEnumDisplayName<TransactionStatus>(t.Status),
+            Type = t.Type,
+            TypeText = _enumService.GetEnumDisplayName<TransactionType>(t.Type),
+            TransactionDirection = t.TransactionDirection,
+            TransactionDirectionText = _enumService.GetEnumDisplayName<TransactionDirection>(t.TransactionDirection),
+
+            Reason = t.Reason,
+            Method = t.Method,
+
+            CreatedTime = t.CreatedTime,
+            LastUpdatedTime = t.LastUpdatedTime
+        };
     }
 }
