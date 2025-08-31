@@ -108,6 +108,17 @@ public class UserController : ControllerBase
         ));
     }
 
+    [HttpGet("all-user-detail")]
+    public async Task<IActionResult> GetAllUserManageAsync(CancellationToken ct = default)
+    {
+        var response = await _userService.GetAllUserManageAsync(ct);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: response,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+        ));
+    }
+
+
     [HttpPatch("enable-user-role/{userId}/{roleId}")]
     public async Task<IActionResult> EnableUserRoleAsync(Guid userId, Guid roleId, CancellationToken ct = default)
     {
