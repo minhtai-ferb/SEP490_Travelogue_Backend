@@ -10,9 +10,11 @@ using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.BankAccountModels;
 using Travelogue.Service.BusinessModels.CraftVillageModels;
 using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.BusinessModels.TourGuideModels;
+using Travelogue.Service.BusinessModels.TransactionModels;
 using Travelogue.Service.BusinessModels.UserModels;
 using Travelogue.Service.BusinessModels.UserModels.Requests;
 using Travelogue.Service.BusinessModels.UserModels.Responses;
@@ -42,6 +44,9 @@ public interface IUserService
     Task<MediaResponse> UploadAvatarAsync(UploadMediaDto uploadMediaDto, CancellationToken cancellationToken);
     Task<bool> RemoveUserFromRole(Guid userId, Guid roleId, CancellationToken cancellationToken);
     Task<bool> SendFeedbackAsync(FeedbackModel model, CancellationToken cancellationToken);
+    Task<UserManageResponse> GetUserManageAsync(Guid userId, CancellationToken ct = default);
+    Task<bool> EnableUserRoleAsync(Guid userId, Guid roleId, CancellationToken ct = default);
+    Task<bool> DisableUserRoleAsync(Guid userId, Guid roleId, CancellationToken ct = default);
     Task<TourGuideRequestResponseDto> CreateTourGuideRequestAsync(CreateTourGuideRequestDto model, CancellationToken cancellationToken = default);
     Task<List<TourGuideRequestResponseDto>> GetTourGuideRequestsAsync(TourGuideRequestStatus? status, CancellationToken cancellationToken = default);
     Task<TourGuideRequestResponseDto> ReviewTourGuideRequestAsync(Guid requestId, ReviewTourGuideRequestDto model, CancellationToken cancellationToken = default);
@@ -229,6 +234,13 @@ public class UserService : IUserService
     {
         try
         {
+            //var currentUserId = _userContextService.GetCurrentUserId();
+            //var currentTime = _timeService.SystemTimeNow;
+
+            //var isValidRole = _userContextService.HasAnyRole(AppRole.MODERATOR, AppRole.ADMIN);
+            //if (!isValidRole)
+            //    throw CustomExceptionFactory.CreateForbiddenError();
+
             var users = await _unitOfWork.UserRepository.GetAllAsync(cancellationToken);
 
             if (users == null || !users.Any())
@@ -775,6 +787,275 @@ public class UserService : IUserService
         }
     }
 
+    public async Task<UserManageResponse> GetUserManageAsync(Guid userId, CancellationToken ct = default)
+    {
+        try
+        {
+            var user = await _unitOfWork.UserRepository.ActiveEntities
+                .Include(u => u.Wallet)
+                .Include(u => u.UserRoles)!.ThenInclude(ur => ur.Role)
+                .Include(u => u.BankAccounts)
+                .FirstOrDefaultAsync(u => u.Id == userId, ct)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("User");
+
+            var transactionDtos = new List<TransactionDto>();
+            if (user.Wallet != null)
+            {
+                var transactions = await _unitOfWork.TransactionEntryRepository.ActiveEntities
+                    .Where(t => t.WalletId == user.Wallet.Id)
+                    .OrderByDescending(t => t.CreatedTime)
+                    .ToListAsync(ct);
+
+                transactionDtos = transactions.Select(t => new TransactionDto
+                {
+                    Id = t.Id,
+                    WalletId = t.WalletId,
+                    UserId = t.UserId,
+                    IsSystem = t.IsSystem,
+                    SystemKind = t.SystemKind,
+                    SystemKindText = t.SystemKind.HasValue
+                        ? _enumService.GetEnumDisplayName<SystemTransactionKind>(t.SystemKind.Value)
+                        : null,
+                    Channel = t.Channel,
+                    PaymentChannelText = t.Channel.HasValue
+                        ? _enumService.GetEnumDisplayName<PaymentChannel>(t.Channel.Value)
+                        : null,
+                    AccountNumber = t.AccountNumber,
+                    PaidAmount = t.PaidAmount,
+                    PaymentReference = t.PaymentReference,
+                    TransactionDateTime = t.TransactionDateTime,
+                    CounterAccountBankId = t.CounterAccountBankId,
+                    CounterAccountName = t.CounterAccountName,
+                    CounterAccountNumber = t.CounterAccountNumber,
+                    Currency = t.Currency,
+                    PaymentLinkId = t.PaymentLinkId,
+                    PaymentStatus = t.PaymentStatus,
+                    PaymentStatusText = t.PaymentStatus.HasValue
+                        ? _enumService.GetEnumDisplayName<PaymentStatus>(t.PaymentStatus.Value)
+                        : null,
+                    Status = t.Status,
+                    StatusText = _enumService.GetEnumDisplayName<TransactionStatus>(t.Status),
+                    Type = t.Type,
+                    TypeText = _enumService.GetEnumDisplayName<TransactionType>(t.Type),
+                    TransactionDirection = t.TransactionDirection,
+                    TransactionDirectionText = _enumService.GetEnumDisplayName<TransactionDirection>(t.TransactionDirection),
+                    Reason = t.Reason,
+                    Method = t.Method
+                }).ToList();
+            }
+
+            // role
+            var roleDtos = (user.UserRoles ?? Array.Empty<UserRole>())
+                .Where(ur => ur.Role != null)
+                .Select(ur => new RoleManageDto
+                {
+                    Name = ur.Role!.Name,
+                    CreatedAt = ur.Role.CreatedTime.UtcDateTime,
+                    IsActive = !ur.Role.IsDeleted
+                })
+                .ToList();
+
+            // bank account
+            var bankAccounts = user.BankAccounts?
+                .Select(b => new BankAccountDto
+                {
+                    Id = b.Id,
+                    BankName = b.BankName,
+                    BankAccountNumber = b.BankAccountNumber,
+                    BankOwnerName = b.BankOwnerName,
+                    CreatedAt = b.CreatedAt,
+                    IsDefault = b.IsDefault
+                })
+                .ToList() ?? new List<BankAccountDto>();
+
+            // tour guide
+            TourGuideInfo? tourGuideInfo = null;
+            var tourGuide = await _unitOfWork.TourGuideRepository.ActiveEntities
+                .Include(g => g.Certifications)
+                .FirstOrDefaultAsync(g => g.UserId == user.Id, ct);
+
+            if (tourGuide != null)
+            {
+                var guideReviews = await _unitOfWork.ReviewRepository.ActiveEntities
+                    .Include(r => r.Booking)
+                    .Where(r => r.Booking.TourGuideId == tourGuide.Id)
+                    .Select(r => (double?)r.Rating)
+                    .ToListAsync(ct);
+
+                var avg = guideReviews.Any() ? (int)Math.Round(guideReviews.Average() ?? 0) : 0;
+                var total = guideReviews.Count;
+
+                tourGuideInfo = new TourGuideInfo
+                {
+                    Id = tourGuide.Id,
+                    Rating = avg,
+                    TotalReviews = total,
+                    Price = tourGuide.Price,
+                    Introduction = tourGuide.Introduction,
+                    Certifications = (tourGuide.Certifications ?? Enumerable.Empty<Certification>())
+                        .Select(c => new CertificationDto
+                        {
+                            Name = c.Name,
+                            CertificateUrl = c.CertificateUrl,
+                        })
+                        .ToList()
+                };
+            }
+
+
+            // lang nghe
+            CraftVillagesInfo? craftInfo = null;
+            var craftVillage = await _unitOfWork.CraftVillageRepository.ActiveEntities
+                .FirstOrDefaultAsync(cv => cv.OwnerId == user.Id, ct);
+
+            if (craftVillage != null)
+            {
+                craftInfo = new CraftVillagesInfo
+                {
+                    Id = craftVillage.Id,
+                    PhoneNumber = craftVillage.PhoneNumber,
+                    Email = craftVillage.Email,
+                    Website = craftVillage.Website,
+                    SignatureProduct = craftVillage.SignatureProduct,
+                    YearsOfHistory = craftVillage.YearsOfHistory,
+                    IsRecognizedByUnesco = craftVillage.IsRecognizedByUnesco,
+                    WorkshopsAvailable = craftVillage.WorkshopsAvailable,
+                    LocationId = craftVillage.LocationId
+                };
+            }
+
+            // response
+            var response = new UserManageResponse
+            {
+                Id = user.Id,
+                Email = user.Email,
+                UserName = user.FullName,
+                EmailConfirmed = user.EmailConfirmed,
+                PhoneNumber = user.PhoneNumber,
+                PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+                FullName = user.FullName,
+                AvatarUrl = user.AvatarUrl ?? user.ProfilePictureUrl,
+                Roles = roleDtos,
+                Sex = user.Sex,
+                GenderText = _enumService.GetEnumDisplayName<Gender>(user.Sex),
+                Address = user.Address,
+                IsEmailVerified = user.IsEmailVerified,
+                LockoutEnd = user.LockoutEnd,
+                BankAccounts = bankAccounts,
+                Wallet = new WalletDto
+                {
+                    UserWalletAmount = user.Wallet?.Balance ?? 0m,
+                    TransactionDtos = transactionDtos
+                },
+                TourGuideInfo = tourGuideInfo,
+                CraftVillagesInfo = craftInfo,
+                CreatedBy = user.CreatedBy,
+                LastUpdatedBy = user.LastUpdatedBy,
+                CreatedTime = user.CreatedTime,
+                LastUpdatedTime = user.LastUpdatedTime
+            };
+
+            return response;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+        finally
+        {
+            //  _unitOfWork.Dispose();
+        }
+    }
+
+    public async Task<bool> DisableUserRoleAsync(Guid userId, Guid roleId, CancellationToken ct = default)
+    {
+        var currentUserId = _userContextService.GetCurrentUserIdGuid();
+
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var user = await _unitOfWork.UserRepository.ActiveEntities
+                .FirstOrDefaultAsync(u => u.Id == userId, ct)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("User");
+
+            var role = await _unitOfWork.RoleRepository.ActiveEntities
+                .FirstOrDefaultAsync(r => r.Id == roleId, ct)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Role");
+
+            var userRole = await _unitOfWork.UserRoleRepository.Entities
+                .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RoleId == role.Id, ct)
+                ?? throw CustomExceptionFactory.CreateBadRequestError("User chưa gán role này.");
+
+            if (!userRole.IsActive)
+                return true;
+
+            if (string.Equals(role.Name, AppRole.ADMIN, StringComparison.OrdinalIgnoreCase))
+            {
+                var otherActiveAdmins = await _unitOfWork.UserRoleRepository.Entities
+                    .CountAsync(ur => ur.RoleId == role.Id && ur.IsActive && ur.UserId != userId, ct);
+
+                if (otherActiveAdmins == 0)
+                    throw CustomExceptionFactory.CreateBadRequestError("Phải có 1 admin tồn tại");
+            }
+
+            userRole.IsActive = false;
+            userRole.LastUpdatedBy = currentUserId.ToString();
+            userRole.LastUpdatedTime = DateTimeOffset.UtcNow;
+            _unitOfWork.UserRoleRepository.Update(userRole);
+
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(ct);
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
+    }
+
+    public async Task<bool> EnableUserRoleAsync(Guid userId, Guid roleId, CancellationToken ct = default)
+    {
+        var currentUserId = _userContextService.GetCurrentUserIdGuid();
+
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var user = await _unitOfWork.UserRepository.ActiveEntities
+                .FirstOrDefaultAsync(u => u.Id == userId, ct)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("User");
+
+            var role = await _unitOfWork.RoleRepository.ActiveEntities
+                .FirstOrDefaultAsync(r => r.Id == roleId, ct)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Role");
+
+            var userRole = await _unitOfWork.UserRoleRepository.Entities
+                .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RoleId == role.Id, ct)
+                ?? throw CustomExceptionFactory.CreateBadRequestError("User chưa gán role này.");
+
+            if (userRole.IsActive)
+                return true;
+
+            userRole.IsActive = true;
+            userRole.LastUpdatedBy = currentUserId.ToString();
+            userRole.LastUpdatedTime = DateTimeOffset.UtcNow;
+            _unitOfWork.UserRoleRepository.Update(userRole);
+
+            await _unitOfWork.SaveAsync();
+            await transaction.CommitAsync(ct);
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
+    }
+
     public async Task<TourGuideRequestResponseDto> CreateTourGuideRequestAsync(CreateTourGuideRequestDto model, CancellationToken cancellationToken = default)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
@@ -1277,6 +1558,12 @@ public class UserService : IUserService
                     RoleId = role.Id
                 };
                 await _unitOfWork.UserRoleRepository.AddAsync(userRole);
+
+                user.VerificationToken = string.Empty;
+                user.ResetToken = string.Empty;
+                user.VerificationTokenExpires = currentTime.AddYears(-1);
+                user.ResetTokenExpires = currentTime.AddYears(-1);
+                _unitOfWork.UserRepository.Update(user);
             }
 
             _unitOfWork.TourGuideRequestRepository.Update(request);
@@ -1776,6 +2063,7 @@ public class UserService : IUserService
         try
         {
             var currentUserId = _userContextService.GetCurrentUserId();
+            var currentTime = _timeService.SystemTimeNow;
 
             var request = await _unitOfWork.CraftVillageRequestRepository
                 .ActiveEntities
@@ -2072,7 +2360,13 @@ public class UserService : IUserService
                             await _unitOfWork.WorkshopMediaRepository.AddAsync(workshopMedia);
                         }
                     }
+
                 }
+                user.VerificationToken = string.Empty;
+                user.ResetToken = string.Empty;
+                user.VerificationTokenExpires = currentTime.AddYears(-1);
+                user.ResetTokenExpires = currentTime.AddYears(-1);
+                _unitOfWork.UserRepository.Update(user);
             }
 
             _unitOfWork.CraftVillageRequestRepository.Update(request);

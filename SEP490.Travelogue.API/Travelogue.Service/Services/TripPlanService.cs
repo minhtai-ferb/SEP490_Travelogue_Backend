@@ -3,6 +3,7 @@ using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
+using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
@@ -17,7 +18,7 @@ public interface ITripPlanService
     /// Lấy chi tiết kế hoạch chuyến đi theo ID.
     /// </summary>
     /// <param name="id">ID của kế hoạch chuyến đi.</param>
-    Task<TripPlanDetailResponse?> GetTripPlanByIdAsync(Guid id, CancellationToken cancellationToken);
+    Task<TripPlanDetailResponseDto?> GetTripPlanByIdAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>
     /// Lấy toàn bộ danh sách kế hoạch chuyến đi.
@@ -48,12 +49,20 @@ public interface ITripPlanService
     Task DeleteTripPlanAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Lấy danh sách kế hoạch chuyến đi có phân trang và tìm kiếm theo tiêu đề.
+    /// Lấy danh sách kế hoạch chuyến đi có phân trang và tìm kiếm theo tiêu đề của người đang đăng nhập.
     /// </summary>
     /// <param name="title">Tiêu đề kế hoạch (tùy chọn, để tìm kiếm).</param>
     /// <param name="pageNumber">Trang hiện tại.</param>
     /// <param name="pageSize">Số lượng phần tử mỗi trang.</param>
     Task<PagedResult<TripPlanResponseDto>> GetPagedTripPlanWithSearchAsync(string? title, int pageNumber, int pageSize, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Lấy danh sách kế hoạch chuyến đi có phân trang và tìm kiếm theo tiêu đề.
+    /// </summary>
+    /// <param name="title">Tiêu đề kế hoạch (tùy chọn, để tìm kiếm).</param>
+    /// <param name="pageNumber">Trang hiện tại.</param>
+    /// <param name="pageSize">Số lượng phần tử mỗi trang.</param>
+    Task<List<TripPlanDetailResponseDto>> GetPagedTripPlanPageAsync(string? title, CancellationToken cancellationToken);
     Task<bool> UpdateTripPlanImageUrlAsync(Guid tripPlanId, string imageUrl, CancellationToken cancellationToken);
 }
 
@@ -154,6 +163,56 @@ public class TripPlanService : ITripPlanService
         }
     }
 
+    //Của admin và moderator
+    public async Task<List<TripPlanDetailResponseDto>> GetPagedTripPlanPageAsync(string? title, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentTime = _timeService.SystemTimeNow;
+
+            var isValidRole = _userContextService.HasAnyRole(AppRole.MODERATOR, AppRole.ADMIN);
+            if (!isValidRole)
+                throw CustomExceptionFactory.CreateForbiddenError();
+
+            var query = _unitOfWork.TripPlanRepository.ActiveEntities
+                            .OrderByDescending(x => x.CreatedTime)
+                            .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(title))
+            {
+                query = query.Where(a => a.Name.Contains(title));
+            }
+
+            var tripPlanResponseModel = _mapper.Map<List<TripPlanDetailResponseDto>>(query);
+
+            foreach (var tripPlan in tripPlanResponseModel)
+            {
+                var activities = await GetAllActivities(tripPlan.Id);
+                tripPlan.OwnerName = await _unitOfWork.UserRepository.GetUserNameByIdAsync(tripPlan.UserId) ?? string.Empty;
+                tripPlan.Status = tripPlan.Status;
+                tripPlan.StatusText = _enumService.GetEnumDisplayName<TripPlanStatus>(tripPlan.Status);
+                tripPlan.PickupAddress = tripPlan.PickupAddress;
+                tripPlan.TotalDays = (tripPlan.EndDate - tripPlan.StartDate).Days + 1;
+                tripPlan.Days = BuildDaySchedule(tripPlan.StartDate, tripPlan.EndDate, activities);
+            }
+
+            return tripPlanResponseModel;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+        finally
+        {
+            ////  _unitOfWork.Dispose();
+        }
+    }
+
     public async Task<TripPlanResponseDto> UpdateTripPlanAsync(Guid tripPlanId, TripPlanUpdateDto dto)
     {
         try
@@ -237,7 +296,7 @@ public class TripPlanService : ITripPlanService
     }
 
 
-    public async Task<TripPlanDetailResponse?> GetTripPlanByIdAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<TripPlanDetailResponseDto?> GetTripPlanByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         try
         {
@@ -251,15 +310,17 @@ public class TripPlanService : ITripPlanService
 
             var activities = await GetAllActivities(id);
 
-            var result = new TripPlanDetailResponse
+            var result = new TripPlanDetailResponseDto
             {
                 Id = tripPlan.Id,
                 Name = tripPlan.Name,
                 Description = tripPlan.Description,
                 PickupAddress = tripPlan.PickupAddress,
                 StartDate = tripPlan.StartDate,
+                ImageUrl = tripPlan.ImageUrl,
                 EndDate = tripPlan.EndDate,
                 TotalDays = (tripPlan.EndDate - tripPlan.StartDate).Days + 1,
+                OwnerName = await _unitOfWork.UserRepository.GetUserNameByIdAsync(tripPlan.UserId) ?? string.Empty,
                 Status = tripPlan.Status,
                 StatusText = _enumService.GetEnumDisplayName<TripPlanStatus>(tripPlan.Status),
                 Days = BuildDaySchedule(tripPlan.StartDate, tripPlan.EndDate, activities)
