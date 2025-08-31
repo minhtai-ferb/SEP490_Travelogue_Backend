@@ -21,8 +21,8 @@ public sealed class Location : BaseEntity
     public TimeSpan? OpenTime { get; set; }
     public TimeSpan? CloseTime { get; set; }
 
-    // public double MinPrice { get; set; } = 0;
-    // public double MaxPrice { get; set; } = 0;
+    public double MinPrice { get; set; } = 0;
+    public double MaxPrice { get; set; } = 0;
 
     // [Range(0, 5)]
     // public double Rating { get; set; } = 0;

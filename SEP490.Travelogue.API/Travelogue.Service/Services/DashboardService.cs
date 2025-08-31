@@ -801,6 +801,7 @@ public class DashboardService : IDashboardService
                 {
                     tg.Id,
                     tg.Price,
+                    tg.MaxParticipants,
                     tg.Introduction,
                     tg.User.Email,
                     tg.User.FullName,

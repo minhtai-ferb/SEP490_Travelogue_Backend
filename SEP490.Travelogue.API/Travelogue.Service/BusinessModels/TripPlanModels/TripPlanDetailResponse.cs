@@ -28,6 +28,8 @@ public class TripActivity
 {
     public Guid TripPlanLocationId { get; set; }
     public Guid LocationId { get; set; }
+    public double MinPrice { get; set; }
+    public double MaxPrice { get; set; }
     public string? Type { get; set; } = string.Empty; // "Location", "Cuisine", "CraftVillage"
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }

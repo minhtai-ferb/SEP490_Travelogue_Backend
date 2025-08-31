@@ -186,6 +186,7 @@ public class TourGuideService : ITourGuideService
                     // AverageRating = tg.Rating,
                     Price = tg.Price,
                     Introduction = tg.Introduction,
+                    MaxParticipants = tg.MaxParticipants,
                     AvatarUrl = tg.User.AvatarUrl,
                     TotalReviews = reviewsForGuide.Count,
                     AverageRating = reviewsForGuide.Any() ? reviewsForGuide.Average(r => r.Rating) : 0.0
@@ -253,6 +254,7 @@ public class TourGuideService : ITourGuideService
                     // AverageRating = tg.Rating,
                     Price = tg.Price,
                     Introduction = tg.Introduction,
+                    MaxParticipants = tg.MaxParticipants,
                     AvatarUrl = tg.User.AvatarUrl,
                     TotalReviews = reviewsForGuide.Count,
                     AverageRating = reviewsForGuide.Any() ? Math.Round(reviewsForGuide.Average(r => r.Rating), 2) : 0.0
@@ -375,6 +377,7 @@ public class TourGuideService : ITourGuideService
                 Rating = tourGuide.Rating,
                 Price = tourGuide.Price,
                 Introduction = tourGuide.Introduction,
+                MaxParticipants = tourGuide.MaxParticipants,
                 AvatarUrl = tourGuide.User.AvatarUrl,
                 Reviews = rating.Reviews,
                 TotalReviews = rating.TotalReviews,
@@ -416,6 +419,7 @@ public class TourGuideService : ITourGuideService
                 ?? throw CustomExceptionFactory.CreateForbiddenError();
 
             tourGuide.Introduction = tourGuideUpdateModel.Introduction;
+            tourGuide.MaxParticipants = tourGuideUpdateModel.MaxParticipants;
             // tourGuide.Languages = tourGuideUpdateModel.Languages;
             // tourGuide.Tags = tourGuideUpdateModel.Tags;
 
