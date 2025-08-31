@@ -1237,8 +1237,11 @@ public class BookingService : IBookingService
             {
                 booking.Status = BookingStatus.CancelledUnpaid;
             }
+            else
+            {
+                booking.Status = BookingStatus.Cancelled;
+            }
 
-            booking.Status = BookingStatus.Cancelled;
             booking.CancelledAt = currentTime;
             booking.LastUpdatedTime = currentTime;
 
