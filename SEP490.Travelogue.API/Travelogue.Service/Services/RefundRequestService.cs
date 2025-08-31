@@ -183,24 +183,26 @@ public class RefundRequestService : IRefundRequestService
                     PaymentStatus = PaymentStatus.Success,
                     Description = $"Hoàn tiền cho booking {refundRequest.BookingId}",
                     Method = "Banking",
-                    TransactionDateTime = DateTime.UtcNow,
+                    TransactionDateTime = currentTime,
                     Currency = "VND"
                 };
 
-                // var systemTransaction = new TransactionEntry
-                // {
-                //     Id = Guid.NewGuid(),
-                //     UserId = null, 
-                //     WalletId = null, 
-                //     PaidAmount = refundRequest.RefundAmount,
-                //     Type = TransactionType.Refund,
-                //     TransactionDirection = TransactionDirection.Debit,
-                //     Status = TransactionStatus.Completed,
-                //     Description = $"Nguồn tiền hoàn cho booking {refundRequest.BookingId} xuất phát từ hệ thống",
-                //     Method = "System"
-                // };
+                var systemTransaction = new TransactionEntry
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = null,
+                    WalletId = null,
+                    IsSystem = true,
+                    PaidAmount = refundRequest.RefundAmount,
+                    Type = TransactionType.Refund,
+                    TransactionDirection = TransactionDirection.Debit,
+                    Status = TransactionStatus.Completed,
+                    Description = $"Nguồn tiền hoàn cho booking {refundRequest.BookingId} xuất phát từ hệ thống",
+                    Method = "System",
+                    TransactionDateTime = currentTime,
+                };
 
-                // await _unitOfWork.TransactionEntryRepository.AddAsync(systemTransaction);
+                await _unitOfWork.TransactionEntryRepository.AddAsync(systemTransaction);
                 await _unitOfWork.TransactionEntryRepository.AddAsync(walletTransaction);
                 _unitOfWork.RefundRequestRepository.Update(refundRequest);
                 _unitOfWork.UserRepository.Update(refundRequest.User);
