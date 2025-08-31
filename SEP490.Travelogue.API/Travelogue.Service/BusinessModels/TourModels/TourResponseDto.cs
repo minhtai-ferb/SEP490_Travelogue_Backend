@@ -9,6 +9,7 @@ public class TourResponseDto : BaseDataModel
     public string? Name { get; set; }
     public string? Description { get; set; }
     public string? Content { get; set; }
+    public bool IsTourWorkshop { get; set; }
     public string? TransportType { get; set; }
     public string? PickupAddress { get; set; }
     public string? StayInfo { get; set; }

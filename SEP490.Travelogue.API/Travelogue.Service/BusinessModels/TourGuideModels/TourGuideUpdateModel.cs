@@ -7,6 +7,7 @@ public class TourGuideUpdateModel
     public required string Email { get; set; }
     public string? PhoneNumber { get; set; }
     public required string FullName { get; set; } = string.Empty;
+    public int MaxParticipants { get; set; } = 5;
 
     public Gender Sex { get; set; }
     public string? Address { get; set; }

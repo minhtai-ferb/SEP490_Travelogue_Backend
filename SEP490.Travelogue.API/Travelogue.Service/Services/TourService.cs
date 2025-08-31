@@ -490,6 +490,7 @@ public class TourService : ITourService
                     Description = tour.Description,
                     Content = tour.Content,
                     TransportType = tour.TransportType,
+                    IsTourWorkshop = tour.IsTourWorkshop,
                     StayInfo = tour.StayInfo,
                     PickupAddress = tour.PickupAddress,
                     TotalDays = tour.TotalDays,
@@ -700,6 +701,7 @@ public class TourService : ITourService
                 Description = tour.Description,
                 Content = tour.Content,
                 TransportType = tour.TransportType,
+                IsTourWorkshop = tour.IsTourWorkshop,
                 StayInfo = tour.StayInfo,
                 PickupAddress = tour.PickupAddress,
                 TotalDays = tour.TotalDays,
@@ -904,6 +906,7 @@ public class TourService : ITourService
                 Description = tour.Description,
                 Content = tour.Content,
                 TransportType = tour.TransportType,
+                IsTourWorkshop = tour.IsTourWorkshop,
                 StayInfo = tour.StayInfo,
                 PickupAddress = tour.PickupAddress,
                 TotalDays = tour.TotalDays,
@@ -1322,6 +1325,14 @@ public class TourService : ITourService
                         }
                     }
 
+                    bool hasWorkshopAfter =
+                        tour.TourPlanLocations.Any(l => !l.IsDeleted && l.ActivityType == ActivityType.Workshop)
+                        || toAdd.Any(l => l.ActivityType == ActivityType.Workshop);
+
+                    tour.IsTourWorkshop = hasWorkshopAfter;
+
+                    _unitOfWork.TourRepository.Update(tour);
+
                     await _unitOfWork.SaveAsync();
 
                     if (tour.Bookings.Any(b => b.Status == BookingStatus.Confirmed))
@@ -1485,7 +1496,23 @@ public class TourService : ITourService
                 if (dto.AdultPrice < 0 || dto.ChildrenPrice < 0)
                     throw CustomExceptionFactory.CreateBadRequestError($"Giá không được âm: {dto.DepartureDate:dd/MM/yyyy}.");
 
-                // Tạo TourSchedule (chưa save)
+                var planWorkshops = tour.TourPlanLocations
+                    .Where(p => !p.IsDeleted && p.ActivityType == ActivityType.Workshop && p.WorkshopDetail != null && !p.WorkshopDetail.IsDeleted)
+                    .ToList();
+
+                if (planWorkshops.Any())
+                {
+                    var minRequired = await ComputeTotalWorkshopPriceAsync(planWorkshops);
+
+                    if (dto.AdultPrice < minRequired)
+                        throw CustomExceptionFactory.CreateBadRequestError(
+                            $"Giá người lớn ({dto.AdultPrice:n0}) phải ≥ tổng giá Workshop trong kế hoạch ({minRequired:n0}).");
+
+                    if (dto.ChildrenPrice < minRequired)
+                        throw CustomExceptionFactory.CreateBadRequestError(
+                            $"Giá trẻ em ({dto.ChildrenPrice:n0}) phải ≥ tổng giá Workshop trong kế hoạch ({minRequired:n0}).");
+                }
+
                 var schedule = new TourSchedule
                 {
                     TourId = tourId,
@@ -1530,7 +1557,7 @@ public class TourService : ITourService
                     }
                 }
 
-                var planWorkshops = tour.TourPlanLocations
+                var planWorkshopEntities = tour.TourPlanLocations
                     .Where(p => !p.IsDeleted && p.ActivityType == ActivityType.Workshop && p.WorkshopDetail != null && !p.WorkshopDetail.IsDeleted)
                     .ToList();
 
@@ -1556,6 +1583,14 @@ public class TourService : ITourService
                     {
                         throw CustomExceptionFactory.CreateBadRequestError(
                             $"Không tìm thấy lịch workshop phù hợp cho Ngày {p.DayOrder} (cửa sổ {winStart:dd/MM HH:mm}–{winEnd:dd/MM HH:mm}).");
+                    }
+
+                    var available = ws.Capacity - ws.CurrentBooked;
+                    if (available < dto.MaxParticipant)
+                    {
+                        throw CustomExceptionFactory.CreateBadRequestError(
+                            $"Số lượng tối đa của workshop ({ws.StartTime:dd/MM HH:mm}) chỉ còn {available} chỗ, " +
+                            $"không đủ cho số khách của tour ({dto.MaxParticipant}) ở Ngày {p.DayOrder}.");
                     }
 
                     if (ws.Capacity <= ws.CurrentBooked)
@@ -1694,7 +1729,23 @@ public class TourService : ITourService
                     $"Đã tồn tại lịch khởi hành vào ngày {dto.DepartureDate:dd/MM/yyyy} cho tour này."
                 );
 
-            // Cập nhật schedule cơ bản
+            var planWorkshops = tour.TourPlanLocations
+                .Where(p => !p.IsDeleted && p.ActivityType == ActivityType.Workshop && p.WorkshopDetail != null && !p.WorkshopDetail.IsDeleted)
+                .ToList();
+
+            if (planWorkshops.Any())
+            {
+                var minRequired = await ComputeTotalWorkshopPriceAsync(planWorkshops);
+
+                if (dto.AdultPrice < minRequired)
+                    throw CustomExceptionFactory.CreateBadRequestError(
+                        $"Giá người lớn ({dto.AdultPrice:n0}) phải ≥ tổng giá Workshop trong kế hoạch ({minRequired:n0}).");
+
+                if (dto.ChildrenPrice < minRequired)
+                    throw CustomExceptionFactory.CreateBadRequestError(
+                        $"Giá trẻ em ({dto.ChildrenPrice:n0}) phải ≥ tổng giá Workshop trong kế hoạch ({minRequired:n0}).");
+            }
+
             schedule.DepartureDate = dto.DepartureDate;
             schedule.MaxParticipant = dto.MaxParticipant;
             schedule.AdultPrice = dto.AdultPrice;
@@ -1758,7 +1809,7 @@ public class TourService : ITourService
                 .Where(x => x.TourScheduleId == schedule.Id)
                 .ToListAsync();
 
-            var planWorkshops = tour.TourPlanLocations
+            var planWorkshopEntities = tour.TourPlanLocations
                 .Where(p => !p.IsDeleted && p.ActivityType == ActivityType.Workshop && p.WorkshopDetail != null && !p.WorkshopDetail.IsDeleted)
                 .ToList();
 
@@ -1793,9 +1844,19 @@ public class TourService : ITourService
                         $"Không tìm thấy lịch workshop phù hợp cho Ngày {p.DayOrder} (cửa sổ {winStart:dd/MM HH:mm}–{winEnd:dd/MM HH:mm}).");
                 }
 
+                var available = ws.Capacity - ws.CurrentBooked;
+                if (available < dto.MaxParticipant)
+                {
+                    throw CustomExceptionFactory.CreateBadRequestError(
+                        $"Số lượng tối đa của workshop ({ws.StartTime:dd/MM HH:mm}) chỉ còn {available} chỗ, " +
+                        $"không đủ cho số khách của tour ({dto.MaxParticipant}) ở Ngày {p.DayOrder}.");
+                }
+
                 if (ws.Capacity <= ws.CurrentBooked)
+                {
                     throw CustomExceptionFactory.CreateBadRequestError(
                         $"Lịch workshop {ws.StartTime:dd/MM HH:mm} đã hết chỗ cho Ngày {p.DayOrder}.");
+                }
 
                 var existing = existingTsw.FirstOrDefault(x => x.TourPlanLocationId == p.Id);
                 if (existing == null)
@@ -2370,6 +2431,7 @@ public class TourService : ITourService
                 AverageRating = tg.TourGuide.Rating,
                 Price = tg.TourGuide.Price,
                 Introduction = tg.TourGuide.Introduction,
+                MaxParticipants = tg.TourGuide.MaxParticipants,
                 AvatarUrl = tg.TourGuide.User.AvatarUrl,
             })
             .DistinctBy(g => g.Id)
@@ -2392,6 +2454,7 @@ public class TourService : ITourService
                 AverageRating = tg.TourGuide.Rating,
                 Price = tg.TourGuide.Price,
                 Introduction = tg.TourGuide.Introduction,
+                MaxParticipants = tg.TourGuide.MaxParticipants,
                 AvatarUrl = tg.TourGuide.User.AvatarUrl,
             })
             .DistinctBy(g => g.Id)
@@ -2472,6 +2535,7 @@ public class TourService : ITourService
                     Description = tour.Description,
                     Content = tour.Content,
                     TransportType = tour.TransportType,
+                    IsTourWorkshop = tour.IsTourWorkshop,
                     StayInfo = tour.StayInfo,
                     PickupAddress = tour.PickupAddress,
                     TotalDays = tour.TotalDays,
@@ -2840,6 +2904,25 @@ public class TourService : ITourService
     private static bool Overlap(DateTime aStart, DateTime aEnd, DateTime bStart, DateTime bEnd)
         => aStart < bEnd && bStart < aEnd;
 
+    private async Task<decimal> ComputeTotalWorkshopPriceAsync(
+        IEnumerable<TourPlanLocation> planWorkshops)
+    {
+        var ticketTypeIds = planWorkshops
+            .Where(p => p.WorkshopDetail != null && !p.WorkshopDetail.IsDeleted && p.WorkshopDetail.WorkshopTicketTypeId.HasValue)
+            .Select(p => p.WorkshopDetail!.WorkshopTicketTypeId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (!ticketTypeIds.Any()) return 0m;
+
+        var prices = await _unitOfWork.WorkshopTicketTypeRepository
+            .ActiveEntities
+            .Where(tt => ticketTypeIds.Contains(tt.Id))
+            .Select(tt => tt.Price)
+            .ToListAsync();
+
+        return prices.Sum();
+    }
 
     #endregion
 }
