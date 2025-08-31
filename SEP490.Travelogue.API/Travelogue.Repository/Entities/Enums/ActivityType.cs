@@ -15,4 +15,13 @@ public enum ActivityType
 
     [Display(Name = "Nghỉ ngơi")]
     Rest = 4,
+
+    [Display(Name = "Mua sắm")]
+    Shopping = 5,
+
+    [Display(Name = "Giải trí")]
+    Entertainment = 6,
+
+    [Display(Name = "Trải nghiệm")]
+    Experience = 7
 }
