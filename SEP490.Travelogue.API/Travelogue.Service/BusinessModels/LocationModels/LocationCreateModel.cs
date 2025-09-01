@@ -12,6 +12,9 @@ public class LocationCreateModel
     public string? Address { get; set; }
     public double Latitude { get; set; }
 
+    public double MinPrice { get; set; } = 0;
+    public double MaxPrice { get; set; } = 0;
+
     [Range(-180, 180)]
     public double Longitude { get; set; }
 
