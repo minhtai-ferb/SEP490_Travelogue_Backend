@@ -1225,6 +1225,7 @@ public class UserService : IUserService
     public async Task<bool> EnableUserRoleAsync(Guid userId, Guid roleId, CancellationToken ct = default)
     {
         var currentUserId = _userContextService.GetCurrentUserIdGuid();
+        var currentTime = _timeService.SystemTimeNow;
 
         await using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
@@ -1246,8 +1247,14 @@ public class UserService : IUserService
 
             userRole.IsActive = true;
             userRole.LastUpdatedBy = currentUserId.ToString();
-            userRole.LastUpdatedTime = DateTimeOffset.UtcNow;
+            userRole.LastUpdatedTime = currentTime;
             _unitOfWork.UserRoleRepository.Update(userRole);
+
+            user.VerificationToken = string.Empty;
+            user.ResetToken = string.Empty;
+            user.VerificationTokenExpires = currentTime.AddYears(-1);
+            user.ResetTokenExpires = currentTime.AddYears(-1);
+            _unitOfWork.UserRepository.Update(user);
 
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(ct);
