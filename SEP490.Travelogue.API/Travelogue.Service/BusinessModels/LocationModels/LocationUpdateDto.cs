@@ -10,6 +10,10 @@ public class LocationUpdateDto
     public string? Description { get; set; }
     public string? Content { get; set; }
     public string? Address { get; set; }
+
+    public double MinPrice { get; set; } = 0;
+    public double MaxPrice { get; set; } = 0;
+
     public double Latitude { get; set; }
 
     [Range(-180, 180)]
