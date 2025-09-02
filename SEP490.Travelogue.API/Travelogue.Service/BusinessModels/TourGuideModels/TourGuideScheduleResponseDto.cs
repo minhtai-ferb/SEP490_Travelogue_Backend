@@ -6,6 +6,7 @@ public class TourGuideScheduleResponseDto
     public Guid TourGuideId { get; set; }
     public Guid? TourScheduleId { get; set; }
     public Guid? BookingId { get; set; }
+    public Guid? TourId { get; set; }
     public DateTimeOffset Date { get; set; }
     public string? Note { get; set; }
     public string? TourName { get; set; }

@@ -1277,7 +1277,13 @@ public class LocationService : ILocationService
     {
         try
         {
-            var existingLocation = await _unitOfWork.LocationRepository.GetByIdAsync(id, cancellationToken);
+            var craftVillage = await _unitOfWork.CraftVillageRepository.GetByIdAsync(id, cancellationToken);
+            if (craftVillage == null)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("làng nghề");
+            }
+
+            var existingLocation = await _unitOfWork.LocationRepository.GetByIdAsync(craftVillage.LocationId, cancellationToken);
             if (existingLocation == null || existingLocation.IsDeleted)
             {
                 throw CustomExceptionFactory.CreateNotFoundError("làng nghề");
@@ -1285,43 +1291,35 @@ public class LocationService : ILocationService
 
             var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
 
-            var craftVillage = await _unitOfWork.CraftVillageRepository.GetByLocationId(existingLocation.Id, cancellationToken);
-            if (craftVillage != null)
+            var workshopQuery = _unitOfWork.WorkshopRepository
+                .ActiveEntities
+                .AsNoTracking()
+                .Where(w => w.CraftVillageId == craftVillage.Id)
+                .Include(w => w.Medias)
+                .Include(w => w.TicketTypes).ThenInclude(tt => tt.WorkshopActivities)
+                .Include(w => w.RecurringRules).ThenInclude(rr => rr.Sessions)
+                .Include(w => w.Exceptions)
+                .Include(w => w.Schedules)
+                .AsSplitQuery();
+
+            var workshopEntity = await workshopQuery.FirstOrDefaultAsync(cancellationToken);
+
+            locationDataModel.CraftVillage = new CraftVillageDataModel
             {
-                locationDataModel.CraftVillage = new CraftVillageDataModel
-                {
-                    OwnerId = craftVillage.OwnerId,
-                    PhoneNumber = craftVillage.PhoneNumber,
-                    Email = craftVillage.Email,
-                    Website = craftVillage.Website,
-                    SignatureProduct = craftVillage.SignatureProduct,
-                    YearsOfHistory = craftVillage.YearsOfHistory,
-                    WorkshopsAvailable = craftVillage.WorkshopsAvailable,
-                    IsRecognizedByUnesco = craftVillage.IsRecognizedByUnesco
-                };
-
-                var workshopQuery = _unitOfWork.WorkshopRepository
-                    .ActiveEntities
-                    .AsNoTracking()
-                    .Where(w => w.CraftVillageId == craftVillage.Id)
-                    .Include(w => w.Medias)
-                    .Include(w => w.TicketTypes).ThenInclude(tt => tt.WorkshopActivities)
-                    .Include(w => w.RecurringRules).ThenInclude(rr => rr.Sessions)
-                    .Include(w => w.Exceptions)
-                    .Include(w => w.Schedules)
-                    .AsSplitQuery();
-
-                var workshopEntity = await workshopQuery.FirstOrDefaultAsync(cancellationToken);
-
-                locationDataModel.CraftVillage.Workshop = workshopEntity != null
+                OwnerId = craftVillage.OwnerId,
+                PhoneNumber = craftVillage.PhoneNumber,
+                Email = craftVillage.Email,
+                Website = craftVillage.Website,
+                SignatureProduct = craftVillage.SignatureProduct,
+                YearsOfHistory = craftVillage.YearsOfHistory,
+                WorkshopsAvailable = craftVillage.WorkshopsAvailable,
+                IsRecognizedByUnesco = craftVillage.IsRecognizedByUnesco,
+                Workshop = workshopEntity != null
                     ? MapWorkshopToDetailDto(workshopEntity)
-                    : null;
-            }
-            else
-            {
-                throw CustomExceptionFactory.CreateNotFoundError("làng nghề");
-            }
+                    : null
+            };
 
+            // Gán thêm các dữ liệu khác
             locationDataModel.Medias = await GetMediaWithoutVideoByIdAsync(id, cancellationToken);
             locationDataModel.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationDataModel.DistrictId);
             locationDataModel.Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(locationDataModel.Id, cancellationToken);

@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Travelogue.Repository.Entities.Enums;
 
-public enum TourGuideRequestStatus
+public enum PriceUpdateStatus
 {
     [Display(Name = "Chờ xác nhận")]
     Pending = 1,

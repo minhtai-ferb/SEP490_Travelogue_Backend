@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Travelogue.Repository.Bases.Responses;
+using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.BookingModels;
 using Travelogue.Service.BusinessModels.TourGuideModels;
 using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
@@ -12,10 +14,12 @@ namespace Travelogue.API.Controllers;
 public class TourGuideController : ControllerBase
 {
     private readonly ITourGuideService _tourGuideService;
+    private readonly IBookingService _bookingService;
 
-    public TourGuideController(ITourGuideService tourGuideService)
+    public TourGuideController(ITourGuideService tourGuideService, IBookingService bookingService)
     {
         _tourGuideService = tourGuideService;
+        _bookingService = bookingService;
     }
 
     /// <summary>
@@ -121,6 +125,40 @@ public class TourGuideController : ControllerBase
         ));
     }
 
+    [HttpGet("booking-price-requests/moderator")]
+    public async Task<IActionResult> GetGuidePriceRequestsForModeratorAsync(
+        [FromQuery] Guid? tourGuideId,
+        [FromQuery] BookingPriceRequestStatus? status,
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
+        [FromQuery] string? keyword,
+        CancellationToken ct = default)
+    {
+        var result = await _tourGuideService.GetGuidePriceRequestsForModeratorAsync(
+            tourGuideId, status, fromDate, toDate, keyword, ct);
+
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "booking price request")
+        ));
+    }
+
+    [HttpGet("booking-price-requests/mine")]
+    public async Task<IActionResult> GetMyGuidePriceRequestsAsync(
+        [FromQuery] BookingPriceRequestStatus? status,
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
+        CancellationToken ct = default)
+    {
+        var result = await _tourGuideService.GetMyGuidePriceRequestsAsync(
+            status, fromDate, toDate, ct);
+
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "booking price request")
+        ));
+    }
+
     /// <summary>
     /// moderator chấp nhận yêu cầu của tour guide
     /// </summary>
@@ -151,6 +189,17 @@ public class TourGuideController : ControllerBase
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "booking price request")
+        ));
+    }
+
+
+    [HttpGet("{tourGuideId}/bookings")]
+    public async Task<IActionResult> GetBookingsByTourGuideAsync(Guid tourGuideId, [FromQuery] BookingFilterDto filter, CancellationToken cancellationToken = default)
+    {
+        var result = await _bookingService.GetBookingsByTourGuideAsync(tourGuideId, filter, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "booking")
         ));
     }
 

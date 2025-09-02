@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Bases.Responses;
+using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.BookingModels;
 using Travelogue.Service.BusinessModels.WorkshopModels;
 using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
@@ -12,9 +14,11 @@ namespace Travelogue.API.Controllers;
 public class WorkshopController : ControllerBase
 {
     private readonly IWorkshopService _workshopService;
-    public WorkshopController(IWorkshopService workshopService)
+    private readonly IBookingService _bookingService;
+    public WorkshopController(IWorkshopService workshopService, IBookingService bookingService)
     {
         _workshopService = workshopService;
+        _bookingService = bookingService;
     }
 
     /// <summary>
@@ -160,6 +164,68 @@ public class WorkshopController : ControllerBase
         return Ok(ResponseModel<WorkshopResponseDtoOLD>.OkResponseModel(
             data: result,
             message: "Workshop submitted for review successfully."
+        ));
+    }
+
+    [HttpPost("{ticketTypeId:guid}/request")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ResponseModel<WorkshopTicketPriceUpdateDto>))]
+    public async Task<IActionResult> RequestPriceChange(Guid ticketTypeId, [FromBody] RequestPriceChangeDto dto, CancellationToken ct)
+    {
+        var res = await _workshopService.RequestTicketTypePriceChangeAsync(ticketTypeId, dto.NewPrice, dto.Reason, ct);
+        return Ok(ResponseModel<WorkshopTicketPriceUpdateDto>.OkResponseModel(res, ResponseMessages.SUCCESS));
+    }
+
+    [HttpPost("{requestId:guid}/approve")]
+    public async Task<IActionResult> Approve(Guid requestId, [FromBody] ModeratorDecisionDto dto, CancellationToken ct)
+    {
+        await _workshopService.ApproveTicketTypePriceChangeAsync(requestId, dto.Note, ct);
+        return Ok(ResponseModel<string>.OkResponseModel("Đã duyệt yêu cầu đổi giá.", ResponseMessages.SUCCESS));
+    }
+
+    [HttpPost("{requestId:guid}/reject")]
+    public async Task<IActionResult> Reject(Guid requestId, [FromBody] ModeratorDecisionDto dto, CancellationToken ct)
+    {
+        await _workshopService.RejectTicketTypePriceChangeAsync(requestId, dto.Note ?? "Không có lý do", ct);
+        return Ok(ResponseModel<string>.OkResponseModel("Đã từ chối yêu cầu đổi giá.", ResponseMessages.SUCCESS));
+    }
+
+    [HttpGet("price-requests/moderator")]
+    public async Task<IActionResult> GetForModerator(
+        [FromQuery] Guid? craftVillageId,
+        [FromQuery] Guid? workshopId,
+        [FromQuery] Guid? ticketTypeId,
+        [FromQuery] PriceUpdateStatus? status,
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
+        CancellationToken ct = default)
+    {
+        var data = await _workshopService.GetRequestsForModeratorAsync(
+            craftVillageId, workshopId, ticketTypeId, status, fromDate, toDate, ct);
+
+        return Ok(ResponseModel<List<WorkshopTicketPriceUpdateListItemDto>>
+            .OkResponseModel(data, ResponseMessages.SUCCESS));
+    }
+
+    [HttpGet("price-requests/mine")]
+    public async Task<IActionResult> GetMine(
+        [FromQuery] PriceUpdateStatus? status,
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
+        CancellationToken ct = default)
+    {
+        var data = await _workshopService.GetMyRequestsAsync(status, fromDate, toDate, ct);
+
+        return Ok(ResponseModel<List<WorkshopTicketPriceUpdateListItemDto>>
+            .OkResponseModel(data, ResponseMessages.SUCCESS));
+    }
+
+    [HttpGet("{workshopId}/bookings")]
+    public async Task<IActionResult> GetBookingsByWorkshopAsync(Guid workshopId, [FromQuery] BookingFilterDto filter, CancellationToken cancellationToken = default)
+    {
+        var result = await _bookingService.GetBookingsByWorkshopAsync(workshopId, filter, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "booking")
         ));
     }
 

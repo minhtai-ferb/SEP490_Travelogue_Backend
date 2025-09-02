@@ -61,6 +61,7 @@ public class UnitOfWork : IUnitOfWork
     public IWorkshopTicketTypeRepository WorkshopTicketTypeRepository { get; }
     public ITourPlanLocationWorkshopRepository TourPlanLocationWorkshopRepository { get; }
     public ITourScheduleWorkshopRepository TourScheduleWorkshopRepository { get; }
+    public IWorkshopTicketPriceUpdateRepository WorkshopTicketPriceUpdateRepository { get; }
 
     public UnitOfWork(ApplicationDbContext dbContext)
     {
@@ -115,6 +116,8 @@ public class UnitOfWork : IUnitOfWork
         WorkshopTicketTypeRepository = new WorkshopTicketTypeRepository(_dbContext);
         TourPlanLocationWorkshopRepository = new TourPlanLocationWorkshopRepository(_dbContext);
         TourScheduleWorkshopRepository = new TourScheduleWorkshopRepository(_dbContext);
+        WorkshopTicketPriceUpdateRepository = new WorkshopTicketPriceUpdateRepository(_dbContext);
+        BookingPriceRequestRepository = new BookingPriceRequestRepository(_dbContext);
     }
 
     public IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity

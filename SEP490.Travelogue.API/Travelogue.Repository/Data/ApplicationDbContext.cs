@@ -46,6 +46,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<WorkshopExceptionRequest> WorkshopExceptionRequests { get; set; }
     public DbSet<WorkshopTicketTypeRequest> WorkshopTicketTypeRequests { get; set; }
     public DbSet<CraftVillageRequest> CraftVillageRequests { get; set; }
+    public DbSet<WorkshopTicketPriceUpdate> WorkshopTicketPriceUpdates { get; set; }
 
     // Cuisine Management
     public DbSet<Cuisine> Cuisines { get; set; }

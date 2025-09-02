@@ -27,6 +27,29 @@ public interface IWorkshopService
         CancellationToken cancellationToken = default);
 
     Task<WorkshopDetailDto> GetWorkshopByIdAsync(Guid workshopId, CancellationToken cancellationToken = default);
+    Task<WorkshopTicketPriceUpdateDto> RequestTicketTypePriceChangeAsync(
+        Guid ticketTypeId, decimal newPrice, string? reason, CancellationToken ct = default);
+
+    Task ApproveTicketTypePriceChangeAsync(
+        Guid requestId, string? moderatorNote, CancellationToken ct = default);
+
+    Task RejectTicketTypePriceChangeAsync(
+        Guid requestId, string rejectReason, CancellationToken ct = default);
+
+    Task<List<WorkshopTicketPriceUpdateListItemDto>> GetRequestsForModeratorAsync(
+        Guid? craftVillageId,
+        Guid? workshopId,
+        Guid? ticketTypeId,
+        PriceUpdateStatus? status,
+        DateTime? fromDate,
+        DateTime? toDate,
+        CancellationToken ct = default);
+
+    Task<List<WorkshopTicketPriceUpdateListItemDto>> GetMyRequestsAsync(
+        PriceUpdateStatus? status,
+        DateTime? fromDate,
+        DateTime? toDate,
+        CancellationToken ct = default);
 
     //// Task<WorkshopResponseDto> ConfirmWorkshopAsync(Guid workshopId, ConfirmWorkshopDto dto);
     //Task DeleteWorkshopAsync(Guid workshopId);
@@ -652,12 +675,327 @@ public class WorkshopService : IWorkshopService
         }
     }
 
+    public async Task<WorkshopTicketPriceUpdateDto> RequestTicketTypePriceChangeAsync(
+        Guid ticketTypeId, decimal newPrice, string? reason, CancellationToken ct = default)
+    {
+        try
+        {
+            var userId = Guid.Parse(_userContextService.GetCurrentUserId());
+            var timeNow = _timeService.SystemTimeNow;
+
+            if (newPrice < 0)
+                throw CustomExceptionFactory.CreateBadRequestError("Giá mới không hợp lệ (>= 0).");
+
+            // Tải ticket type + workshop + craft village owner để check quyền
+            var ticket = await _unitOfWork.WorkshopTicketTypeRepository
+                .ActiveEntities
+                .Include(tt => tt.Workshop)
+                    .ThenInclude(w => w.CraftVillage)
+                .FirstOrDefaultAsync(tt => tt.Id == ticketTypeId, ct)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Ticket type");
+
+            var ownerId = ticket.Workshop.CraftVillage.OwnerId;
+            if (ownerId != userId && !_userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR))
+                throw CustomExceptionFactory.CreateForbiddenError();
+
+            if (ticket.Price == newPrice)
+                throw CustomExceptionFactory.CreateBadRequestError("Giá mới trùng giá hiện tại.");
+
+            // Không cho tồn tại Pending cho cùng TicketType
+            var hasPending = await _unitOfWork.WorkshopTicketPriceUpdateRepository.ActiveEntities
+                .AnyAsync(r => r.TicketTypeId == ticketTypeId && r.Status == PriceUpdateStatus.Pending, ct);
+            if (hasPending)
+                throw CustomExceptionFactory.CreateBadRequestError("Đang có yêu cầu đổi giá chờ duyệt cho ticket này.");
+
+            var now = timeNow;
+            var request = new WorkshopTicketPriceUpdate
+            {
+                WorkshopId = ticket.WorkshopId,
+                TicketTypeId = ticket.Id,
+                OldPrice = ticket.Price,
+                NewPrice = newPrice,
+                Status = PriceUpdateStatus.Pending,
+                RequestReason = reason,
+                RequestedBy = userId,
+                CreatedBy = userId.ToString(),
+                LastUpdatedBy = userId.ToString(),
+                CreatedTime = now,
+                LastUpdatedTime = now
+            };
+
+            await _unitOfWork.WorkshopTicketPriceUpdateRepository.AddAsync(request);
+            await _unitOfWork.SaveAsync();
+
+            // Gửi email cho moderator
+            var moderators = await _unitOfWork.UserRepository.GetUsersByRoleAsync(AppRole.MODERATOR);
+            foreach (var m in moderators)
+            {
+                await _emailService.SendEmailAsync(
+                    new[] { m.Email },
+                    "Yêu cầu duyệt thay đổi giá vé workshop",
+                    $"Ticket \"{ticket.Name}\" (Workshop: {ticket.Workshop.Name}) đề nghị đổi giá " +
+                    $"{ticket.Price:n0} → {newPrice:n0}. Lý do: {reason ?? "(không có)"}");
+            }
+
+            return new WorkshopTicketPriceUpdateDto
+            {
+                Id = request.Id,
+                WorkshopId = request.WorkshopId,
+                TicketTypeId = request.TicketTypeId,
+                OldPrice = request.OldPrice,
+                NewPrice = request.NewPrice,
+                Status = request.Status,
+                RequestReason = request.RequestReason,
+                RequestedBy = request.RequestedBy,
+                CreatedTime = request.CreatedTime
+            };
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<WorkshopTicketPriceUpdateListItemDto>> GetRequestsForModeratorAsync(
+        Guid? craftVillageId,
+        Guid? workshopId,
+        Guid? ticketTypeId,
+        PriceUpdateStatus? status,
+        DateTime? fromDate,
+        DateTime? toDate,
+        CancellationToken ct = default)
+    {
+        if (!_userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR))
+            throw CustomExceptionFactory.CreateForbiddenError();
+
+        var from = fromDate?.Date;
+        var to = toDate?.Date.AddDays(1).AddTicks(-1);
+
+        var qReq = _unitOfWork.WorkshopTicketPriceUpdateRepository.ActiveEntities.AsNoTracking();
+        var qTt = _unitOfWork.WorkshopTicketTypeRepository.ActiveEntities.AsNoTracking();
+        var qWs = _unitOfWork.WorkshopRepository.ActiveEntities.AsNoTracking();
+        var qCv = _unitOfWork.CraftVillageRepository.ActiveEntities.AsNoTracking();
+        var qLoc = _unitOfWork.LocationRepository.ActiveEntities.AsNoTracking();
+        var qU = _unitOfWork.UserRepository.ActiveEntities.AsNoTracking();
+
+        var query =
+            from r in qReq
+            join tt in qTt on r.TicketTypeId equals tt.Id
+            join w in qWs on r.WorkshopId equals w.Id
+            join cv in qCv on w.CraftVillageId equals cv.Id
+            join loc in qLoc on cv.LocationId equals loc.Id
+            join uReq in qU on r.RequestedBy equals uReq.Id
+            join uModOpt in qU on r.DecidedBy equals (Guid?)uModOpt.Id into modJoin
+            from uMod in modJoin.DefaultIfEmpty()
+            select new { r, tt, w, cv, loc, uReq, uMod };
+
+        if (craftVillageId.HasValue) query = query.Where(x => x.cv.Id == craftVillageId.Value);
+        if (workshopId.HasValue) query = query.Where(x => x.w.Id == workshopId.Value);
+        if (ticketTypeId.HasValue) query = query.Where(x => x.tt.Id == ticketTypeId.Value);
+        if (status.HasValue) query = query.Where(x => x.r.Status == status.Value);
+        if (from.HasValue) query = query.Where(x => x.r.CreatedTime >= from.Value);
+        if (to.HasValue) query = query.Where(x => x.r.CreatedTime <= to.Value);
+
+        var items = await query
+            .OrderByDescending(x => x.r.CreatedTime)
+            .Select(x => new WorkshopTicketPriceUpdateListItemDto
+            {
+                Id = x.r.Id,
+                WorkshopId = x.w.Id,
+                WorkshopName = x.w.Name,
+
+                CraftVillageId = x.cv.Id,
+                CraftVillageName = x.loc.Name,
+
+                TicketTypeId = x.tt.Id,
+                TicketTypeName = x.tt.Name,
+
+                OldPrice = x.r.OldPrice,
+                NewPrice = x.r.NewPrice,
+
+                Status = x.r.Status,
+                RequestReason = x.r.RequestReason,
+                ModeratorNote = x.r.ModeratorNote,
+
+                RequestedBy = x.r.RequestedBy,
+                RequestedByName = x.uReq.FullName,
+
+                DecidedBy = x.r.DecidedBy,
+                DecidedByName = x.uMod != null ? x.uMod.FullName : null,
+
+                CreatedTime = x.r.CreatedTime,
+                DecidedAt = x.r.DecidedAt
+            })
+            .ToListAsync(ct);
+
+        return items;
+    }
+
+    public async Task<List<WorkshopTicketPriceUpdateListItemDto>> GetMyRequestsAsync(
+        PriceUpdateStatus? status,
+        DateTime? fromDate,
+        DateTime? toDate,
+        CancellationToken ct = default)
+    {
+        var myId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+        var from = fromDate?.Date;
+        var to = toDate?.Date.AddDays(1).AddTicks(-1);
+
+        var qReq = _unitOfWork.WorkshopTicketPriceUpdateRepository.ActiveEntities.AsNoTracking();
+        var qTt = _unitOfWork.WorkshopTicketTypeRepository.ActiveEntities.AsNoTracking();
+        var qWs = _unitOfWork.WorkshopRepository.ActiveEntities.AsNoTracking();
+        var qCv = _unitOfWork.CraftVillageRepository.ActiveEntities.AsNoTracking();
+        var qLoc = _unitOfWork.LocationRepository.ActiveEntities.AsNoTracking();
+        var qU = _unitOfWork.UserRepository.ActiveEntities.AsNoTracking();
+
+        var query =
+            from r in qReq
+            where r.RequestedBy == myId
+            join tt in qTt on r.TicketTypeId equals tt.Id
+            join w in qWs on r.WorkshopId equals w.Id
+            join cv in qCv on w.CraftVillageId equals cv.Id
+            join loc in qLoc on cv.LocationId equals loc.Id
+            join uReq in qU on r.RequestedBy equals uReq.Id
+            join uModOpt in qU on r.DecidedBy equals (Guid?)uModOpt.Id into modJoin
+            from uMod in modJoin.DefaultIfEmpty()
+            select new { r, tt, w, cv, loc, uReq, uMod };
+
+        if (status.HasValue) query = query.Where(x => x.r.Status == status.Value);
+        if (from.HasValue) query = query.Where(x => x.r.CreatedTime >= from.Value);
+        if (to.HasValue) query = query.Where(x => x.r.CreatedTime <= to.Value);
+
+        var items = await query
+            .OrderByDescending(x => x.r.CreatedTime)
+            .Select(x => new WorkshopTicketPriceUpdateListItemDto
+            {
+                Id = x.r.Id,
+                WorkshopId = x.w.Id,
+                WorkshopName = x.w.Name,
+
+                CraftVillageId = x.cv.Id,
+                CraftVillageName = x.loc.Name,
+
+                TicketTypeId = x.tt.Id,
+                TicketTypeName = x.tt.Name,
+
+                OldPrice = x.r.OldPrice,
+                NewPrice = x.r.NewPrice,
+
+                Status = x.r.Status,
+                RequestReason = x.r.RequestReason,
+                ModeratorNote = x.r.ModeratorNote,
+
+                RequestedBy = x.r.RequestedBy,
+                RequestedByName = x.uReq.FullName,
+
+                DecidedBy = x.r.DecidedBy,
+                DecidedByName = x.uMod != null ? x.uMod.FullName : null,
+
+                CreatedTime = x.r.CreatedTime,
+                DecidedAt = x.r.DecidedAt
+            })
+            .ToListAsync(ct);
+
+        return items;
+    }
+
+    public async Task ApproveTicketTypePriceChangeAsync(
+        Guid requestId, string? moderatorNote, CancellationToken ct = default)
+    {
+        var moderatorId = Guid.Parse(_userContextService.GetCurrentUserId());
+        if (!_userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR))
+            throw CustomExceptionFactory.CreateForbiddenError();
+
+        await using var tx = await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var req = await _unitOfWork.WorkshopTicketPriceUpdateRepository.ActiveEntities
+                .FirstOrDefaultAsync(r => r.Id == requestId, ct)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Price update request");
+
+            if (req.Status != PriceUpdateStatus.Pending)
+                throw CustomExceptionFactory.CreateBadRequestError("Yêu cầu không ở trạng thái Pending.");
+
+            var ticket = await _unitOfWork.WorkshopTicketTypeRepository.ActiveEntities
+                .FirstOrDefaultAsync(tt => tt.Id == req.TicketTypeId, ct)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Ticket type");
+
+            // (Tuỳ chọn) Kiểm tra concurrency: nếu giá hiện tại đã đổi khác OldPrice
+            // có thể cảnh báo hoặc vẫn proceed
+            // if (ticket.Price != req.OldPrice) { ... }
+
+            // Cập nhật giá
+            ticket.Price = req.NewPrice;
+            ticket.LastUpdatedTime = DateTimeOffset.UtcNow;
+            ticket.LastUpdatedBy = moderatorId.ToString();
+            _unitOfWork.WorkshopTicketTypeRepository.Update(ticket);
+
+            // Cập nhật request
+            req.Status = PriceUpdateStatus.Approved;
+            req.DecidedBy = moderatorId;
+            req.DecidedAt = DateTimeOffset.UtcNow;
+            req.ModeratorNote = moderatorNote;
+            req.LastUpdatedBy = moderatorId.ToString();
+            req.LastUpdatedTime = DateTimeOffset.UtcNow;
+            _unitOfWork.WorkshopTicketPriceUpdateRepository.Update(req);
+
+            await _unitOfWork.SaveAsync();
+            await tx.CommitAsync();
+        }
+        catch
+        {
+            await tx.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task RejectTicketTypePriceChangeAsync(
+        Guid requestId, string rejectReason, CancellationToken ct = default)
+    {
+        try
+        {
+            var moderatorId = Guid.Parse(_userContextService.GetCurrentUserId());
+            if (!_userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR))
+                throw CustomExceptionFactory.CreateForbiddenError();
+
+            var req = await _unitOfWork.WorkshopTicketPriceUpdateRepository.ActiveEntities
+                .FirstOrDefaultAsync(r => r.Id == requestId, ct)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("Price update request");
+
+            if (req.Status != PriceUpdateStatus.Pending)
+                throw CustomExceptionFactory.CreateBadRequestError("Yêu cầu không ở trạng thái Pending.");
+
+            req.Status = PriceUpdateStatus.Rejected;
+            req.DecidedBy = moderatorId;
+            req.DecidedAt = DateTimeOffset.UtcNow;
+            req.ModeratorNote = string.IsNullOrWhiteSpace(rejectReason) ? "Không có lý do" : rejectReason;
+            req.LastUpdatedBy = moderatorId.ToString();
+            req.LastUpdatedTime = DateTimeOffset.UtcNow;
+
+            _unitOfWork.WorkshopTicketPriceUpdateRepository.Update(req);
+            await _unitOfWork.SaveAsync();
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
     //public async Task<WorkshopResponseDto> ConfirmWorkshopAsync(Guid workshopId, ConfirmWorkshopDto dto)
     //{
-    //    var currentUserId = _userContextService.GetCurrentUserId();
+    //    var currentUserId = _userContextServiceService.GetCurrentUserId();
     //    var currentTime = _timeService.SystemTimeNow;
 
-    //    var isValidRole = _userContextService.HasAnyRole(AppRole.MODERATOR, AppRole.ADMIN);
+    //    var isValidRole = _userContextServiceService.HasAnyRole(AppRole.MODERATOR, AppRole.ADMIN);
     //    if (!isValidRole)
     //        throw CustomExceptionFactory.CreateForbiddenError();
 
@@ -694,8 +1032,8 @@ public class WorkshopService : IWorkshopService
     //{
     //    try
     //    {
-    //        var isAdminOrModerator = _userContextService.HasAnyRoleOrAnonymous(AppRole.ADMIN, AppRole.MODERATOR);
-    //        var currentUserId = _userContextService.GetCurrentUserIdGuidOrAnonymous();
+    //        var isAdminOrModerator = _userContextServiceService.HasAnyRoleOrAnonymous(AppRole.ADMIN, AppRole.MODERATOR);
+    //        var currentUserId = _userContextServiceService.GetCurrentUserIdGuidOrAnonymous();
 
     //        var query = _unitOfWork.WorkshopRepository.ActiveEntities
     //            .Include(ws => ws.CraftVillage)
@@ -841,9 +1179,9 @@ public class WorkshopService : IWorkshopService
     //    using var transaction = await _unitOfWork.BeginTransactionAsync();
     //    try
     //    {
-    //        var currentUserId = _userContextService.GetCurrentUserId();
+    //        var currentUserId = _userContextServiceService.GetCurrentUserId();
     //        var currentTime = _timeService.SystemTimeNow;
-    //        var checkRole = _userContextService.HasAnyRole(AppRole.CRAFT_VILLAGE_OWNER);
+    //        var checkRole = _userContextServiceService.HasAnyRole(AppRole.CRAFT_VILLAGE_OWNER);
     //        if (!checkRole)
     //            throw CustomExceptionFactory.CreateForbiddenError();
 
