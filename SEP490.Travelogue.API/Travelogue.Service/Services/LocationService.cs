@@ -26,6 +26,7 @@ public interface ILocationService
     Task<LocationDataModel> AddLocationAsync(LocationCreateModel locationCreateModel, CancellationToken cancellationToken);
     Task UpdateLocationAsync(Guid id, LocationUpdateModel locationUpdateModel, CancellationToken cancellationToken);
     Task DeleteLocationAsync(Guid id, CancellationToken cancellationToken);
+    Task<LocationDataDetailModel?> GetCraftVillageByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<List<LocationDataModel>> GetNearestCuisineLocationsAsync(Guid locationId, CancellationToken cancellationToken = default);
     Task<List<LocationDataModel>> GetNearestHistoricalLocationsAsync(Guid locationId, CancellationToken cancellationToken = default);
     Task<List<LocationDataModel>> GetNearestCraftVillageLocationsAsync(Guid locationId, CancellationToken cancellationToken = default);
@@ -1269,6 +1270,71 @@ public class LocationService : ILocationService
         finally
         {
             //  _unitOfWork.Dispose();
+        }
+    }
+
+    public async Task<LocationDataDetailModel?> GetCraftVillageByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var existingLocation = await _unitOfWork.LocationRepository.GetByIdAsync(id, cancellationToken);
+            if (existingLocation == null || existingLocation.IsDeleted)
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("làng nghề");
+            }
+
+            var locationDataModel = _mapper.Map<LocationDataDetailModel>(existingLocation);
+
+            var craftVillage = await _unitOfWork.CraftVillageRepository.GetByLocationId(existingLocation.Id, cancellationToken);
+            if (craftVillage != null)
+            {
+                locationDataModel.CraftVillage = new CraftVillageDataModel
+                {
+                    OwnerId = craftVillage.OwnerId,
+                    PhoneNumber = craftVillage.PhoneNumber,
+                    Email = craftVillage.Email,
+                    Website = craftVillage.Website,
+                    SignatureProduct = craftVillage.SignatureProduct,
+                    YearsOfHistory = craftVillage.YearsOfHistory,
+                    WorkshopsAvailable = craftVillage.WorkshopsAvailable,
+                    IsRecognizedByUnesco = craftVillage.IsRecognizedByUnesco
+                };
+
+                var workshopQuery = _unitOfWork.WorkshopRepository
+                    .ActiveEntities
+                    .AsNoTracking()
+                    .Where(w => w.CraftVillageId == craftVillage.Id)
+                    .Include(w => w.Medias)
+                    .Include(w => w.TicketTypes).ThenInclude(tt => tt.WorkshopActivities)
+                    .Include(w => w.RecurringRules).ThenInclude(rr => rr.Sessions)
+                    .Include(w => w.Exceptions)
+                    .Include(w => w.Schedules)
+                    .AsSplitQuery();
+
+                var workshopEntity = await workshopQuery.FirstOrDefaultAsync(cancellationToken);
+
+                locationDataModel.CraftVillage.Workshop = workshopEntity != null
+                    ? MapWorkshopToDetailDto(workshopEntity)
+                    : null;
+            }
+            else
+            {
+                throw CustomExceptionFactory.CreateNotFoundError("làng nghề");
+            }
+
+            locationDataModel.Medias = await GetMediaWithoutVideoByIdAsync(id, cancellationToken);
+            locationDataModel.DistrictName = await _unitOfWork.DistrictRepository.GetDistrictNameById(locationDataModel.DistrictId);
+            locationDataModel.Category = await _unitOfWork.LocationRepository.GetCategoryNameAsync(locationDataModel.Id, cancellationToken);
+
+            return locationDataModel;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 

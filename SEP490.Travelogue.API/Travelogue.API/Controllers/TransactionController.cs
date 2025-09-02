@@ -37,4 +37,16 @@ public class TransactionController : ControllerBase
             message: ResponseMessages.SUCCESS
         ));
     }
+
+    [HttpGet("top-system-transactions")]
+    public async Task<IActionResult> GetTopSystemTransactions(
+    [FromQuery] int top = 5,
+    CancellationToken cancellationToken = default)
+    {
+        var result = await _walletService.GetTopSystemTransactionsAsync(top, cancellationToken);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessages.SUCCESS
+        ));
+    }
 }

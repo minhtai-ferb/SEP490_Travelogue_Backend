@@ -2855,6 +2855,10 @@ public class UserService : IUserService
             RejectionReason = request.RejectionReason,
             ReviewedAt = request.ReviewedAt,
             ReviewedBy = request.ReviewedBy,
+            CreatedTime = request.CreatedTime,
+            CreatedBy = request.CreatedBy,
+            LastUpdatedTime = request.LastUpdatedTime,
+            LastUpdatedBy = request.LastUpdatedBy,
             Medias = request.Medias.ToMediaDto()
         };
     }

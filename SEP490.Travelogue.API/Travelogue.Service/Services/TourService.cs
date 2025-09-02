@@ -1168,38 +1168,17 @@ public class TourService : ITourService
 
                     foreach (var dto in dtos.Where(d => !d.TourPlanLocationId.HasValue))
                     {
-                        if (dto.ActivityType != ActivityType.Workshop || !dto.WorkshopId.HasValue)
-                            continue;
+                        if (dto.ActivityType != ActivityType.Workshop) continue;
 
                         var locMeta = locations.First(l => l.Id == dto.LocationId);
-
                         if (locMeta.LocationType != LocationType.CraftVillage)
                             throw CustomExceptionFactory.CreateBadRequestError($"Địa điểm {dto.LocationId} không phải là làng nghề.");
 
                         if (!locToCv.TryGetValue(dto.LocationId, out var craftVillageId))
                             throw CustomExceptionFactory.CreateBadRequestError($"Không tìm thấy làng nghề cho địa điểm {dto.LocationId}.");
 
-                        var wkOk = await _unitOfWork.WorkshopRepository.ActiveEntities
-                            .AnyAsync(w => w.Id == dto.WorkshopId.Value && w.CraftVillageId == craftVillageId);
-                        if (!wkOk)
-                            throw CustomExceptionFactory.CreateBadRequestError("Workshop không thuộc làng nghề của địa điểm.");
-
-                        if (dto.WorkshopTicketTypeId.HasValue)
-                        {
-                            var ttOk = await _unitOfWork.WorkshopTicketTypeRepository.ActiveEntities
-                                .AnyAsync(tt => tt.Id == dto.WorkshopTicketTypeId.Value && tt.WorkshopId == dto.WorkshopId.Value);
-                            if (!ttOk)
-                                throw CustomExceptionFactory.CreateBadRequestError("Ticket type không thuộc workshop đã chọn.");
-                        }
-
-                        if (dto.WorkshopSessionRuleId.HasValue)
-                        {
-                            var srOk = await _unitOfWork.WorkshopSessionRuleRepository.ActiveEntities
-                                .AnyAsync(sr => sr.Id == dto.WorkshopSessionRuleId.Value
-                                             && sr.RecurringRule.WorkshopId == dto.WorkshopId.Value);
-                            if (!srOk)
-                                throw CustomExceptionFactory.CreateBadRequestError("Session rule không thuộc workshop đã chọn.");
-                        }
+                        // 👇 Suy ra workshopId từ ticket/session rule
+                        var workshopId = await ResolveWorkshopIdAsync(dto, craftVillageId);
 
                         var addedEntity = toAdd.First(a =>
                             a.LocationId == dto.LocationId &&
@@ -1211,7 +1190,7 @@ public class TourService : ITourService
                         {
                             Id = Guid.NewGuid(),
                             TourPlanLocationId = addedEntity.Id,
-                            WorkshopId = dto.WorkshopId.Value,
+                            WorkshopId = workshopId,
                             WorkshopTicketTypeId = dto.WorkshopTicketTypeId,
                             WorkshopSessionRuleId = dto.WorkshopSessionRuleId,
                             Notes = dto.Notes,
@@ -1241,8 +1220,9 @@ public class TourService : ITourService
 
                         var locMeta = locations.First(l => l.Id == dto.LocationId);
 
-                        if (dto.ActivityType != ActivityType.Workshop || !dto.WorkshopId.HasValue)
+                        if (dto.ActivityType != ActivityType.Workshop)
                         {
+                            // Nếu không còn là Workshop nữa thì soft-delete WorkshopDetail (nếu có)
                             if (tourPlanLocation.WorkshopDetail != null && !tourPlanLocation.WorkshopDetail.IsDeleted)
                             {
                                 tourPlanLocation.WorkshopDetail.IsDeleted = true;
@@ -1253,72 +1233,62 @@ public class TourService : ITourService
                         }
                         else
                         {
-                            if (locMeta.LocationType != LocationType.CraftVillage)
+                            var locMeta2 = locations.First(l => l.Id == dto.LocationId);
+                            if (locMeta2.LocationType != LocationType.CraftVillage)
                                 throw CustomExceptionFactory.CreateBadRequestError($"Địa điểm {dto.LocationId} không phải là làng nghề.");
 
-                            if (!locToCv.TryGetValue(dto.LocationId, out var craftVillageId))
+                            if (!locToCv.TryGetValue(dto.LocationId, out var craftVillageId2))
                                 throw CustomExceptionFactory.CreateBadRequestError($"Không tìm thấy làng nghề cho địa điểm {dto.LocationId}.");
 
-                            var wkOk = await _unitOfWork.WorkshopRepository.ActiveEntities
-                                .AnyAsync(w => w.Id == dto.WorkshopId.Value && w.CraftVillageId == craftVillageId);
-                            if (!wkOk)
-                                throw CustomExceptionFactory.CreateBadRequestError("Workshop không thuộc làng nghề của địa điểm.");
-
-                            if (dto.WorkshopTicketTypeId.HasValue)
+                            if (dto.WorkshopTicketTypeId.HasValue || dto.WorkshopSessionRuleId.HasValue ||
+                                tourPlanLocation.WorkshopDetail == null || tourPlanLocation.WorkshopDetail.IsDeleted)
                             {
-                                var ttOk = await _unitOfWork.WorkshopTicketTypeRepository.ActiveEntities
-                                    .AnyAsync(tt => tt.Id == dto.WorkshopTicketTypeId.Value && tt.WorkshopId == dto.WorkshopId.Value);
-                                if (!ttOk)
-                                    throw CustomExceptionFactory.CreateBadRequestError("Ticket type không thuộc workshop đã chọn.");
-                            }
+                                var resolvedWorkshopId = await ResolveWorkshopIdAsync(dto, craftVillageId2);
 
-                            if (dto.WorkshopSessionRuleId.HasValue)
-                            {
-                                var srOk = await _unitOfWork.WorkshopSessionRuleRepository.ActiveEntities
-                                    .AnyAsync(sr => sr.Id == dto.WorkshopSessionRuleId.Value
-                                                 && sr.RecurringRule.WorkshopId == dto.WorkshopId.Value);
-                                if (!srOk)
-                                    throw CustomExceptionFactory.CreateBadRequestError("Session rule không thuộc workshop đã chọn.");
-                            }
-
-                            if (tourPlanLocation.WorkshopDetail == null || tourPlanLocation.WorkshopDetail.IsDeleted)
-                            {
-                                var tplw = new TourPlanLocationWorkshop
+                                if (tourPlanLocation.WorkshopDetail == null || tourPlanLocation.WorkshopDetail.IsDeleted)
                                 {
-                                    Id = Guid.NewGuid(),
-                                    TourPlanLocationId = tourPlanLocation.Id,
-                                    WorkshopId = dto.WorkshopId.Value,
-                                    WorkshopTicketTypeId = dto.WorkshopTicketTypeId,
-                                    WorkshopSessionRuleId = dto.WorkshopSessionRuleId,
-                                    Notes = dto.Notes,
-                                    CreatedBy = userId.ToString(),
-                                    CreatedTime = DateTimeOffset.UtcNow,
-                                    LastUpdatedBy = userId.ToString(),
-                                    LastUpdatedTime = DateTimeOffset.UtcNow
-                                };
-                                await _unitOfWork.TourPlanLocationWorkshopRepository.AddAsync(tplw);
-                            }
-                            else
-                            {
-                                var d = tourPlanLocation.WorkshopDetail;
-                                d.WorkshopId = dto.WorkshopId.Value;
-                                d.WorkshopTicketTypeId = dto.WorkshopTicketTypeId;
-                                d.WorkshopSessionRuleId = dto.WorkshopSessionRuleId;
-                                d.Notes = dto.Notes;
-                                d.IsDeleted = false;
-                                d.LastUpdatedBy = userId.ToString();
-                                d.LastUpdatedTime = DateTimeOffset.UtcNow;
-                                _unitOfWork.TourPlanLocationWorkshopRepository.Update(d);
+                                    var tplw = new TourPlanLocationWorkshop
+                                    {
+                                        Id = Guid.NewGuid(),
+                                        TourPlanLocationId = tourPlanLocation.Id,
+                                        WorkshopId = resolvedWorkshopId,
+                                        WorkshopTicketTypeId = dto.WorkshopTicketTypeId,
+                                        WorkshopSessionRuleId = dto.WorkshopSessionRuleId,
+                                        Notes = dto.Notes,
+                                        CreatedBy = userId.ToString(),
+                                        CreatedTime = DateTimeOffset.UtcNow,
+                                        LastUpdatedBy = userId.ToString(),
+                                        LastUpdatedTime = DateTimeOffset.UtcNow
+                                    };
+                                    await _unitOfWork.TourPlanLocationWorkshopRepository.AddAsync(tplw);
+                                }
+                                else
+                                {
+                                    var d = tourPlanLocation.WorkshopDetail;
+                                    d.WorkshopId = resolvedWorkshopId;
+                                    d.WorkshopTicketTypeId = dto.WorkshopTicketTypeId;
+                                    d.WorkshopSessionRuleId = dto.WorkshopSessionRuleId;
+                                    d.Notes = dto.Notes;
+                                    d.IsDeleted = false;
+                                    d.LastUpdatedBy = userId.ToString();
+                                    d.LastUpdatedTime = DateTimeOffset.UtcNow;
+                                    _unitOfWork.TourPlanLocationWorkshopRepository.Update(d);
+                                }
                             }
                         }
                     }
 
-                    bool hasWorkshopAfter =
-                        tour.TourPlanLocations.Any(l => !l.IsDeleted && l.ActivityType == ActivityType.Workshop)
-                        || toAdd.Any(l => l.ActivityType == ActivityType.Workshop);
+                    await _unitOfWork.SaveAsync();
+
+                    var hasWorkshopAfter = await (
+                        from d in _unitOfWork.TourPlanLocationWorkshopRepository.ActiveEntities
+                        join l in _unitOfWork.TourPlanLocationRepository.ActiveEntities
+                            on d.TourPlanLocationId equals l.Id
+                        where !d.IsDeleted && !l.IsDeleted && l.TourId == tourId
+                        select d.Id
+                    ).AnyAsync();
 
                     tour.IsTourWorkshop = hasWorkshopAfter;
-
                     _unitOfWork.TourRepository.Update(tour);
 
                     await _unitOfWork.SaveAsync();
@@ -3001,6 +2971,54 @@ public class TourService : ITourService
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
+
+    private async Task<Guid> ResolveWorkshopIdAsync(
+        UpdateTourPlanLocationDto dto,
+        Guid craftVillageId)
+    {
+        Guid? fromTicket = null;
+        Guid? fromSession = null;
+
+        if (dto.WorkshopTicketTypeId.HasValue)
+        {
+            fromTicket = await _unitOfWork.WorkshopTicketTypeRepository.ActiveEntities
+                .Where(tt => tt.Id == dto.WorkshopTicketTypeId.Value)
+                .Select(tt => tt.WorkshopId)
+                .FirstOrDefaultAsync();
+
+            if (fromTicket == Guid.Empty)
+                throw CustomExceptionFactory.CreateBadRequestError("Workshop ticket type không tồn tại.");
+        }
+
+        if (dto.WorkshopSessionRuleId.HasValue)
+        {
+            fromSession = await _unitOfWork.WorkshopSessionRuleRepository.ActiveEntities
+                .Where(sr => sr.Id == dto.WorkshopSessionRuleId.Value)
+                .Select(sr => sr.RecurringRule.WorkshopId)
+                .FirstOrDefaultAsync();
+
+            if (fromSession == Guid.Empty)
+                throw CustomExceptionFactory.CreateBadRequestError("Workshop session rule không tồn tại.");
+        }
+
+        var resolved = fromTicket ?? fromSession;
+        if (!resolved.HasValue)
+            throw CustomExceptionFactory.CreateBadRequestError(
+                "Thiếu thông tin để xác định workshop (cần WorkshopTicketTypeId hoặc WorkshopSessionRuleId).");
+
+        if (fromTicket.HasValue && fromSession.HasValue && fromTicket.Value != fromSession.Value)
+            throw CustomExceptionFactory.CreateBadRequestError(
+                "Ticket type và session rule thuộc 2 workshop khác nhau.");
+
+        var belongs = await _unitOfWork.WorkshopRepository.ActiveEntities
+            .AnyAsync(w => w.Id == resolved.Value && w.CraftVillageId == craftVillageId);
+
+        if (!belongs)
+            throw CustomExceptionFactory.CreateBadRequestError("Workshop không thuộc làng nghề của địa điểm.");
+
+        return resolved.Value;
+    }
+
 
     private static (DateTime Start, DateTime End) ComputePlanWindow(
     DateTime departureDate, int dayOrder, TimeSpan start, TimeSpan end)
