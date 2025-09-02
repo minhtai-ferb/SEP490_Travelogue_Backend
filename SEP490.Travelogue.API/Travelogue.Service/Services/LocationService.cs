@@ -1065,7 +1065,6 @@ public class LocationService : ILocationService
             var currentUserId = _userContextService.GetCurrentUserId();
             var currentTime = _timeService.SystemTimeNow;
 
-            // Load Location with related entities
             var existingLocation = await _unitOfWork.LocationRepository
                 .ActiveEntities
                 .Include(l => l.Cuisine)
@@ -1074,16 +1073,24 @@ public class LocationService : ILocationService
                 .FirstOrDefaultAsync(l => l.Id == id, cancellationToken);
 
             if (existingLocation == null || existingLocation.IsDeleted)
-            {
                 throw CustomExceptionFactory.CreateNotFoundError("location");
-            }
 
-            var isInUsing = await _unitOfWork.NewsRepository.ActiveEntities
-                .AnyAsync(e => e.LocationId == id, cancellationToken);
+            if (existingLocation.CraftVillage != null)
+                throw CustomExceptionFactory.CreateBadRequestError("Không thể xóa Làng nghề.");
 
-            if (isInUsing)
-            {
+            var usedByNews = await _unitOfWork.NewsRepository.ActiveEntities
+                .AnyAsync(n => n.LocationId == id, cancellationToken);
+            if (usedByNews)
                 throw CustomExceptionFactory.CreateBadRequestError(ResponseMessages.BE_USED);
+
+            var (usedByTourPlan, usedByTripPlan) = await IsLocationInUseAsync(id, cancellationToken);
+            if (usedByTourPlan || usedByTripPlan)
+            {
+                var reasons = new List<string>();
+                if (usedByTourPlan) reasons.Add("Tour");
+                if (usedByTripPlan) reasons.Add("Trip Plan");
+                throw CustomExceptionFactory.CreateBadRequestError(
+                    $"Location đang được sử dụng trong: {string.Join(", ", reasons)}");
             }
 
             if (existingLocation.Cuisine != null)
@@ -1094,16 +1101,6 @@ public class LocationService : ILocationService
                 existingLocation.Cuisine.LastUpdatedBy = currentUserId;
                 existingLocation.Cuisine.LastUpdatedTime = currentTime;
                 _unitOfWork.CuisineRepository.Update(existingLocation.Cuisine);
-            }
-
-            if (existingLocation.CraftVillage != null)
-            {
-                existingLocation.CraftVillage.IsDeleted = true;
-                existingLocation.CraftVillage.DeletedBy = currentUserId;
-                existingLocation.CraftVillage.DeletedTime = currentTime;
-                existingLocation.CraftVillage.LastUpdatedBy = currentUserId;
-                existingLocation.CraftVillage.LastUpdatedTime = currentTime;
-                _unitOfWork.CraftVillageRepository.Update(existingLocation.CraftVillage);
             }
 
             if (existingLocation.HistoricalLocation != null)
@@ -1129,14 +1126,32 @@ public class LocationService : ILocationService
         }
         catch (CustomException)
         {
-            await _unitOfWork.RollBackAsync();
+            await transaction.RollbackAsync(cancellationToken);
             throw;
         }
         catch (Exception ex)
         {
-            await _unitOfWork.RollBackAsync();
+            await transaction.RollbackAsync(cancellationToken);
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
+    }
+
+    private async Task<(bool usedByTourPlan, bool usedByTripPlan)> IsLocationInUseAsync(
+        Guid locationId,
+        CancellationToken ct)
+    {
+        var usedByTourPlan = await _unitOfWork.TourPlanLocationRepository
+            .ActiveEntities
+            .AnyAsync(tpl => tpl.LocationId == locationId, ct);
+
+        if (usedByTourPlan)
+            return (true, false);
+
+        var usedByTripPlan = await _unitOfWork.TripPlanLocationRepository
+            .ActiveEntities
+            .AnyAsync(tpl => tpl.LocationId == locationId, ct);
+
+        return (false, usedByTripPlan);
     }
 
     public async Task<List<LocationDataModel>> GetAllLocationsAsync(CancellationToken cancellationToken)
