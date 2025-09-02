@@ -20,7 +20,7 @@ public class UpdateTourPlanLocationDto
     public float TravelTimeFromPrev { get; set; }
     public float DistanceFromPrev { get; set; }
 
-    public Guid? WorkshopId { get; set; }
+    // public Guid? WorkshopId { get; set; }
     public Guid? WorkshopTicketTypeId { get; set; }
     public Guid? WorkshopSessionRuleId { get; set; }
 }

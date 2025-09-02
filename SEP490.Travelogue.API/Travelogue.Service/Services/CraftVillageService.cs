@@ -20,6 +20,9 @@ public interface ICraftVillageService
     Task<LocationDataDetailModel?> GetCraftVillageByLocationIdAsync(Guid id, CancellationToken cancellationToken);
     Task<List<LocationDataModel>> GetAllCraftVillagesAsync(CancellationToken cancellationToken);
     Task<PagedResult<LocationDataModel>> GetPagedCraftVillagesWithSearchAsync(string? name, int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<CraftVillageWorkshopDashboardDto> GetCraftVillageWorkshopDashboardAsync(
+       Guid craftVillageId, DateTime fromDate, DateTime toDate, CancellationToken ct = default);
+
     Task AddCraftVillageAsync(CraftVillageCreateModel craftVillageCreateModel, CancellationToken cancellationToken);
     Task AddCraftVillageAsync(Guid locationId, CraftVillageCreateModel craftVillageCreateModel, CancellationToken cancellationToken);
     Task UpdateCraftVillageAsync(Guid id, CraftVillageUpdateDto craftVillageUpdateModel, CancellationToken cancellationToken);
@@ -364,6 +367,143 @@ public class CraftVillageService : ICraftVillageService
         }
     }
 
+    public async Task<CraftVillageWorkshopDashboardDto> GetCraftVillageWorkshopDashboardAsync(
+        Guid craftVillageId, DateTime fromDate, DateTime toDate, CancellationToken ct = default)
+    {
+        if (fromDate > toDate)
+            throw CustomExceptionFactory.CreateBadRequestError("fromDate phải <= toDate.");
+
+        var start = fromDate.Date;
+        var end = toDate.Date.AddDays(1).AddTicks(-1);
+
+        var exists = await _unitOfWork.CraftVillageRepository.ActiveEntities
+            .AsNoTracking()
+            .AnyAsync(cv => cv.Id == craftVillageId, ct);
+        if (!exists) throw CustomExceptionFactory.CreateNotFoundError("CraftVillage");
+
+        var directRaw = await _unitOfWork.BookingRepository.ActiveEntities
+            .AsNoTracking()
+            .Include(b => b.Workshop)
+            .Where(b => b.BookingType == BookingType.Workshop
+                        && (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed)
+                        && b.WorkshopId != null
+                        && b.Workshop!.CraftVillageId == craftVillageId
+                        && b.StartDate >= start && b.StartDate <= end)
+            .Select(b => new
+            {
+                Date = b.StartDate.Date,
+                b.FinalPrice,
+                BookingAt = b.BookingDate.DateTime
+            })
+            .ToListAsync(ct);
+
+        var directItems = directRaw.Select(x =>
+        {
+            var c = AsRatio(GetCommissionPercent(BookingType.Workshop, x.BookingAt));
+            var net = x.FinalPrice * (1 - c);
+            return new { x.Date, GrossDirect = x.FinalPrice, NetDirect = net };
+        }).ToList();
+
+        var tourBookings = await _unitOfWork.BookingRepository.ActiveEntities
+            .AsNoTracking()
+            .Include(b => b.Participants)
+            .Include(b => b.TourSchedule)
+                .ThenInclude(ts => ts.TourScheduleWorkshops)
+                    .ThenInclude(tsw => tsw.Workshop)
+            .Include(b => b.TourSchedule)
+                .ThenInclude(ts => ts.TourScheduleWorkshops)
+                    .ThenInclude(tsw => tsw.WorkshopTicketType)
+            .Where(b => b.BookingType == BookingType.Tour
+                        && (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed)
+                        && b.TourScheduleId != null
+                        && b.StartDate >= start && b.StartDate <= end)
+            .ToListAsync(ct);
+
+        var fromToursItems = new List<(DateTime Date, decimal GrossFromTours, decimal NetFromTours)>();
+
+        foreach (var b in tourBookings)
+        {
+            int people = (b.Participants?.Any() == true)
+                ? b.Participants.Sum(p => Math.Max(p.Quantity, 1))
+                : 1;
+
+            var perPersonSum = (b.TourSchedule?.TourScheduleWorkshops?
+                .Where(tsw => !tsw.IsDeleted && tsw.Workshop != null && tsw.Workshop.CraftVillageId == craftVillageId)
+                .Sum(tsw => (decimal?)(tsw.WorkshopTicketType != null ? tsw.WorkshopTicketType.Price : 0m)) ?? 0m);
+
+            var gross = perPersonSum * people;
+
+            var c = AsRatio(GetCommissionPercent(BookingType.Workshop, b.BookingDate.DateTime));
+            var net = gross * (1 - c);
+
+            fromToursItems.Add((b.StartDate.Date, gross, net));
+        }
+
+        var grossDirectTotal = directItems.Sum(i => i.GrossDirect);
+        var netDirectTotal = directItems.Sum(i => i.NetDirect);
+        var grossFromToursTotal = fromToursItems.Sum(i => i.GrossFromTours);
+        var netFromToursTotal = fromToursItems.Sum(i => i.NetFromTours);
+
+        var grossTotal = grossDirectTotal + grossFromToursTotal;
+        var netTotal = netDirectTotal + netFromToursTotal;
+
+        var allDates = Enumerable.Range(0, (toDate.Date - fromDate.Date).Days + 1)
+                                 .Select(d => fromDate.Date.AddDays(d))
+                                 .ToList();
+
+        var directDaily = directItems.GroupBy(x => x.Date)
+            .ToDictionary(g => g.Key, g => new
+            {
+                Gross = g.Sum(z => z.GrossDirect),
+                Net = g.Sum(z => z.NetDirect)
+            });
+
+        var fromToursDaily = fromToursItems.GroupBy(x => x.Date)
+            .ToDictionary(g => g.Key, g => new
+            {
+                Gross = g.Sum(z => z.GrossFromTours),
+                Net = g.Sum(z => z.NetFromTours)
+            });
+
+        var daily = allDates.Select(d =>
+        {
+            var dg = directDaily.TryGetValue(d, out var dv) ? dv.Gross : 0m;
+            var dn = directDaily.TryGetValue(d, out var dv2) ? dv2.Net : 0m;
+
+            var tg = fromToursDaily.TryGetValue(d, out var tv) ? tv.Gross : 0m;
+            var tn = fromToursDaily.TryGetValue(d, out var tv2) ? tv2.Net : 0m;
+
+            return new DailyRevenueDto
+            {
+                Date = d,
+                Gross = dg + tg,
+                Net = dn + tn,
+                GrossDirect = dg,
+                NetDirect = dn,
+                GrossFromTours = tg,
+                NetFromTours = tn
+            };
+        })
+        .OrderBy(x => x.Date)
+        .ToList();
+
+        return new CraftVillageWorkshopDashboardDto
+        {
+            CraftVillageId = craftVillageId,
+            FromDate = fromDate.Date,
+            ToDate = toDate.Date,
+            GrossTotal = grossTotal,
+            NetTotal = netTotal,
+            GrossDirectTotal = grossDirectTotal,
+            NetDirectTotal = netDirectTotal,
+            GrossFromToursTotal = grossFromToursTotal,
+            NetFromToursTotal = netFromToursTotal,
+            Daily = daily
+        };
+
+        static decimal AsRatio(decimal commission) => commission > 1m ? commission / 100m : commission;
+    }
+
     // public async Task<CraftVillageMediaResponse> UploadMediaAsync(
     //     Guid id,
     //     List<IFormFile>? imageUploads,
@@ -561,5 +701,28 @@ public class CraftVillageService : ICraftVillageService
             SizeInBytes = x.SizeInBytes,
             CreatedTime = x.CreatedTime
         }).ToList();
+    }
+
+    private decimal GetCommissionPercent(BookingType bookingType, DateTime applyDate)
+    {
+        var commissionType = bookingType switch
+        {
+            BookingType.TourGuide => CommissionType.TourGuideCommission,
+            BookingType.Workshop => CommissionType.CraftVillageCommission,
+            _ => throw CustomExceptionFactory.CreateNotFoundError("Commission type mapping")
+        };
+
+        var commissionRate = _unitOfWork.CommissionRateRepository
+            .ActiveEntities
+            .Where(c => c.Type == commissionType
+                     && c.EffectiveDate <= applyDate
+                     && (!c.ExpiryDate.HasValue || applyDate <= c.ExpiryDate))
+            .OrderByDescending(c => c.EffectiveDate)
+            .FirstOrDefault();
+
+        if (commissionRate == null)
+            throw CustomExceptionFactory.CreateNotFoundError("Commission rate");
+
+        return commissionRate.RateValue / 100m;
     }
 }
