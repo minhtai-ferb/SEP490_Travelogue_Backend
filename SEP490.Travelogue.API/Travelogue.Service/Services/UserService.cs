@@ -524,9 +524,9 @@ public class UserService : IUserService
             if (role.Name == AppRole.TOUR_GUIDE || role.Name == AppRole.CRAFT_VILLAGE_OWNER)
                 throw CustomExceptionFactory.CreateBadRequestError("Không được gán thủ công role này");
 
-            var isAdmin = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
-            if (isAdmin && role.Name == AppRole.MODERATOR)
-                throw CustomExceptionFactory.CreateBadRequestError("Bạn không được tự cấp quyền Moderator cho mình");
+            // var isAdmin = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
+            // if (isAdmin && role.Name == AppRole.MODERATOR)
+            //     throw CustomExceptionFactory.CreateBadRequestError("Bạn không được tự cấp quyền Moderator cho mình");
 
             // check user có role này chưa
             var userRoleExists = await _unitOfWork.UserRoleRepository.RoleExistsForUserAsync(userId, role.Id);
@@ -1775,6 +1775,7 @@ public class UserService : IUserService
                 user.VerificationTokenExpires = currentTime.AddYears(-1);
                 user.ResetTokenExpires = currentTime.AddYears(-1);
                 _unitOfWork.UserRepository.Update(user);
+                await _unitOfWork.SaveAsync();
             }
 
             _unitOfWork.TourGuideRequestRepository.Update(request);

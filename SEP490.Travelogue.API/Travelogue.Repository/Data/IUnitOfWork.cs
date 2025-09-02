@@ -57,6 +57,7 @@ public interface IUnitOfWork //: IDisposable
     IWorkshopTicketTypeRepository WorkshopTicketTypeRepository { get; }
     ITourPlanLocationWorkshopRepository TourPlanLocationWorkshopRepository { get; }
     ITourScheduleWorkshopRepository TourScheduleWorkshopRepository { get; }
+    IWorkshopTicketPriceUpdateRepository WorkshopTicketPriceUpdateRepository { get; }
 
     IGenericRepository<T> GetRepository<T>() where T : class, IBaseEntity;
     void Save();

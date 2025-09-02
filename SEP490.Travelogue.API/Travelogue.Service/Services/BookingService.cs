@@ -33,6 +33,15 @@ public interface IBookingService
     Task<bool> ProcessPaymentResponseAsync(PaymentResponse paymentResponse);
     Task<PaymentLinkInformation> GetPaymentLinkInformationAsync(long orderId);
     Task<bool> CancelBookingAsync(Guid bookingId);
+    Task<List<BookingDataModel>> GetBookingsByTourGuideAsync(
+        Guid tourGuideId,
+        BookingFilterDto filter,
+        CancellationToken cancellationToken = default);
+
+    Task<List<BookingDataModel>> GetBookingsByWorkshopAsync(
+        Guid workshopId,
+        BookingFilterDto filter,
+        CancellationToken cancellationToken = default);
 }
 
 public class BookingService : IBookingService
@@ -959,6 +968,7 @@ public class BookingService : IBookingService
                 CounterAccountNumber = paymentResponse.Data.CounterAccountNumber,
                 Currency = paymentResponse.Data.Currency,
                 PaymentLinkId = paymentResponse.Data.PaymentLinkId,
+                Status = TransactionStatus.Completed,
                 PaymentStatus = PaymentStatus.Success,
                 CreatedBy = currentUserId,
                 CreatedTime = currentTime,
@@ -974,25 +984,25 @@ public class BookingService : IBookingService
                 UserId = null,
                 WalletId = null,
                 AccountNumber = paymentResponse.Data.AccountNumber,
-                IsSystem = false,
+                IsSystem = true,
                 SystemKind = SystemTransactionKind.IncomingTourPayment,
                 Channel = PaymentChannel.Bank,
                 TransactionDirection = TransactionDirection.Debit,
                 PaidAmount = paymentResponse.Data.Amount,
                 PaymentReference = paymentResponse.Data.Reference,
+                Status = TransactionStatus.Completed,
+                PaymentStatus = PaymentStatus.Success,
                 TransactionDateTime = transactionDateTime,
                 CounterAccountBankId = paymentResponse.Data.CounterAccountBankId,
                 CounterAccountName = paymentResponse.Data.CounterAccountName,
                 CounterAccountNumber = paymentResponse.Data.CounterAccountNumber,
                 Currency = paymentResponse.Data.Currency,
                 PaymentLinkId = paymentResponse.Data.PaymentLinkId,
-                PaymentStatus = PaymentStatus.Success,
                 CreatedBy = currentUserId,
                 CreatedTime = currentTime,
                 LastUpdatedBy = currentUserId,
                 LastUpdatedTime = currentTime
             };
-
             await _unitOfWork.TransactionEntryRepository.AddAsync(systemTransaction);
             await _unitOfWork.SaveAsync();
 
@@ -1181,6 +1191,355 @@ public class BookingService : IBookingService
                 ContactAddress = b.ContactAddress,
                 ContactEmail = b.ContactEmail,
                 ContactPhone = b.ContactPhone,
+                Participants = b.Participants.Select(p => new BookingParticipantDataModel
+                {
+                    Id = p.Id,
+                    BookingId = p.BookingId,
+                    Type = p.Type,
+                    Quantity = 1,
+                    PricePerParticipant = p.PricePerParticipant,
+                    FullName = p.FullName,
+                    Gender = p.Gender,
+                    GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                    DateOfBirth = p.DateOfBirth
+                }).ToList()
+            }).ToList();
+
+            return result;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<BookingDataModel>> GetBookingsByTourGuideAsync(
+        Guid tourGuideId,
+        BookingFilterDto filter,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (tourGuideId == Guid.Empty)
+                throw CustomExceptionFactory.CreateBadRequestError("tourGuideId kh hợp lệ");
+
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            var isAdminOrMod = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
+            var isTourGuide = _userContextService.HasRole(AppRole.TOUR_GUIDE);
+
+            if (!isAdminOrMod && !isTourGuide)
+                throw CustomExceptionFactory.CreateForbiddenError();
+
+            if (isTourGuide && !isAdminOrMod)
+            {
+                var myGuide = await _unitOfWork.TourGuideRepository
+                    .ActiveEntities
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(g => g.UserId == currentUserId, cancellationToken);
+
+                if (myGuide == null || myGuide.Id != tourGuideId)
+                    throw CustomExceptionFactory.CreateForbiddenError();
+            }
+
+            var query = _unitOfWork.BookingRepository
+                .ActiveEntities
+                .Where(b => b.TourGuideId.HasValue && b.TourGuideId.Value == tourGuideId)
+                .Select(b => new
+                {
+                    b.Id,
+                    b.UserId,
+                    b.TourId,
+                    b.TourScheduleId,
+                    b.TourGuideId,
+                    b.TripPlanId,
+                    b.WorkshopId,
+                    b.WorkshopScheduleId,
+                    b.PaymentLinkId,
+                    b.PromotionId,
+                    b.Status,
+                    b.BookingType,
+                    b.BookingDate,
+                    b.StartDate,
+                    b.EndDate,
+                    b.CancelledAt,
+                    b.OriginalPrice,
+                    b.DiscountAmount,
+                    b.FinalPrice,
+                    b.ContactName,
+                    b.ContactAddress,
+                    b.ContactEmail,
+                    b.ContactPhone,
+
+                    UserName = b.User != null ? b.User.FullName : string.Empty,
+                    TourName = b.Tour != null ? b.Tour.Name : string.Empty,
+                    DepartureDate = b.TourSchedule != null
+                        ? (DateTime?)b.TourSchedule.DepartureDate
+                        : null,
+                    TourGuideName = (b.TourGuide != null && b.TourGuide.User != null)
+                        ? b.TourGuide.User.FullName
+                        : string.Empty,
+                    TripPlanName = b.TripPlan != null ? b.TripPlan.Name : string.Empty,
+                    WorkshopName = b.Workshop != null ? b.Workshop.Name : string.Empty,
+
+                    Participants = b.Participants.Select(p => new
+                    {
+                        p.Id,
+                        p.BookingId,
+                        p.Type,
+                        Quantity = 1,
+                        p.PricePerParticipant,
+                        p.FullName,
+                        p.Gender,
+                        p.DateOfBirth
+                    }).ToList()
+                });
+
+            if (filter.Status.HasValue)
+                query = query.Where(b => b.Status == filter.Status.Value);
+
+            if (filter.BookingType.HasValue)
+                query = query.Where(b => b.BookingType == filter.BookingType.Value);
+
+            if (filter.StartDate.HasValue && filter.EndDate.HasValue)
+            {
+                if (filter.StartDate > filter.EndDate)
+                    throw CustomExceptionFactory.CreateBadRequestError("Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.");
+
+                query = query.Where(b => b.BookingDate >= filter.StartDate.Value &&
+                                         b.BookingDate <= filter.EndDate.Value);
+            }
+            else if (filter.StartDate.HasValue)
+            {
+                query = query.Where(b => b.BookingDate >= filter.StartDate.Value);
+            }
+            else if (filter.EndDate.HasValue)
+            {
+                query = query.Where(b => b.BookingDate <= filter.EndDate.Value);
+            }
+
+            var bookings = await query
+                .OrderBy(b => b.BookingDate)
+                .ToListAsync(cancellationToken);
+
+            // Map sang BookingDataModel
+            var result = bookings.Select(b => new BookingDataModel
+            {
+                Id = b.Id,
+                UserId = b.UserId,
+                UserName = b.UserName,
+
+                TourId = b.TourId,
+                TourName = b.TourName,
+                TourScheduleId = b.TourScheduleId,
+                DepartureDate = b.DepartureDate,
+
+                TourGuideId = b.TourGuideId,
+                TourGuideName = b.TourGuideName,
+
+                TripPlanId = b.TripPlanId,
+                TripPlanName = b.TripPlanName,
+
+                WorkshopId = b.WorkshopId,
+                WorkshopName = b.WorkshopName,
+                WorkshopScheduleId = b.WorkshopScheduleId,
+
+                PaymentLinkId = b.PaymentLinkId,
+                PromotionId = b.PromotionId,
+
+                Status = b.Status,
+                StatusText = _enumService.GetEnumDisplayName<BookingStatus>(b.Status),
+
+                BookingType = b.BookingType,
+                BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(b.BookingType),
+
+                BookingDate = b.BookingDate,
+                StartDate = b.StartDate,
+                EndDate = b.EndDate,
+                CancelledAt = b.CancelledAt,
+
+                OriginalPrice = b.OriginalPrice,
+                DiscountAmount = b.DiscountAmount,
+                FinalPrice = b.FinalPrice,
+
+                ContactName = b.ContactName,
+                ContactAddress = b.ContactAddress,
+                ContactEmail = b.ContactEmail,
+                ContactPhone = b.ContactPhone,
+
+                Participants = b.Participants.Select(p => new BookingParticipantDataModel
+                {
+                    Id = p.Id,
+                    BookingId = p.BookingId,
+                    Type = p.Type,
+                    Quantity = 1,
+                    PricePerParticipant = p.PricePerParticipant,
+                    FullName = p.FullName,
+                    Gender = p.Gender,
+                    GenderText = _enumService.GetEnumDisplayName<Gender>(p.Gender),
+                    DateOfBirth = p.DateOfBirth
+                }).ToList()
+            }).ToList();
+
+            return result;
+        }
+        catch (CustomException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<BookingDataModel>> GetBookingsByWorkshopAsync(
+        Guid workshopId,
+        BookingFilterDto filter,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (workshopId == Guid.Empty)
+                throw CustomExceptionFactory.CreateBadRequestError("workshopId không hợp lệ");
+
+            var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
+
+            var isAdminOrMod = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
+            var isWorkshopOwner = _userContextService.HasAnyRole(AppRole.CRAFT_VILLAGE_OWNER);
+
+            if (!isAdminOrMod && !isWorkshopOwner)
+                throw CustomExceptionFactory.CreateForbiddenError();
+
+            var query = _unitOfWork.BookingRepository
+                .ActiveEntities
+                .AsNoTracking()
+                .Where(b => b.WorkshopId.HasValue && b.WorkshopId.Value == workshopId)
+                .Select(b => new
+                {
+                    b.Id,
+                    b.UserId,
+                    b.TourId,
+                    b.TourScheduleId,
+                    b.TourGuideId,
+                    b.TripPlanId,
+                    b.WorkshopId,
+                    b.WorkshopScheduleId,
+                    b.PaymentLinkId,
+                    b.PromotionId,
+                    b.Status,
+                    b.BookingType,
+                    b.BookingDate,
+                    b.StartDate,
+                    b.EndDate,
+                    b.CancelledAt,
+                    b.OriginalPrice,
+                    b.DiscountAmount,
+                    b.FinalPrice,
+                    b.ContactName,
+                    b.ContactAddress,
+                    b.ContactEmail,
+                    b.ContactPhone,
+
+                    UserName = b.User != null ? b.User.FullName : string.Empty,
+                    TourName = b.Tour != null ? b.Tour.Name : string.Empty,
+                    DepartureDate = b.TourSchedule != null
+                        ? (DateTime?)b.TourSchedule.DepartureDate
+                        : null,
+                    TourGuideName = (b.TourGuide != null && b.TourGuide.User != null)
+                        ? b.TourGuide.User.FullName
+                        : string.Empty,
+                    TripPlanName = b.TripPlan != null ? b.TripPlan.Name : string.Empty,
+                    WorkshopName = b.Workshop != null ? b.Workshop.Name : string.Empty,
+
+                    Participants = b.Participants.Select(p => new
+                    {
+                        p.Id,
+                        p.BookingId,
+                        p.Type,
+                        Quantity = 1,
+                        p.PricePerParticipant,
+                        p.FullName,
+                        p.Gender,
+                        p.DateOfBirth
+                    }).ToList()
+                });
+
+            if (filter.Status.HasValue)
+                query = query.Where(b => b.Status == filter.Status.Value);
+
+            if (filter.BookingType.HasValue)
+                query = query.Where(b => b.BookingType == filter.BookingType.Value);
+
+            if (filter.StartDate.HasValue && filter.EndDate.HasValue)
+            {
+                if (filter.StartDate > filter.EndDate)
+                    throw CustomExceptionFactory.CreateBadRequestError("Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.");
+
+                query = query.Where(b => b.BookingDate >= filter.StartDate.Value &&
+                                         b.BookingDate <= filter.EndDate.Value);
+            }
+            else if (filter.StartDate.HasValue)
+            {
+                query = query.Where(b => b.BookingDate >= filter.StartDate.Value);
+            }
+            else if (filter.EndDate.HasValue)
+            {
+                query = query.Where(b => b.BookingDate <= filter.EndDate.Value);
+            }
+
+            var bookings = await query
+                .OrderBy(b => b.BookingDate)
+                .ToListAsync(cancellationToken);
+
+            var result = bookings.Select(b => new BookingDataModel
+            {
+                Id = b.Id,
+                UserId = b.UserId,
+                UserName = b.UserName,
+
+                TourId = b.TourId,
+                TourName = b.TourName,
+                TourScheduleId = b.TourScheduleId,
+                DepartureDate = b.DepartureDate,
+
+                TourGuideId = b.TourGuideId,
+                TourGuideName = b.TourGuideName,
+
+                TripPlanId = b.TripPlanId,
+                TripPlanName = b.TripPlanName,
+
+                WorkshopId = b.WorkshopId,
+                WorkshopName = b.WorkshopName,
+                WorkshopScheduleId = b.WorkshopScheduleId,
+
+                PaymentLinkId = b.PaymentLinkId,
+                PromotionId = b.PromotionId,
+
+                Status = b.Status,
+                StatusText = _enumService.GetEnumDisplayName<BookingStatus>(b.Status),
+
+                BookingType = b.BookingType,
+                BookingTypeText = _enumService.GetEnumDisplayName<BookingType>(b.BookingType),
+
+                BookingDate = b.BookingDate,
+                StartDate = b.StartDate,
+                EndDate = b.EndDate,
+                CancelledAt = b.CancelledAt,
+
+                OriginalPrice = b.OriginalPrice,
+                DiscountAmount = b.DiscountAmount,
+                FinalPrice = b.FinalPrice,
+
+                ContactName = b.ContactName,
+                ContactAddress = b.ContactAddress,
+                ContactEmail = b.ContactEmail,
+                ContactPhone = b.ContactPhone,
+
                 Participants = b.Participants.Select(p => new BookingParticipantDataModel
                 {
                     Id = p.Id,

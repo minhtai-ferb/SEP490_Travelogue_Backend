@@ -313,36 +313,64 @@ public class NewsService : INewsService
         }
     }
 
-    public async Task<PagedResult<NewsDataModel>> GetPagedEventWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int? month, int? year, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<NewsDataModel>> GetPagedEventWithFilterAsync(
+    string? title, Guid? locationId, bool? isHighlighted, int? month, int? year,
+    int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
-            var allItems = await _unitOfWork.NewsRepository
+            var query = _unitOfWork.NewsRepository
                 .ActiveEntities
-                .Where(a => a.NewsCategory == NewsCategory.Event)
-                .ToListAsync(cancellationToken);
+                .AsNoTracking()
+                .Where(n => n.NewsCategory == NewsCategory.Event);
 
-            if (year.HasValue && month.HasValue && year.Value > 0 && month.Value > 0)
+            if (!string.IsNullOrWhiteSpace(title))
+                query = query.Where(n => n.Title.Contains(title));
+
+            if (locationId.HasValue)
+                query = query.Where(n => n.LocationId == locationId.Value);
+
+            if (isHighlighted.HasValue)
+                query = query.Where(n => n.IsHighlighted == isHighlighted.Value);
+
+            if ((year.HasValue && year.Value > 0) || (month.HasValue && month.Value > 0))
             {
-                allItems = allItems.Where(a =>
-                    a.StartDate.HasValue &&
-                    a.EndDate.HasValue &&
-                    a.StartDate.Value.Year == year.Value &&
-                    (a.StartDate.Value.Month == month.Value ||
-                     a.EndDate.Value.Month == month.Value)
-                ).ToList();
+                if (year.HasValue && year.Value > 0 && month.HasValue && month.Value > 0)
+                {
+                    var start = new DateTime(year.Value, month.Value, 1);
+                    var end = start.AddMonths(1);
+                    query = query.Where(n =>
+                        n.StartDate.HasValue && n.EndDate.HasValue &&
+                        n.StartDate.Value < end && n.EndDate.Value >= start);
+                }
+                else if (year.HasValue && year.Value > 0)
+                {
+                    var start = new DateTime(year.Value, 1, 1);
+                    var end = start.AddYears(1);
+                    query = query.Where(n =>
+                        n.StartDate.HasValue && n.EndDate.HasValue &&
+                        n.StartDate.Value < end && n.EndDate.Value >= start);
+                }
+                else if (month.HasValue && month.Value > 0)
+                {
+                    query = query.Where(n =>
+                        (n.StartDate.HasValue && n.StartDate.Value.Month == month.Value) ||
+                        (n.EndDate.HasValue && n.EndDate.Value.Month == month.Value));
+                }
             }
 
-            var totalCount = allItems.Count;
+            query = query.OrderByDescending(n => n.StartDate).ThenByDescending(n => n.CreatedTime);
 
-            var eventItems = allItems
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            var items = await query
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
-                .ToList();
+                .ToListAsync(cancellationToken);
 
-            var newsDataModels = _mapper.Map<List<NewsDataModel>>(eventItems);
+            var models = _mapper.Map<List<NewsDataModel>>(items);
 
-            foreach (var item in newsDataModels)
+            foreach (var item in models)
             {
                 item.Medias = await GetMediaByIdAsync(item.Id, cancellationToken);
 
@@ -356,36 +384,33 @@ public class NewsService : INewsService
                 item.TypeExperienceText = _enumService.GetEnumDisplayName<TypeExperience>(item.TypeExperience);
             }
 
-            var result = new PagedResult<NewsDataModel>
+            return new PagedResult<NewsDataModel>
             {
-                Items = newsDataModels,
-                TotalCount = eventItems.Count,
+                Items = models,
+                TotalCount = totalCount,
                 PageNumber = pageNumber,
                 PageSize = pageSize
             };
-
-            return result;
         }
-        catch (CustomException)
-        {
-            throw;
-        }
+        catch (CustomException) { throw; }
         catch (Exception ex)
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
-    public async Task<PagedResult<NewsDataModel>> GetPagedNewsWithFilterAsync(string? title, Guid? locationId, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<NewsDataModel>> GetPagedNewsWithFilterAsync(
+        string? title, Guid? locationId, bool? isHighlighted,
+        int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
-            var query = _unitOfWork.NewsRepository.ActiveEntities.AsQueryable();
+            var query = _unitOfWork.NewsRepository
+                .ActiveEntities
+                .AsNoTracking()
+                .Where(a => a.NewsCategory == NewsCategory.News);
 
-            // lọc
-            query = query.Where(a => a.NewsCategory == NewsCategory.News);
-
-            if (!string.IsNullOrEmpty(title))
+            if (!string.IsNullOrWhiteSpace(title))
                 query = query.Where(x => x.Title.Contains(title));
 
             if (locationId.HasValue)
@@ -394,6 +419,8 @@ public class NewsService : INewsService
             if (isHighlighted.HasValue)
                 query = query.Where(x => x.IsHighlighted == isHighlighted.Value);
 
+            query = query.OrderByDescending(n => n.CreatedTime).ThenByDescending(n => n.Id);
+
             var totalCount = await query.CountAsync(cancellationToken);
 
             var items = await query
@@ -401,9 +428,9 @@ public class NewsService : INewsService
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
 
-            var newsDataModels = _mapper.Map<List<NewsDataModel>>(items);
+            var models = _mapper.Map<List<NewsDataModel>>(items);
 
-            foreach (var item in newsDataModels)
+            foreach (var item in models)
             {
                 item.Medias = await GetMediaByIdAsync(item.Id, cancellationToken);
 
@@ -417,38 +444,36 @@ public class NewsService : INewsService
                 item.TypeExperienceText = _enumService.GetEnumDisplayName<TypeExperience>(item.TypeExperience);
             }
 
-            var result = new PagedResult<NewsDataModel>
+            return new PagedResult<NewsDataModel>
             {
-                Items = newsDataModels,
-                TotalCount = query.Count(),
+                Items = models,
+                TotalCount = totalCount,
                 PageNumber = pageNumber,
                 PageSize = pageSize
             };
-
-            return result;
         }
-        catch (CustomException)
-        {
-            throw;
-        }
+        catch (CustomException) { throw; }
         catch (Exception ex)
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
 
-    public async Task<PagedResult<NewsDataModel>> GetPagedExperienceWithFilterAsync(string? title, Guid? locationId, TypeExperience? typeExperience, Boolean? isHighlighted, int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<NewsDataModel>> GetPagedExperienceWithFilterAsync(
+        string? title, Guid? locationId, TypeExperience? typeExperience, bool? isHighlighted,
+        int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
         try
         {
-            var query = _unitOfWork.NewsRepository.ActiveEntities.AsQueryable();
-
-            query = query.Where(a => a.NewsCategory == NewsCategory.Experience);
+            var query = _unitOfWork.NewsRepository
+                .ActiveEntities
+                .AsNoTracking()
+                .Where(a => a.NewsCategory == NewsCategory.Experience);
 
             if (locationId.HasValue)
                 query = query.Where(a => a.LocationId == locationId.Value);
 
-            if (!string.IsNullOrEmpty(title))
+            if (!string.IsNullOrWhiteSpace(title))
                 query = query.Where(a => a.Title.Contains(title));
 
             if (isHighlighted.HasValue)
@@ -457,6 +482,8 @@ public class NewsService : INewsService
             if (typeExperience.HasValue)
                 query = query.Where(a => a.TypeExperience == typeExperience.Value);
 
+            query = query.OrderByDescending(n => n.CreatedTime).ThenByDescending(n => n.Id);
+
             var totalCount = await query.CountAsync(cancellationToken);
 
             var items = await query
@@ -464,9 +491,9 @@ public class NewsService : INewsService
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
 
-            var newsDataModels = _mapper.Map<List<NewsDataModel>>(items);
+            var models = _mapper.Map<List<NewsDataModel>>(items);
 
-            foreach (var item in newsDataModels)
+            foreach (var item in models)
             {
                 item.Medias = await GetMediaByIdAsync(item.Id, cancellationToken);
 
@@ -480,20 +507,15 @@ public class NewsService : INewsService
                 item.TypeExperienceText = _enumService.GetEnumDisplayName<TypeExperience>(item.TypeExperience);
             }
 
-            var result = new PagedResult<NewsDataModel>
+            return new PagedResult<NewsDataModel>
             {
-                Items = newsDataModels,
-                TotalCount = query.Count(),
+                Items = models,
+                TotalCount = totalCount,
                 PageNumber = pageNumber,
                 PageSize = pageSize
             };
-
-            return result;
         }
-        catch (CustomException)
-        {
-            throw;
-        }
+        catch (CustomException) { throw; }
         catch (Exception ex)
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);

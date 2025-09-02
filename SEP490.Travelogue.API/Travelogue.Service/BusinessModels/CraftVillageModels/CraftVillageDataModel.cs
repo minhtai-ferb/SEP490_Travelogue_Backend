@@ -5,6 +5,7 @@ namespace Travelogue.Service.BusinessModels.CraftVillageModels;
 
 public class CraftVillageDataModel // : BaseDataModel
 {
+
     // public Guid CraftVillageId { get; set; }
     // public string Name { get; set; } = string.Empty;
     // public string? Description { get; set; }

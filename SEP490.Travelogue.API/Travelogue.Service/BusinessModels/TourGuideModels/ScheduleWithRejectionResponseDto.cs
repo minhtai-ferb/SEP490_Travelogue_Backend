@@ -5,10 +5,12 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Travelogue.Service.BusinessModels.TourGuideModels;
+
 public class ScheduleWithRejectionResponseDto
 {
     public Guid Id { get; set; }
     public Guid TourGuideId { get; set; }
+    public Guid? TourId { get; set; }
     public Guid? TourScheduleId { get; set; }
     public Guid? BookingId { get; set; }
     public DateTimeOffset Date { get; set; }

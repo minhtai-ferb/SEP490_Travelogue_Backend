@@ -4,6 +4,7 @@ namespace Travelogue.Service.BusinessModels.TourGuideModels;
 
 public class BookingPriceRequestResponseDto
 {
+    public Guid Id { get; set; }
     public Guid TourGuideId { get; set; }
     public decimal Price { get; set; }
 

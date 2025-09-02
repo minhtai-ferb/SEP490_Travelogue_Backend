@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Travelogue.Repository.Data;
 
@@ -11,9 +12,11 @@ using Travelogue.Repository.Data;
 namespace Travelogue.Repository.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250902213357_UpdateWorkshopPrice")]
+    partial class UpdateWorkshopPrice
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -676,27 +679,27 @@ namespace Travelogue.Repository.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("90e1106e-4014-4388-b754-35da0cd33741"),
+                            Id = new Guid("64922192-6816-4c7c-bd55-6ba7e7536233"),
                             CreatedBy = "System",
-                            CreatedTime = new DateTimeOffset(new DateTime(2025, 9, 2, 21, 48, 22, 416, DateTimeKind.Unspecified).AddTicks(1815), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedTime = new DateTimeOffset(new DateTime(2025, 9, 2, 21, 33, 50, 307, DateTimeKind.Unspecified).AddTicks(7915), new TimeSpan(0, 0, 0, 0, 0)),
                             EffectiveDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             IsActive = true,
                             IsDeleted = false,
                             LastUpdatedBy = "System",
-                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 9, 2, 21, 48, 22, 416, DateTimeKind.Unspecified).AddTicks(1824), new TimeSpan(0, 0, 0, 0, 0)),
+                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 9, 2, 21, 33, 50, 307, DateTimeKind.Unspecified).AddTicks(7936), new TimeSpan(0, 0, 0, 0, 0)),
                             RateValue = 5m,
                             Type = 1
                         },
                         new
                         {
-                            Id = new Guid("c78b42b6-ff36-471f-b519-927c4218c3f8"),
+                            Id = new Guid("be6ed906-935c-47ad-ab11-a0bfb6946929"),
                             CreatedBy = "System",
-                            CreatedTime = new DateTimeOffset(new DateTime(2025, 9, 2, 21, 48, 22, 416, DateTimeKind.Unspecified).AddTicks(1834), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedTime = new DateTimeOffset(new DateTime(2025, 9, 2, 21, 33, 50, 307, DateTimeKind.Unspecified).AddTicks(7961), new TimeSpan(0, 0, 0, 0, 0)),
                             EffectiveDate = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             IsActive = true,
                             IsDeleted = false,
                             LastUpdatedBy = "System",
-                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 9, 2, 21, 48, 22, 416, DateTimeKind.Unspecified).AddTicks(1835), new TimeSpan(0, 0, 0, 0, 0)),
+                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 9, 2, 21, 33, 50, 307, DateTimeKind.Unspecified).AddTicks(7963), new TimeSpan(0, 0, 0, 0, 0)),
                             RateValue = 3m,
                             Type = 2
                         });
@@ -2434,12 +2437,12 @@ namespace Travelogue.Repository.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("349286b7-9619-46b8-87f1-64d41bc45622"),
-                            CreatedTime = new DateTimeOffset(new DateTime(2025, 9, 3, 4, 48, 22, 416, DateTimeKind.Unspecified).AddTicks(1306), new TimeSpan(0, 7, 0, 0, 0)),
+                            Id = new Guid("afd87827-5fef-4cb1-9276-54451f3ab28d"),
+                            CreatedTime = new DateTimeOffset(new DateTime(2025, 9, 3, 4, 33, 50, 307, DateTimeKind.Unspecified).AddTicks(1425), new TimeSpan(0, 7, 0, 0, 0)),
                             IsActive = true,
                             IsDeleted = false,
                             Key = 1,
-                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 9, 3, 4, 48, 22, 416, DateTimeKind.Unspecified).AddTicks(1405), new TimeSpan(0, 7, 0, 0, 0)),
+                            LastUpdatedTime = new DateTimeOffset(new DateTime(2025, 9, 3, 4, 33, 50, 307, DateTimeKind.Unspecified).AddTicks(5741), new TimeSpan(0, 7, 0, 0, 0)),
                             Unit = "%",
                             Value = "10"
                         });
@@ -4753,90 +4756,6 @@ namespace Travelogue.Repository.Migrations
                     b.HasIndex("RecurringRuleId");
 
                     b.ToTable("workshop_session_rules");
-                });
-
-            modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopTicketPriceUpdate", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("CreatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_time");
-
-                    b.Property<DateTimeOffset?>("DecidedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("decided_at");
-
-                    b.Property<Guid?>("DecidedBy")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("decided_by");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<DateTimeOffset?>("DeletedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("deleted_time");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("LastUpdatedBy")
-                        .HasColumnType("longtext")
-                        .HasColumnName("last_updated_by");
-
-                    b.Property<DateTimeOffset>("LastUpdatedTime")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_updated_time");
-
-                    b.Property<string>("ModeratorNote")
-                        .HasColumnType("longtext")
-                        .HasColumnName("moderator_note");
-
-                    b.Property<decimal>("NewPrice")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("new_price");
-
-                    b.Property<decimal>("OldPrice")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("old_price");
-
-                    b.Property<string>("RequestReason")
-                        .HasColumnType("longtext")
-                        .HasColumnName("request_reason");
-
-                    b.Property<Guid>("RequestedBy")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("requested_by");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int")
-                        .HasColumnName("status");
-
-                    b.Property<Guid>("TicketTypeId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("ticket_type_id");
-
-                    b.Property<Guid>("WorkshopId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("workshop_id");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("workshop_ticket_price_updates");
                 });
 
             modelBuilder.Entity("Travelogue.Repository.Entities.WorkshopTicketType", b =>

@@ -407,7 +407,7 @@ public class WalletService : IWalletService
                 TransactionDirection = TransactionDirection.Debit,
                 Status = TransactionStatus.Completed,
                 PaymentStatus = PaymentStatus.Success,
-                Description = $"Hệ thống chi tiền cho yêu cầu rút {request.Id} của user {request.Wallet.User.FullName}",
+                Description = $"Hệ thống chi tiền cho yêu cầu rút {request.Id} của user",
                 Method = "BankTransfer",
                 TransactionDateTime = currentTime.UtcDateTime,
                 Currency = "VND"

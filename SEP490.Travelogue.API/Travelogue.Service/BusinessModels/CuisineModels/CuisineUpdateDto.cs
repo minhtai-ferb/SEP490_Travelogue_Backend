@@ -11,6 +11,9 @@ public class CuisineUpdateDto
     public string? Content { get; set; }
     public string? Address { get; set; }
 
+    public double MinPrice { get; set; } = 0;
+    public double MaxPrice { get; set; } = 0;
+
     [Range(-90, 90)]
     public double Latitude { get; set; }
 
