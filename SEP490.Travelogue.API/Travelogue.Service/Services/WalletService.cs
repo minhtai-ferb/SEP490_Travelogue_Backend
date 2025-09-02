@@ -22,6 +22,7 @@ public interface IWalletService
     Task RejectAsync(Guid requestId, string reason);
     Task<List<TransactionDto>> GetTransactionsByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<List<TransactionDto>> GetAllTransactionsAsync(CancellationToken cancellationToken = default);
+    Task<List<TransactionDto>> GetTopSystemTransactionsAsync(int top = 5, CancellationToken cancellationToken = default);
 }
 
 public class WalletService : IWalletService
@@ -455,6 +456,32 @@ public class WalletService : IWalletService
         {
             throw;
         }
+        catch (Exception ex)
+        {
+            throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
+        }
+    }
+
+    public async Task<List<TransactionDto>> GetTopSystemTransactionsAsync(
+        int top = 5,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (!_userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR))
+                throw CustomExceptionFactory.CreateForbiddenError();
+
+            var transactions = await _unitOfWork.TransactionEntryRepository
+                .ActiveEntities
+                .AsNoTracking()
+                .Where(t => t.IsSystem)
+                .OrderByDescending(t => t.CreatedTime)
+                .Take(top)
+                .ToListAsync(cancellationToken);
+
+            return transactions.Select(MapTransactionToDto).ToList();
+        }
+        catch (CustomException) { throw; }
         catch (Exception ex)
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);

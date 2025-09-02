@@ -7,6 +7,7 @@ using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
+using Travelogue.Service.BusinessModels.DashboardModels;
 using Travelogue.Service.BusinessModels.ReviewModels;
 using Travelogue.Service.BusinessModels.TourGuideModels;
 using Travelogue.Service.Commons.Implementations;
@@ -36,6 +37,8 @@ public interface ITourGuideService
     Task<PagedResult<RejectionRequestResponseDto>> GetRejectionRequestsForAdminAsync(RejectionRequestFilter? filter, int pageNumber, int pageSize);
     Task<RejectionRequestResponseDto> GetRejectionRequestByIdAsync(Guid requestId);
     Task<ScheduleWithRejectionResponseDto> GetShedulesById(Guid tourGuideSchedulesId, CancellationToken cancellationToken);
+    Task<TourGuideDashboardDto> GetTourGuideDashboardAsync(
+            Guid tourGuideId, DateTime fromDate, DateTime toDate, CancellationToken ct = default);
 }
 
 public class TourGuideService : ITourGuideService
@@ -1388,5 +1391,147 @@ public class TourGuideService : ITourGuideService
         {
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
+    }
+
+    public async Task<TourGuideDashboardDto> GetTourGuideDashboardAsync(
+        Guid tourGuideId, DateTime fromDate, DateTime toDate, CancellationToken ct = default)
+    {
+        if (fromDate > toDate)
+            throw CustomExceptionFactory.CreateBadRequestError("fromDate phải <= toDate.");
+
+        var start = fromDate.Date;
+        var end = toDate.Date.AddDays(1).AddTicks(-1);
+
+        var guideExists = await _unitOfWork.TourGuideRepository
+            .ActiveEntities
+            .AsNoTracking()
+            .AnyAsync(g => g.Id == tourGuideId, ct);
+
+        if (!guideExists)
+            throw CustomExceptionFactory.CreateNotFoundError("TourGuide");
+
+        var allDates = Enumerable.Range(0, (toDate.Date - fromDate.Date).Days + 1)
+                                 .Select(d => fromDate.Date.AddDays(d))
+                                 .ToList();
+
+        // Booking TourGuide
+        var directGrossQuery = _unitOfWork.BookingRepository.ActiveEntities
+            .AsNoTracking()
+            .Where(b => b.BookingType == BookingType.TourGuide
+                        && b.TourGuideId == tourGuideId
+                        && b.StartDate >= start
+                        && b.StartDate <= end
+                        && (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed));
+
+        var directNetQuery = _unitOfWork.BookingRepository.ActiveEntities
+            .AsNoTracking()
+            .Where(b => b.BookingType == BookingType.TourGuide
+                        && b.TourGuideId == tourGuideId
+                        && b.StartDate >= start
+                        && b.StartDate <= end
+                        && b.Status == BookingStatus.Completed);
+
+        var directGrossList = await directGrossQuery
+            .Select(b => new { b.StartDate, b.FinalPrice, b.BookingDate })
+            .ToListAsync(ct);
+
+        var directNetList = await directNetQuery
+            .Select(b => new { b.StartDate, b.FinalPrice, b.BookingDate })
+            .ToListAsync(ct);
+
+        // GROSS  = Confirmed + Completed
+        var directGrossByDay = directGrossList
+            .GroupBy(x => x.StartDate.Date)
+            .Select(g => new
+            {
+                Date = g.Key,
+                Revenue = g.Sum(x => x.FinalPrice),
+                Count = g.Count()
+            })
+            .ToDictionary(k => k.Date, v => new { v.Revenue, v.Count });
+
+        // NET = Completed / FinalPrice * (1 - commission)
+        var directNetByDay = directNetList
+            .GroupBy(x => x.StartDate.Date)
+            .Select(g => new
+            {
+                Date = g.Key,
+                Net = g.Sum(x => x.FinalPrice * (1 - GetCommissionPercent(BookingType.TourGuide, x.BookingDate.DateTime)))
+            })
+            .ToDictionary(k => k.Date, v => v.Net);
+
+        var guideScheduleIds = await _unitOfWork.TourGuideScheduleRepository.ActiveEntities
+            .AsNoTracking()
+            .Where(s => s.TourGuideId == tourGuideId && !s.IsDeleted && s.TourScheduleId != null)
+            .Select(s => s.TourScheduleId!.Value)
+            .Distinct()
+            .ToListAsync(ct);
+
+        var fromToursList = await _unitOfWork.BookingRepository.ActiveEntities
+            .AsNoTracking()
+            .Where(b => b.BookingType == BookingType.Tour
+                        && b.TourScheduleId != null
+                        && guideScheduleIds.Contains(b.TourScheduleId!.Value)
+                        && b.StartDate >= start
+                        && b.StartDate <= end
+                        && (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed))
+            .Select(b => new { b.StartDate })
+            .ToListAsync(ct);
+
+        var fromToursByDay = fromToursList
+            .GroupBy(x => x.StartDate.Date)
+            .Select(g => new { Date = g.Key, Count = g.Count() })
+            .ToDictionary(k => k.Date, v => v.Count);
+
+        // thong ke theo ngay
+        var daily = new List<TourGuideDailyStatDto>();
+
+        foreach (var d in allDates)
+        {
+            var dirGross = directGrossByDay.TryGetValue(d, out var dg) ? dg.Revenue : 0m;
+            var dirCount = directGrossByDay.TryGetValue(d, out var dg2) ? dg2.Count : 0;
+            var dirNet = directNetByDay.TryGetValue(d, out var dn) ? dn : 0m;
+            var fromTourCount = fromToursByDay.TryGetValue(d, out var ft) ? ft : 0;
+
+            daily.Add(new TourGuideDailyStatDto
+            {
+                Date = d,
+                RevenueDirectGross = dirGross,
+                RevenueDirectNet = dirNet,
+                BookingsDirect = dirCount,
+                BookingsFromTours = fromTourCount,
+                BookingsAll = dirCount + fromTourCount
+            });
+        }
+
+        var dashboard = new TourGuideDashboardDto
+        {
+            TourGuideId = tourGuideId,
+            FromDate = fromDate.Date,
+            ToDate = toDate.Date,
+
+            GrossRevenueDirect = daily.Sum(x => x.RevenueDirectGross),
+            NetRevenueDirect = daily.Sum(x => x.RevenueDirectNet),
+
+            BookingsDirectCount = daily.Sum(x => x.BookingsDirect),
+            BookingsFromToursCount = daily.Sum(x => x.BookingsFromTours),
+            BookingsAllCount = daily.Sum(x => x.BookingsAll),
+
+            DailyStats = daily.OrderBy(d => d.Date).ToList()
+        };
+
+        return dashboard;
+    }
+
+
+
+    private decimal GetCommissionPercent(BookingType type, DateTime at)
+    {
+        return type switch
+        {
+            BookingType.TourGuide => 0.20m,
+            BookingType.Workshop => 0.10m,
+            _ => 0m
+        };
     }
 }

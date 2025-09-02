@@ -4,7 +4,7 @@ using Travelogue.Service.BusinessModels.WorkshopModels;
 
 namespace Travelogue.Service.BusinessModels.CraftVillageModels;
 
-public class CraftVillageRequestResponseDto
+public class CraftVillageRequestResponseDto : BaseDataModel
 {
     public Guid Id { get; set; }
     public Guid OwnerId { get; set; }

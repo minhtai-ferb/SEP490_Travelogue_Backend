@@ -184,4 +184,14 @@ public class TourGuideController : ControllerBase
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
         ));
     }
+
+    [HttpGet("dashboard")]
+    public async Task<IActionResult> GetTourGuideDashboardAsync(Guid tourGuideId, DateTime fromDate, DateTime toDate, CancellationToken ct = default)
+    {
+        var result = await _tourGuideService.GetTourGuideDashboardAsync(tourGuideId, fromDate, toDate, ct);
+        return Ok(ResponseModel<object>.OkResponseModel(
+            data: result,
+            message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
+        ));
+    }
 }
