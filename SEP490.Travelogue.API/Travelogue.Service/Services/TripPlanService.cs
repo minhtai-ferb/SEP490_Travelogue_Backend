@@ -295,7 +295,6 @@ public class TripPlanService : ITripPlanService
         }
     }
 
-
     public async Task<TripPlanDetailResponseDto?> GetTripPlanByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         try
@@ -580,7 +579,6 @@ public class TripPlanService : ITripPlanService
             }
 
             await UpdateTripPlanLocationsAsync(tripPlan, tripPlanUpdateModel.Locations);
-
 
             _mapper.Map(tripPlanUpdateModel, tripPlan);
 

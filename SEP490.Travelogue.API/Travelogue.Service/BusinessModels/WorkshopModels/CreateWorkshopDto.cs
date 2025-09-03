@@ -1,4 +1,3 @@
-using Travelogue.Repository.Entities;
 using Travelogue.Service.BusinessModels.MediaModel;
 
 namespace Travelogue.Service.BusinessModels.WorkshopModels;

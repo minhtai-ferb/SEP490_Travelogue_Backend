@@ -983,7 +983,7 @@ public class TourService : ITourService
             tour.IsDeleted = true;
             _unitOfWork.TourRepository.Update(tour);
             await _unitOfWork.SaveAsync();
-
+            await transaction.CommitAsync();
             return true;
         }
         catch (CustomException)
@@ -3018,7 +3018,6 @@ public class TourService : ITourService
 
         return resolved.Value;
     }
-
 
     private static (DateTime Start, DateTime End) ComputePlanWindow(
     DateTime departureDate, int dayOrder, TimeSpan start, TimeSpan end)

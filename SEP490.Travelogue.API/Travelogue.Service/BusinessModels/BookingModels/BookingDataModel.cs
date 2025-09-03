@@ -1,4 +1,3 @@
-using Newtonsoft.Json;
 using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Service.BusinessModels.BookingModels;

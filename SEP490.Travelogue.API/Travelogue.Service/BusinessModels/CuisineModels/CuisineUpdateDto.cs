@@ -23,7 +23,6 @@ public class CuisineUpdateDto
     public TimeSpan? CloseTime { get; set; }
     public Guid? DistrictId { get; set; }
 
-
     // Cuisine properties
     public string? CuisineType { get; set; } // Loại âm thực 
     public string? PhoneNumber { get; set; }

@@ -113,7 +113,7 @@ public sealed class NewsRepository : GenericRepository<News>, INewsRepository
         };
     }
 
-    public async Task<PagedResult<News>> GetPageWithSearchAsync(string? title, Guid? locationId, Boolean? isHighlighted, TypeExperience? typeExperience, int pageNumber, int pageSize, CancellationToken cancellationToken = default) 
+    public async Task<PagedResult<News>> GetPageWithSearchAsync(string? title, Guid? locationId, Boolean? isHighlighted, TypeExperience? typeExperience, int pageNumber, int pageSize, CancellationToken cancellationToken = default)
     {
         if (pageNumber < 1 || pageSize < 1)
         {

@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using System.Threading;
 using Travelogue.Repository.Bases.Responses;
-using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.ReportModels;
 using Travelogue.Service.Commons.BaseResponses;
@@ -158,7 +156,6 @@ public class ReportController : ControllerBase
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.GET_SUCCESS, "reviews with reports")
         ));
     }
-
 
     /// <summary>
     /// Admin/Moderator xử lý một báo cáo: phê duyệt hoặc từ chối.

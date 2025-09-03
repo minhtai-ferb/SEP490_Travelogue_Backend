@@ -4,7 +4,6 @@ using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
-using Travelogue.Service.BusinessModels.BookingModels;
 using Travelogue.Service.BusinessModels.RefundRequestModels;
 using Travelogue.Service.Commons.Interfaces;
 
@@ -313,7 +312,6 @@ public class RefundRequestService : IRefundRequestService
             var query = _unitOfWork.RefundRequestRepository.ActiveEntities
                 .Include(r => r.User)
                 .AsQueryable();
-
 
             if (filter.FromDate.HasValue)
                 query = query.Where(r => r.CreatedTime >= filter.FromDate.Value);

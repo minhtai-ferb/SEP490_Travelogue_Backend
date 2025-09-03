@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Travelogue.Service.Commons.Interfaces;
-using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Repository.Bases.Responses;
+using Travelogue.Service.Commons.BaseResponses;
+using Travelogue.Service.Commons.Interfaces;
 
 namespace Travelogue.API.Controllers;
 

@@ -1,7 +1,4 @@
 using AutoMapper;
-using Travelogue.Repository.Entities;
-using Travelogue.Service.BusinessModels.DistrictModels;
-using Travelogue.Service.BusinessModels.WorkshopModels;
 
 namespace Travelogue.Service.Commons.Mappers;
 

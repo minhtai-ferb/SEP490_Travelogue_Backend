@@ -1,5 +1,4 @@
 
-
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
@@ -555,7 +554,6 @@ public class DashboardService : IDashboardService
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
-
 
     public async Task<BookingStatisticResponse> GetBookingStatisticsAsync(DateTime fromDate, DateTime toDate)
     {

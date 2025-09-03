@@ -10,7 +10,7 @@ public sealed class WorkshopTicketType : BaseEntity
     public Guid WorkshopId { get; set; }
     public Workshop Workshop { get; set; } = null!;
 
-    public TicketType Type { get; set; } = TicketType.Visit; 
+    public TicketType Type { get; set; } = TicketType.Visit;
 
     [Required, MaxLength(100)]
     public string Name { get; set; } = string.Empty;

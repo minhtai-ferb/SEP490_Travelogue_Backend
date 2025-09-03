@@ -1,6 +1,5 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
-using System.Threading;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Const;
@@ -666,8 +665,8 @@ public class TourGuideService : ITourGuideService
     }
 
     public async Task<List<BookingPriceRequestListItemDto>> GetGuidePriceRequestsForModeratorAsync(
-    Guid? tourGuideId, BookingPriceRequestStatus? status,
-    DateTime? fromDate, DateTime? toDate, string? keyword, CancellationToken ct = default)
+        Guid? tourGuideId, BookingPriceRequestStatus? status,
+        DateTime? fromDate, DateTime? toDate, string? tourGuideName, CancellationToken ct = default)
     {
         if (!_userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR))
             throw CustomExceptionFactory.CreateForbiddenError();
@@ -675,14 +674,12 @@ public class TourGuideService : ITourGuideService
         DateTime? from = fromDate?.Date;
         DateTime? to = toDate?.Date.AddDays(1).AddTicks(-1);
 
-        // Chỉ dùng 1 UnitOfWork, start từ BookingPriceRequestRepository
         IQueryable<BookingPriceRequest> query = _unitOfWork.BookingPriceRequestRepository
             .ActiveEntities
             .AsNoTracking()
             .Include(r => r.TourGuide)
-                .ThenInclude(g => g.User); // để lọc/search theo tên hướng dẫn viên
+                .ThenInclude(g => g.User);
 
-        // --- Filters (có gì lọc nấy) ---
         if (tourGuideId.HasValue)
             query = query.Where(r => r.TourGuideId == tourGuideId.Value);
 
@@ -695,17 +692,15 @@ public class TourGuideService : ITourGuideService
         if (to.HasValue)
             query = query.Where(r => r.CreatedTime <= to.Value);
 
-        if (!string.IsNullOrWhiteSpace(keyword))
+        if (!string.IsNullOrWhiteSpace(tourGuideName))
         {
-            var kw = keyword.Trim();
-            // tìm theo tên user của TourGuide (đã Include)
+            var kw = tourGuideName.Trim();
             query = query.Where(r =>
                 r.TourGuide != null &&
                 r.TourGuide.User != null &&
                 EF.Functions.Like(r.TourGuide.User.FullName, $"%{kw}%"));
         }
 
-        // Project lần 1: chỉ dữ liệu thuần (EF dịch được)
         var rows = await query
             .OrderByDescending(r => r.CreatedTime)
             .Select(r => new
@@ -729,7 +724,6 @@ public class TourGuideService : ITourGuideService
             })
             .ToListAsync(ct);
 
-        // Map lần 2 ở bộ nhớ: gọi _enumService an toàn
         var items = rows.Select(x => new BookingPriceRequestListItemDto
         {
             Id = x.Id,
@@ -796,7 +790,6 @@ public class TourGuideService : ITourGuideService
 
         return items;
     }
-
 
     public async Task<RejectionRequestResponseDto> CreateRejectionRequestAsync(RejectionRequestCreateDto dto)
     {
@@ -1242,7 +1235,6 @@ public class TourGuideService : ITourGuideService
         }
     }
 
-
     public async Task<CertificationDto> SoftDeleteCertificationAsync(Guid certificationId, CancellationToken cancellationToken)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
@@ -1354,6 +1346,7 @@ public class TourGuideService : ITourGuideService
                     TourGuideId = item.TourGuideId,
                     RequestType = item.RequestType,
                     TourScheduleId = item.TourScheduleId,
+                    TourId = item.TourSchedule?.TourId,
                     BookingId = item.BookingId,
                     Reason = item.Reason,
                     Status = item.Status,
@@ -1414,6 +1407,7 @@ public class TourGuideService : ITourGuideService
                 TourGuideId = request.TourGuideId,
                 RequestType = request.RequestType,
                 TourScheduleId = request.TourScheduleId,
+                TourId = request.TourSchedule?.TourId,
                 BookingId = request.BookingId,
                 Reason = request.Reason,
                 Status = request.Status,
@@ -1659,8 +1653,6 @@ public class TourGuideService : ITourGuideService
 
         return dashboard;
     }
-
-
 
     private decimal GetCommissionPercent(BookingType type, DateTime at)
     {

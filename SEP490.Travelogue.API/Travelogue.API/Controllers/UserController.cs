@@ -118,7 +118,6 @@ public class UserController : ControllerBase
         ));
     }
 
-
     [HttpPatch("enable-user-role/{userId}/{roleId}")]
     public async Task<IActionResult> EnableUserRoleAsync(Guid userId, Guid roleId, CancellationToken ct = default)
     {
@@ -138,7 +137,6 @@ public class UserController : ControllerBase
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.SUCCESS)
         ));
     }
-
 
     ///// <summary>
     ///// Upload ảnh lên Cloudinary --> link ảnh cho api sau
