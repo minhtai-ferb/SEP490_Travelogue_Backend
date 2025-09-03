@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using System.Text;
 using AutoMapper;
+using Azure.Core;
 using FirebaseAdmin.Auth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -351,7 +352,23 @@ public class AuthService : IAuthService
                 throw CustomExceptionFactory.CreateBadRequestError("Tài khoản đã được xác thực trước đó.");
             }
 
+            var roles = await _unitOfWork.UserRepository.GetRolesAsync(user);
+            if (roles == null)
+            {
+                throw new CustomException(StatusCodes.Status403Forbidden, ResponseCodeConstants.UNAUTHORIZED, "User has no assigned role");
+            }
+
+            var roleNames = roles.Select(r => r.Name).ToList();
+
+            var accessToken = GenerateJwtToken(user.Id, roleNames, isRefreshToken: false);
+            var refreshToken = GenerateJwtToken(user.Id, roleNames, isRefreshToken: true);
+
+
             user.IsEmailVerified = true;
+            user.VerificationToken = accessToken;
+            user.ResetToken = refreshToken;
+            user.VerificationTokenExpires = _timeService.SystemTimeNow.AddDays(_exAccessToken);
+            user.ResetTokenExpires = _timeService.SystemTimeNow.AddDays(_exRefreshToken);
             await _unitOfWork.UserRepository.UpdateAsync(user);
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync();
@@ -891,6 +908,11 @@ public class AuthService : IAuthService
             if (roles == null)
             {
                 throw new CustomException(StatusCodes.Status403Forbidden, ResponseCodeConstants.UNAUTHORIZED, "User has no assigned role");
+            }
+
+            if (!user.IsEmailVerified ?? false)
+            {
+                user.IsEmailVerified = true;
             }
 
             var roleNames = roles.Select(r => r.Name).ToList();
