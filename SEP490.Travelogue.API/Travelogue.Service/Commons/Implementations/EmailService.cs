@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Mail;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -21,8 +22,9 @@ public class EmailService : IEmailService
     private readonly string _senderEmail;
     private readonly ILogger<EmailService> _logger;
     private readonly HttpClient _httpClient;
+    private readonly IWebHostEnvironment _env;
 
-    public EmailService(IConfiguration configuration, ILogger<EmailService> logger, HttpClient httpClient)
+    public EmailService(IConfiguration configuration, ILogger<EmailService> logger, HttpClient httpClient, IWebHostEnvironment env)
     {
         _senderEmail = configuration["EmailSettings:Sender"]
             ?? throw new CustomException(StatusCodes.Status404NotFound, ResponseCodeConstants.NOT_FOUND, "Email Sender is not configured.");
@@ -40,6 +42,7 @@ public class EmailService : IEmailService
 
         _logger = logger;
         _httpClient = httpClient;
+        _env = env;
     }
 
     public async Task<bool> SendEmailAsync(IEnumerable<string> toList, string subject, string body)
@@ -65,7 +68,7 @@ public class EmailService : IEmailService
     {
         try
         {
-            var mailTemplateService = new MailTemplateService(_httpClient);
+            var mailTemplateService = new MailTemplateService(_httpClient, _env);
             var templateContent = await mailTemplateService.GetTemplateContentAsync(templateUrl);
 
             var body = RenderTemplate(templateContent, model);
