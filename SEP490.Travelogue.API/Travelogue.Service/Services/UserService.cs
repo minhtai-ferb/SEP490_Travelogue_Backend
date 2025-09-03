@@ -528,6 +528,9 @@ public class UserService : IUserService
             // if (isAdmin && role.Name == AppRole.MODERATOR)
             //     throw CustomExceptionFactory.CreateBadRequestError("Bạn không được tự cấp quyền Moderator cho mình");
 
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId, cancellationToken)
+                ?? throw CustomExceptionFactory.CreateNotFoundError("user");
+
             // check user có role này chưa
             var userRoleExists = await _unitOfWork.UserRoleRepository.RoleExistsForUserAsync(userId, role.Id);
             if (userRoleExists)
@@ -535,6 +538,13 @@ public class UserService : IUserService
                 throw CustomExceptionFactory.CreateBadRequestError("Người dùng đã có vai trò này");
             }
             var result = await _unitOfWork.UserRoleRepository.AddRolesToUser(userId, new List<Guid> { role.Id });
+
+            user.ResetToken = string.Empty;
+            user.ResetTokenExpires = DateTimeOffset.Now.AddYears(-1);
+            user.VerificationToken = string.Empty;
+            user.VerificationTokenExpires = DateTimeOffset.Now.AddYears(-1);
+
+            _unitOfWork.UserRepository.Update(user);
 
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync(cancellationToken);
@@ -765,11 +775,23 @@ public class UserService : IUserService
                 Message = model.Message
             };
 
+            string? actionLink = null;
+            string? ActionButtonText = null;
+
+            var templateModel = new
+            {
+                Subject = $"Đóng góp ý kiến từ người dùng {user.Email}",
+                UserName = user.FullName ?? "Traveler",
+                MainMessage = "Cảm ơn bạn đã gửi phản hồi đến Travelogue! Chúng tôi rất trân trọng ý kiến của bạn.",
+                Details = $"Email: {model.Email}\nNội dung: {model.Message}",
+                ActionButtonHtml = BuildActionButtonHtml(actionLink, ActionButtonText)
+            };
+
             var resultSendMail = await _emailService.SendEmailWithTemplateAsync(
                 selectedEmail,
-                $"Đóng góp ý kiến từ người dùng {user.Email}",
-                MailTemplateLinks.SendFeedbackTemplate,
-                maiModel
+                templateModel.Subject,
+                Path.Combine("EmailTemplates", "templateEmail.html"), // khuyến nghị để trong thư mục con
+                templateModel
             );
 
             return resultSendMail;
@@ -784,8 +806,21 @@ public class UserService : IUserService
         }
         finally
         {
-            //  _unitOfWork.Dispose();
+            // _unitOfWork.Dispose();
         }
+    }
+
+    string BuildActionButtonHtml(string? link, string? text)
+    {
+        if (string.IsNullOrWhiteSpace(link)) return string.Empty;
+
+        var safeText = string.IsNullOrWhiteSpace(text) ? "View" : text;
+        return $@"<p>
+        <a href=""{link}"" 
+           style=""display:inline-block;padding:12px 24px;border-radius:25px;
+                  background-color:#1e90ff;color:#ffffff;text-decoration:none;
+                  font-weight:bold;"">{System.Net.WebUtility.HtmlEncode(safeText)}</a>
+    </p>";
     }
 
     public async Task<UserManageResponse> GetUserManageAsync(Guid userId, CancellationToken ct = default)
@@ -852,7 +887,7 @@ public class UserService : IUserService
                 {
                     Name = ur.Role!.Name,
                     CreatedAt = ur.Role.CreatedTime.UtcDateTime,
-                    IsActive = !ur.Role.IsDeleted
+                    IsActive = ur.Role.IsActive
                 })
                 .ToList();
 
