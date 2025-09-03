@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Travelogue.Repository.Entities.Enums;
+﻿using Travelogue.Repository.Entities.Enums;
 
 namespace Travelogue.Service.BusinessModels.TripPlanModels;
 public class TripPlanDetailResponseDto
@@ -22,8 +17,6 @@ public class TripPlanDetailResponseDto
     public string? StatusText { get; set; }
     public List<TripDayDetail> Days { get; set; } = new List<TripDayDetail>();
 }
-
-
 
 public class TripDayDetail
 {

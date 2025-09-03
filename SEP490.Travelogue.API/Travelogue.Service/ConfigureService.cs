@@ -19,7 +19,6 @@ public static class ConfigureService
         services.Configure<CloudinarySettings>(configuration.GetSection("Cloudinary"));
         services.AddScoped<ICloudinaryService, CloudinaryService>();
 
-
         PayOS payOS = new PayOS(configuration["Environment:PAYOS_CLIENT_ID"] ?? throw new Exception("Cannot find environment"),
                             configuration["Environment:PAYOS_API_KEY"] ?? throw new Exception("Cannot find environment"),
                             configuration["Environment:PAYOS_CHECKSUM_KEY"] ?? throw new Exception("Cannot find environment"));

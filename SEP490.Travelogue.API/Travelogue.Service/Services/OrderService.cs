@@ -91,7 +91,6 @@
 //                     cancellationToken: cancellationToken)
 //                     ?? throw CustomExceptionFactory.CreateNotFoundError("Trip plan not found.");
 
-
 //                 int tripTotalDays = (int)(tripPlan.EndDate.Date - tripPlan.StartDate.Date).TotalDays + 1;
 
 //                 if (tripTotalDays <= 0)

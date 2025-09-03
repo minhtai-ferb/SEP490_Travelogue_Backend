@@ -7,7 +7,7 @@ public class BookingPriceRequestListItemDto
     public Guid Id { get; set; }
 
     public Guid TourGuideId { get; set; }
-    public string TourGuideName { get; set; } = string.Empty;
+    public string? TourGuideName { get; set; } = string.Empty;
 
     public decimal RequestedPrice { get; set; }
 

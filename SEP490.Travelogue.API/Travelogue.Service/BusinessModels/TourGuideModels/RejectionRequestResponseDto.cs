@@ -8,6 +8,7 @@ public class RejectionRequestResponseDto
     public Guid TourGuideId { get; set; }
     public RejectionRequestType RequestType { get; set; }
     public Guid? TourScheduleId { get; set; }
+    public Guid? TourId { get; set; }
     public Guid? BookingId { get; set; }
     public string Reason { get; set; } = null!;
     public RejectionRequestStatus Status { get; set; }

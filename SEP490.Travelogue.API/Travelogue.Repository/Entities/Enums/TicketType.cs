@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-
 namespace Travelogue.Repository.Entities.Enums;
 public enum TicketType
 {

@@ -1,4 +1,3 @@
-using AutoMapper;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Data;

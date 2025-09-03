@@ -42,7 +42,7 @@ public class TourController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, $"An unexpected error occurred. {ex.Message}"));
         }
     }
 
@@ -72,7 +72,7 @@ public class TourController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, $"An unexpected error occurred. {ex.Message}"));
         }
     }
 
@@ -103,7 +103,7 @@ public class TourController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, $"An unexpected error occurred. {ex.Message}"));
         }
     }
 
@@ -134,7 +134,7 @@ public class TourController : ControllerBase
     //     }
     //     catch (Exception ex)
     //     {
-    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, $"An unexpected error occurred. {ex.Message}"));
     //     }
     // }
 
@@ -162,7 +162,7 @@ public class TourController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, $"An unexpected error occurred. {ex.Message}"));
         }
     }
 
@@ -192,7 +192,7 @@ public class TourController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, $"An unexpected error occurred. {ex.Message}"));
         }
     }
 
@@ -222,7 +222,7 @@ public class TourController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, $"An unexpected error occurred. {ex.Message}"));
         }
     }
 
@@ -260,7 +260,7 @@ public class TourController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, $"An unexpected error occurred. {ex.Message}"));
         }
     }
 
@@ -290,7 +290,7 @@ public class TourController : ControllerBase
     //     }
     //     catch (Exception ex)
     //     {
-    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, $"An unexpected error occurred. {ex.Message}"));
     //     }
     // }
 
@@ -325,7 +325,7 @@ public class TourController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, $"An unexpected error occurred. {ex.Message}"));
         }
     }
 
@@ -355,7 +355,7 @@ public class TourController : ControllerBase
     //     }
     //     catch (Exception ex)
     //     {
-    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, $"An unexpected error occurred. {ex.Message}"));
     //     }
     // }
 
@@ -387,7 +387,7 @@ public class TourController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, $"An unexpected error occurred. {ex.Message}"));
         }
     }
 
@@ -428,7 +428,7 @@ public class TourController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+            return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, $"An unexpected error occurred. {ex.Message}"));
         }
     }
     #endregion
@@ -460,7 +460,7 @@ public class TourController : ControllerBase
     //     }
     //     catch (Exception ex)
     //     {
-    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, $"An unexpected error occurred. {ex.Message}"));
     //     }
     // }
 
@@ -491,7 +491,7 @@ public class TourController : ControllerBase
     //     }
     //     catch (Exception ex)
     //     {
-    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, $"An unexpected error occurred. {ex.Message}"));
     //     }
     // }
 
@@ -521,7 +521,7 @@ public class TourController : ControllerBase
     //     }
     //     catch (Exception)
     //     {
-    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, $"An unexpected error occurred. {ex.Message}"));
     //     }
     // }
 
@@ -554,7 +554,7 @@ public class TourController : ControllerBase
     //     }
     //     catch (Exception)
     //     {
-    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
+    //         return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, $"An unexpected error occurred. {ex.Message}"));
     //     }
     // }
 }
