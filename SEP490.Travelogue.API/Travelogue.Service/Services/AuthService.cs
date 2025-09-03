@@ -937,7 +937,7 @@ public class AuthService : IAuthService
                 Email = email,
                 GoogleId = googleId,
                 FullName = fullName,
-                IsEmailVerified = true;
+                IsEmailVerified = true,
                 IsActive = true,
                 IsDeleted = false,
                 CreatedBy = "system",
