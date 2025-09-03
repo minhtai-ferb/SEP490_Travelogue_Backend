@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f6f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background: linear-gradient(90deg, #1e90ff, #00b7eb);
+            color: #ffffff;
+            padding: 20px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+        }
+        .header img {
+            max-width: 150px;
+            height: auto;
+        }
+        .header h1 {
+            margin: 10px 0;
+            font-size: 24px;
+        }
+        .content {
+            padding: 20px;
+        }
+        .content h2 {
+            color: #1e90ff;
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+        .content p {
+            margin: 0 0 15px;
+            font-size: 16px;
+        }
+        .highlight {
+            background-color: #e6f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .highlight p {
+            margin: 0;
+            font-size: 16px;
+            color: #333;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #1e90ff;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .button:hover {
+            background-color: #007bff;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+            padding: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+        .footer a {
+            color: #1e90ff;
+            text-decoration: none;
+        }
+        @media only screen and (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+            .header {
+                padding: 15px;
+            }
+            .content h2 {
+                font-size: 18px;
+            }
+            .button {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <!-- <img src="https://via.placeholder.com/150x50.png?text=Travelogue+Logo" alt="Travelogue Logo"> -->
+            <h1>{{ Subject }}</h1>
+        </div>
+        <div class="content">
+            <h2>Hello, {{ UserName }}!</h2>
+            <p>{{ MainMessage }}</p>
+            <div class="highlight">
+                <p>{{ Details }}</p>
+            </div>
+
+            {{ ActionButtonHtml }}
+
+            <p>If you have any questions or need assistance, please contact our support team at <a href="mailto:travelogue.fpt@gmail.com">travelogue.fpt@gmail.com</a>.</p>
+        </div>
+        <div class="footer">
+            <p>Travelogue &copy; 2025 | <a href="https://travelogue.onl">travelogue.onl</a></p>
+        </div>
+    </div>
+</body>
+</html>

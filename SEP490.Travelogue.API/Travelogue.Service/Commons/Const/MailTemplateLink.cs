@@ -10,4 +10,5 @@ public static class MailTemplateLinks
     public static readonly string LinkForResetPasswordMailTemplate = "https://res.cloudinary.com/dczpihhma/raw/upload/v1743766891/LinkForResetPasswordMailTemplate.html";
     public static readonly string SendFeedbackTemplate = "https://res.cloudinary.com/dczpihhma/raw/upload/v1743766911/SendFeedbackTemplate.html";
     public static readonly string ChangePasswordSuccesfullyTemplate = "https://res.cloudinary.com/dczpihhma/raw/upload/v1743766840/ChangePasswordSuccesfullyTemplate.html";
+    public static readonly string TemplateEmail = "https://res.cloudinary.com/dgbsfacyr/raw/upload/v1756906340/templateEmail_rtftrn.html";
 }

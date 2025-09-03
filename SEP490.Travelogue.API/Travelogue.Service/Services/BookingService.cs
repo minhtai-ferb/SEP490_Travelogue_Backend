@@ -10,6 +10,7 @@ using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.BookingModels;
 using Travelogue.Service.Commons.Helpers;
+using Travelogue.Service.Commons.Implementations;
 using Travelogue.Service.Commons.Interfaces;
 
 namespace Travelogue.Service.Services;
@@ -52,8 +53,9 @@ public class BookingService : IBookingService
     private readonly ITimeService _timeService;
     private readonly IEnumService _enumService;
     private readonly PayOS _payOS;
+    private readonly IEmailService _emailService;
 
-    public BookingService(IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService, IEnumService enumService, PayOS payOS)
+    public BookingService(IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService, ITimeService timeService, IEnumService enumService, PayOS payOS, IEmailService emailService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -61,6 +63,7 @@ public class BookingService : IBookingService
         _timeService = timeService;
         _enumService = enumService;
         _payOS = payOS;
+        _emailService = emailService;
     }
 
     public async Task<BookingDataModel> CreateTourBookingAsync(CreateBookingTourDto dto, CancellationToken cancellationToken)
@@ -830,6 +833,34 @@ public class BookingService : IBookingService
                             _unitOfWork.WorkshopScheduleRepository.Update(ws);
                         }
 
+                        var tour = await _unitOfWork.TourRepository
+                            .ActiveEntities
+                            .FirstOrDefaultAsync(t => t.Id == tourSchedule.TourId);
+
+                        var isConfirmed = existingBooking.Status == BookingStatus.Confirmed;
+                        var subject = isConfirmed
+                            ? $"[Travelogue] Xác nhận đặt tour: {tour?.Name ?? "Tour"}"
+                            : $"[Travelogue] Đơn đặt tour đang chờ thanh toán: {tour?.Name ?? "Tour"}";
+
+                        var body =
+                            $"Chào {existingBooking.ContactName},\n\n" +
+                            (isConfirmed
+                                ? "Đơn đặt tour của bạn đã được XÁC NHẬN.\n\n"
+                                : "Đơn đặt tour của bạn đang CHỜ THANH TOÁN.\n\n") +
+                            $"• Mã đơn: {existingBooking.Id}\n" +
+                            $"• Tour: {tour?.Name ?? "N/A"}\n" +
+                            $"• Khởi hành: {existingBooking.StartDate:dd/MM/yyyy}\n" +
+                            $"• Kết thúc: {existingBooking.EndDate:dd/MM/yyyy}\n" +
+                            $"• Số khách: {totalParticipants}\n" +
+                            $"• Tổng thanh toán: {(existingBooking.FinalPrice)}\n" +
+                            (string.IsNullOrWhiteSpace(tour?.PickupAddress) ? "" : $"• Điểm đón: {tour!.PickupAddress}\n") +
+                            $"\nCảm ơn bạn đã chọn Travelogue.\n";
+
+                        await _emailService.SendEmailAsync(
+                            new[] { existingBooking.ContactEmail },
+                            subject,
+                            body
+                        );
                         break;
                     }
 
@@ -873,6 +904,8 @@ public class BookingService : IBookingService
 
                     workshopSchedule.CurrentBooked += totalParticipants;
                     _unitOfWork.WorkshopScheduleRepository.Update(workshopSchedule);
+
+
 
                     break;
 
@@ -946,6 +979,34 @@ public class BookingService : IBookingService
                     //     };
                     //     await _unitOfWork.TourGuideScheduleRepository.AddAsync(schedule);
                     // }
+
+                    {
+                        // Nếu có FullName, dùng; nếu không, fallback email
+                        var guideName = (guideUser.GetType().GetProperty("FullName")?.GetValue(guideUser) as string)
+                                        ?? guideUser.Email;
+
+                        var isConfirmed = existingBooking.Status == BookingStatus.Confirmed;
+                        var subject = isConfirmed
+                            ? $"[Travelogue] Xác nhận đặt tour guide: {guideName}"
+                            : $"[Travelogue] Đặt tour guide đang chờ thanh toán: {guideName}";
+
+                        var body =
+                            $"Chào {existingBooking.ContactName},\n\n" +
+                            (isConfirmed
+                                ? "Đơn đặt tour guide của bạn đã được XÁC NHẬN.\n\n"
+                                : "Đơn đặt tour guide của bạn đang CHỜ THANH TOÁN.\n\n") +
+                            $"• Mã đơn: {existingBooking.Id}\n" +
+                            $"• Hướng dẫn viên: {guideName}\n" +
+                            $"• Lịch làm việc: {existingBooking.StartDate:dd/MM/yyyy} → {existingBooking.EndDate:dd/MM/yyyy}\n" +
+                            $"• Tổng thanh toán: {(existingBooking.FinalPrice)}\n" +
+                            $"\nChúc bạn có chuyến đi thuận lợi!\n";
+
+                        await _emailService.SendEmailAsync(
+                            new[] { existingBooking.ContactEmail },
+                            subject,
+                            body
+                        );
+                    }
                     break;
 
                 default:
@@ -988,7 +1049,7 @@ public class BookingService : IBookingService
                 IsSystem = true,
                 SystemKind = SystemTransactionKind.IncomingTourPayment,
                 Channel = PaymentChannel.Bank,
-                TransactionDirection = TransactionDirection.Debit,
+                TransactionDirection = TransactionDirection.Credit,
                 PaidAmount = paymentResponse.Data.Amount,
                 PaymentReference = paymentResponse.Data.Reference,
                 Status = TransactionStatus.Completed,
@@ -1021,6 +1082,8 @@ public class BookingService : IBookingService
                 _unitOfWork.BookingRepository.UpdateRange(bookingsToUpdate);
                 await _unitOfWork.SaveAsync();
             }
+
+
 
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync();
