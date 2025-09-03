@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Google.Protobuf;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
@@ -218,7 +217,6 @@ public class LocationService : ILocationService
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
-
 
     public async Task<LocationDataModel> AddCuisineDataAsync(Guid locationId, CuisineCreateModel? model, CancellationToken cancellationToken)
     {
@@ -2841,7 +2839,6 @@ public class LocationService : ILocationService
 
         return dto;
     }
-
 
     #endregion
 }

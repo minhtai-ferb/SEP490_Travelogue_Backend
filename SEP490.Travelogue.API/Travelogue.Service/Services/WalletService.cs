@@ -145,7 +145,6 @@ public class WalletService : IWalletService
         }
     }
 
-
     public async Task<List<TransactionDto>> GetAllTransactionsAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -181,7 +180,6 @@ public class WalletService : IWalletService
 
             if (hasPendingRequest)
                 throw CustomExceptionFactory.CreateBadRequestError("Bạn đang có một yêu cầu rút tiền đang chờ xử lý. Vui lòng đợi admin duyệt trước khi tạo yêu cầu mới.");
-
 
             var wallet = await _unitOfWork.WalletRepository
                 .ActiveEntities

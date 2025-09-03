@@ -6,8 +6,6 @@ using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.MediaModel;
-using Travelogue.Service.BusinessModels.ReviewModels;
-using Travelogue.Service.BusinessModels.TourModels;
 using Travelogue.Service.BusinessModels.WorkshopModels;
 using Travelogue.Service.Commons.Implementations;
 using Travelogue.Service.Commons.Interfaces;
@@ -1775,7 +1773,6 @@ public class WorkshopService : IWorkshopService
     //            .FirstOrDefaultAsync(a => a.Id == activityId && a.WorkshopId == workshopId)
     //            ?? throw CustomExceptionFactory.CreateNotFoundError("Activity");
 
-
     //        _unitOfWork.WorkshopActivityRepository.Remove(activity);
     //        await _unitOfWork.SaveAsync();
 
@@ -1868,7 +1865,6 @@ public class WorkshopService : IWorkshopService
     //            Notes = dto.Notes
     //        }).ToList();
 
-
     //        foreach (var schedule in schedules)
     //        {
     //            await _unitOfWork.WorkshopScheduleRepository.AddAsync(schedule);
@@ -1888,7 +1884,6 @@ public class WorkshopService : IWorkshopService
     //        }
 
     //        await transaction.CommitAsync();
-
 
     //        return schedules.Select(s => new ScheduleResponseDto
     //        {
@@ -2065,7 +2060,6 @@ public class WorkshopService : IWorkshopService
     //        // var maxDayOrder = workshop.WorkshopActivities.Any() ? workshop.WorkshopActivities.Max(a => a.DayOrder) : 0;
     //        // if (remainingSchedules.Count < maxDayOrder)
     //        //     throw CustomExceptionFactory.CreateBadRequestError($"Không thể xóa schedule: Not enough remaining schedules ({remainingSchedules.Count}) to cover DayOrder ({maxDayOrder}).");
-
 
     //        _unitOfWork.WorkshopScheduleRepository.Remove(schedule);
     //        await _unitOfWork.SaveAsync();

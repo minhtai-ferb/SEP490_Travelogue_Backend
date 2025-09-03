@@ -24,7 +24,6 @@ public class EnumService : IEnumService
         return displayAttr?.Name ?? enumValue.ToString();
     }
 
-
     public List<EnumResponse> GetEnumValues<T>() where T : Enum
     {
         return Enum.GetValues(typeof(T))

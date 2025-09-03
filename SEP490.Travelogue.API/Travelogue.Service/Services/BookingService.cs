@@ -156,7 +156,6 @@ public class BookingService : IBookingService
                 });
             }
 
-
             await _unitOfWork.BookingRepository.AddAsync(booking);
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync();
@@ -562,6 +561,8 @@ public class BookingService : IBookingService
                     DateOfBirth = p.DateOfBirth
                 }).ToList()
             };
+
+
         }
         catch (CustomException)
         {
@@ -1568,6 +1569,7 @@ public class BookingService : IBookingService
 
     public async Task<bool> CancelBookingAsync(Guid bookingId)
     {
+        await using var tx = await _unitOfWork.BeginTransactionAsync();
         try
         {
             var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
@@ -1580,41 +1582,114 @@ public class BookingService : IBookingService
 
             var booking = await _unitOfWork.BookingRepository
                 .ActiveEntities
+                .Include(b => b.Participants)
                 .FirstOrDefaultAsync(b => b.Id == bookingId && b.UserId == currentUserId)
-                ?? throw CustomExceptionFactory.CreateNotFoundError("tour");
+                ?? throw CustomExceptionFactory.CreateNotFoundError("booking");
+
+            if (booking.Status == BookingStatus.Cancelled || booking.Status == BookingStatus.CancelledUnpaid)
+                return true;
 
             if (booking.Status == BookingStatus.Confirmed)
             {
                 var hoursUntilStart = (booking.StartDate - currentTime).TotalHours;
                 if (hoursUntilStart < 24)
-                {
                     throw CustomExceptionFactory.CreateBadRequestError("Không thể hủy đơn trong vòng 24 giờ trước khi bắt đầu.");
+            }
+
+            var totalParticipants = booking.Participants?.Sum(p => (p.Quantity > 0 ? p.Quantity : 1)) ?? 0;
+
+            if (booking.Status == BookingStatus.Confirmed && totalParticipants > 0)
+            {
+                switch (booking.BookingType)
+                {
+                    case BookingType.Tour:
+                        {
+                            if (!booking.TourScheduleId.HasValue)
+                                break;
+
+                            var tourSchedule = await _unitOfWork.TourScheduleRepository
+                                 .ActiveEntities
+                                 .FirstOrDefaultAsync(ts => ts.Id == booking.TourScheduleId.Value)
+                                 ?? throw CustomExceptionFactory.CreateNotFoundError("tour schedule");
+
+                            tourSchedule.CurrentBooked = Math.Max(0, tourSchedule.CurrentBooked - totalParticipants);
+                            _unitOfWork.TourScheduleRepository.Update(tourSchedule);
+
+                            var wsIds = await _unitOfWork.TourScheduleWorkshopRepository
+                               .ActiveEntities
+                               .Where(x => x.TourScheduleId == tourSchedule.Id)
+                               .Select(x => x.WorkshopScheduleId)
+                               .Distinct()
+                               .ToListAsync();
+
+                            if (wsIds.Count > 0)
+                            {
+                                var workshopSchedules = await _unitOfWork.WorkshopScheduleRepository
+                                    .ActiveEntities
+                                    .Where(ws => wsIds.Contains(ws.Id))
+                                    .ToListAsync();
+
+                                foreach (var ws in workshopSchedules)
+                                {
+                                    ws.CurrentBooked = Math.Max(0, ws.CurrentBooked - totalParticipants);
+                                    _unitOfWork.WorkshopScheduleRepository.Update(ws);
+                                }
+                            }
+                            break;
+                        }
+
+                    case BookingType.Workshop:
+                        {
+                            if (!booking.WorkshopScheduleId.HasValue)
+                                break;
+
+                            var workshopSchedule = await _unitOfWork.WorkshopScheduleRepository
+                                .ActiveEntities
+                                .FirstOrDefaultAsync(ws => ws.Id == booking.WorkshopScheduleId.Value)
+                                ?? throw CustomExceptionFactory.CreateNotFoundError("workshop schedule");
+
+                            workshopSchedule.CurrentBooked = Math.Max(0, workshopSchedule.CurrentBooked - totalParticipants);
+                            _unitOfWork.WorkshopScheduleRepository.Update(workshopSchedule);
+                            break;
+                        }
+
+                    case BookingType.TourGuide:
+                        {
+                            var guideSchedules = await _unitOfWork.TourGuideScheduleRepository
+                                .ActiveEntities
+                                .Where(s => s.BookingId == booking.Id)
+                                .ToListAsync();
+
+                            if (guideSchedules.Count > 0)
+                                _unitOfWork.TourGuideScheduleRepository.RemoveRange(guideSchedules);
+
+                            break;
+                        }
                 }
             }
 
             if (booking.Status == BookingStatus.Pending)
-            {
                 booking.Status = BookingStatus.CancelledUnpaid;
-            }
             else
-            {
                 booking.Status = BookingStatus.Cancelled;
-            }
 
             booking.CancelledAt = currentTime;
             booking.LastUpdatedTime = currentTime;
 
             _unitOfWork.BookingRepository.Update(booking);
-            await _unitOfWork.SaveAsync();
 
+            await _unitOfWork.SaveAsync();
+            await tx.CommitAsync();
             return true;
         }
         catch (CustomException)
         {
+            await tx.RollbackAsync();
             throw;
         }
         catch (Exception ex)
         {
+            await tx.RollbackAsync();
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
@@ -1987,7 +2062,6 @@ public class BookingService : IBookingService
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
-
 
     public async Task<BookingDataModel> GetBookingByIdAsync(Guid bookingId)
     {

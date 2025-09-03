@@ -30,7 +30,6 @@ namespace Travelogue.Repository.Entities;
 //    public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 //}
 
-
 public sealed class WorkshopSchedule : BaseEntity
 {
     [Required]
@@ -49,5 +48,5 @@ public sealed class WorkshopSchedule : BaseEntity
     public int CurrentBooked { get; set; } = 0;
     public string? Notes { get; set; }
 
-    public ScheduleStatus Status { get; set; } = ScheduleStatus.Active; 
+    public ScheduleStatus Status { get; set; } = ScheduleStatus.Active;
 }

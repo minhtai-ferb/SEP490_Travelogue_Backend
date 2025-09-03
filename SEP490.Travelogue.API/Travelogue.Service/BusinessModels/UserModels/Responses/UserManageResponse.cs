@@ -1,6 +1,6 @@
-﻿using Travelogue.Service.BusinessModels.TourGuideModels;
-using Travelogue.Repository.Entities.Enums;
+﻿using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.BankAccountModels;
+using Travelogue.Service.BusinessModels.TourGuideModels;
 using Travelogue.Service.BusinessModels.TransactionModels;
 
 namespace Travelogue.Service.BusinessModels.UserModels.Responses;

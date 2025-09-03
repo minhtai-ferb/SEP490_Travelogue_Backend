@@ -21,5 +21,5 @@ public class NewsDataModel : BaseDataModel
     public TypeExperience? TypeExperience { get; set; }
     public string? TypeExperienceText { get; set; } = string.Empty;
 
-    public List<MediaResponse> Medias { get; set; } = new List<MediaResponse>(); 
+    public List<MediaResponse> Medias { get; set; } = new List<MediaResponse>();
 }

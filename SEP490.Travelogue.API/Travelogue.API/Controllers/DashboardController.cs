@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Travelogue.Repository.Bases.Responses;
 using Travelogue.Repository.Entities.Enums;
-using Travelogue.Service.BusinessModels.BookingModels;
 using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 

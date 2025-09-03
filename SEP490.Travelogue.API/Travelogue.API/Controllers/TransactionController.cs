@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Travelogue.Repository.Bases.Exceptions;
 using Travelogue.Repository.Bases.Responses;
-using Travelogue.Service.BusinessModels.TourModels;
 using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 

@@ -8,7 +8,6 @@ using Travelogue.Repository.Const;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Service.BusinessModels.UserModels.Responses;
-using Travelogue.Service.Commons.Const;
 using Travelogue.Service.Commons.Interfaces;
 
 namespace Travelogue.Service.Services;

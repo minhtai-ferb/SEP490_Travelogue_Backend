@@ -1,5 +1,3 @@
-using Travelogue.Service.BusinessModels.BookingModels;
-
 namespace Travelogue.Service.BusinessModels.DashboardModels;
 
 public class BookingStatisticsDto

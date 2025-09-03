@@ -1,6 +1,4 @@
-﻿using Travelogue.Service.BusinessModels.MediaModel;
-
-namespace Travelogue.Service.BusinessModels.CuisineModels;
+﻿namespace Travelogue.Service.BusinessModels.CuisineModels;
 
 public class CuisineDataModel //: BaseDataModel
 {

@@ -28,7 +28,6 @@ namespace Travelogue.Repository.Entities;
 //    public ICollection<PromotionApplicable> PromotionApplicables { get; set; } = new List<PromotionApplicable>();
 //}
 
-
 public sealed class Workshop : BaseEntity
 {
     [Required, MaxLength(100)]

@@ -63,7 +63,6 @@ public class TourGuideController : ControllerBase
         ));
     }
 
-
     // [HttpPost("assign")]
     // public async Task<IActionResult> AssignToTourGuideAsync([FromBody] List<string> emails, CancellationToken cancellationToken)
     // {
@@ -131,11 +130,11 @@ public class TourGuideController : ControllerBase
         [FromQuery] BookingPriceRequestStatus? status,
         [FromQuery] DateTime? fromDate,
         [FromQuery] DateTime? toDate,
-        [FromQuery] string? keyword,
+        [FromQuery] string? tourGuideName,
         CancellationToken ct = default)
     {
         var result = await _tourGuideService.GetGuidePriceRequestsForModeratorAsync(
-            tourGuideId, status, fromDate, toDate, keyword, ct);
+            tourGuideId, status, fromDate, toDate, tourGuideName, ct);
 
         return Ok(ResponseModel<object>.OkResponseModel(
             data: result,
@@ -191,7 +190,6 @@ public class TourGuideController : ControllerBase
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "booking price request")
         ));
     }
-
 
     [HttpGet("{tourGuideId}/bookings")]
     public async Task<IActionResult> GetBookingsByTourGuideAsync(Guid tourGuideId, [FromQuery] BookingFilterDto filter, CancellationToken cancellationToken = default)

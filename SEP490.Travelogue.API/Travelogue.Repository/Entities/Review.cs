@@ -18,10 +18,10 @@ public class Review : BaseEntity
     [Range(1, 5)]
     public int Rating { get; set; }
 
-    public ReportStatus? FinalReportStatus { get; set; } 
-    public Guid? HandledBy { get; set; }             
-    public DateTimeOffset? HandledAt { get; set; }     
-    public string? ModeratorNote { get; set; }      
+    public ReportStatus? FinalReportStatus { get; set; }
+    public Guid? HandledBy { get; set; }
+    public DateTimeOffset? HandledAt { get; set; }
+    public string? ModeratorNote { get; set; }
 
     public User User { get; set; } = null!;
     public Booking Booking { get; set; } = null!;

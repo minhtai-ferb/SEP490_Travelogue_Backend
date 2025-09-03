@@ -77,7 +77,6 @@ builder.Services.AddHttpClient<MailTemplateService>();
 // Load file .env
 var serviceAccountPath = Path.Combine(Directory.GetCurrentDirectory(), "Config/serviceAccountKey.json");
 
-
 if (string.IsNullOrEmpty(serviceAccountPath))
 {
     throw new Exception("GOOGLE_APPLICATION_CREDENTIALS is missing in .env");
@@ -105,7 +104,6 @@ builder.Services.AddQuartz(q =>
 });
 
 builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
-
 
 builder.Services.AddSingleton(FirebaseAuth.DefaultInstance);
 
@@ -163,7 +161,6 @@ app.UseStaticFiles(new StaticFileOptions
         Path.Combine(Directory.GetCurrentDirectory(), "documents")),
     RequestPath = "/documents"
 });
-
 
 app.UseAuthentication();
 app.UseAuthorization();

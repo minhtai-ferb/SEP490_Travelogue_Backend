@@ -48,7 +48,6 @@ public class WorkshopController : ControllerBase
         ));
     }
 
-
     /// <summary>
     /// moderator filter các workshop theo các điều kiện kèm theo status (đã duyệt hay chưa)
     /// </summary>
@@ -125,7 +124,6 @@ public class WorkshopController : ControllerBase
             return StatusCode(500, ResponseModel<object>.ErrorResponseModel(500, "An unexpected error occurred."));
         }
     }
-
 
     // [HttpPut("{workshopId}/confirm")]
     // [ProducesResponseType(typeof(ResponseModel<WorkshopResponseDto>), StatusCodes.Status200OK)]

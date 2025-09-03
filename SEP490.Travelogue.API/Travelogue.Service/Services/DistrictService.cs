@@ -5,7 +5,6 @@ using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
-using Travelogue.Repository.Bases.Responses;
 using Travelogue.Repository.Data;
 using Travelogue.Repository.Entities;
 using Travelogue.Service.BusinessModels.DistrictModels;

@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Travelogue.Repository.Bases;
 using Travelogue.Repository.Bases.Exceptions;
@@ -8,7 +7,6 @@ using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
 using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.BusinessModels.NewsModels;
-using Travelogue.Service.Commons.Helpers;
 using Travelogue.Service.Commons.Implementations;
 using Travelogue.Service.Commons.Interfaces;
 
@@ -120,7 +118,6 @@ public class NewsService : INewsService
             }
 
             await transaction.CommitAsync(cancellationToken);
-
 
             var response = new NewsDataModel
             {

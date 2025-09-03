@@ -6,7 +6,6 @@ using Travelogue.Service.BusinessModels.CraftVillageModels;
 using Travelogue.Service.BusinessModels.CuisineModels;
 using Travelogue.Service.BusinessModels.HistoricalLocationModels;
 using Travelogue.Service.BusinessModels.LocationModels;
-using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
 

@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Travelogue.Repository.Bases.Responses;
-using Travelogue.Repository.Entities;
 using Travelogue.Repository.Entities.Enums;
-using Travelogue.Service.BusinessModels.MediaModel;
 using Travelogue.Service.BusinessModels.NewsModels;
 using Travelogue.Service.Commons.BaseResponses;
 using Travelogue.Service.Services;
@@ -157,7 +155,7 @@ public class NewsController : ControllerBase
         [FromQuery] int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
-        var result = await _newsService.GetPagedExperienceWithFilterAsync(title, locationId, typeExperience , isHighlighted, pageNumber, pageSize, cancellationToken);
+        var result = await _newsService.GetPagedExperienceWithFilterAsync(title, locationId, typeExperience, isHighlighted, pageNumber, pageSize, cancellationToken);
 
         return Ok(PagedResponseModel<object>.OkResponseModel(
             data: result.Items,
@@ -219,7 +217,6 @@ public class NewsController : ControllerBase
             message: ResponseMessageHelper.FormatMessage(ResponseMessages.UPDATE_SUCCESS, "news")
         ));
     }
-
 
     /// <summary>
     /// Xóa news theo id

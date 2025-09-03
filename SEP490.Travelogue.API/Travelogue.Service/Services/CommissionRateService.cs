@@ -96,7 +96,6 @@ public class CommissionRateService : ICommissionRateService
         }
     }
 
-
     public async Task<CommissionRateDto?> GetByIdAsync(Guid id)
     {
         try

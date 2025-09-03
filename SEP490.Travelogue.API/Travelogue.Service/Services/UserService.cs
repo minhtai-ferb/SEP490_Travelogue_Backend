@@ -903,7 +903,6 @@ public class UserService : IUserService
                 };
             }
 
-
             // lang nghe
             CraftVillagesInfo? craftInfo = null;
             var craftVillage = await _unitOfWork.CraftVillageRepository.ActiveEntities
@@ -1691,7 +1690,6 @@ public class UserService : IUserService
             throw CustomExceptionFactory.CreateInternalServerError(ex.Message);
         }
     }
-
 
     public async Task<TourGuideRequestResponseDto> ReviewTourGuideRequestAsync(Guid requestId, ReviewTourGuideRequestDto model, CancellationToken cancellationToken = default)
     {

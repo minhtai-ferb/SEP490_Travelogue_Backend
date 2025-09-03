@@ -1,5 +1,4 @@
-﻿using Travelogue.Service.BusinessModels.MediaModel;
-using Travelogue.Service.BusinessModels.WorkshopModels;
+﻿using Travelogue.Service.BusinessModels.WorkshopModels;
 
 namespace Travelogue.Service.BusinessModels.CraftVillageModels;
 
