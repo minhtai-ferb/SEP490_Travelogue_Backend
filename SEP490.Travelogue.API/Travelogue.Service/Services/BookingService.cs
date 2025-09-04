@@ -832,35 +832,6 @@ public class BookingService : IBookingService
                             ws.CurrentBooked += totalParticipants;
                             _unitOfWork.WorkshopScheduleRepository.Update(ws);
                         }
-
-                        // var tour = await _unitOfWork.TourRepository
-                        //     .ActiveEntities
-                        //     .FirstOrDefaultAsync(t => t.Id == tourSchedule.TourId);
-
-                        // var isConfirmed = existingBooking.Status == BookingStatus.Confirmed;
-                        // var subject = isConfirmed
-                        //     ? $"[Travelogue] Xác nhận đặt tour: {tour?.Name ?? "Tour"}"
-                        //     : $"[Travelogue] Đơn đặt tour đang chờ thanh toán: {tour?.Name ?? "Tour"}";
-
-                        // var body =
-                        //     $"Chào {existingBooking.ContactName},\n\n" +
-                        //     (isConfirmed
-                        //         ? "Đơn đặt tour của bạn đã được XÁC NHẬN.\n\n"
-                        //         : "Đơn đặt tour của bạn đang CHỜ THANH TOÁN.\n\n") +
-                        //     $"• Mã đơn: {existingBooking.Id}\n" +
-                        //     $"• Tour: {tour?.Name ?? "N/A"}\n" +
-                        //     $"• Khởi hành: {existingBooking.StartDate:dd/MM/yyyy}\n" +
-                        //     $"• Kết thúc: {existingBooking.EndDate:dd/MM/yyyy}\n" +
-                        //     $"• Số khách: {totalParticipants}\n" +
-                        //     $"• Tổng thanh toán: {(existingBooking.FinalPrice)}\n" +
-                        //     (string.IsNullOrWhiteSpace(tour?.PickupAddress) ? "" : $"• Điểm đón: {tour!.PickupAddress}\n") +
-                        //     $"\nCảm ơn bạn đã chọn Travelogue.\n";
-
-                        // await _emailService.SendEmailAsync(
-                        //     new[] { existingBooking.ContactEmail },
-                        //     subject,
-                        //     body
-                        // );
                         break;
                     }
 
@@ -980,33 +951,7 @@ public class BookingService : IBookingService
                     //     await _unitOfWork.TourGuideScheduleRepository.AddAsync(schedule);
                     // }
 
-                    // {
-                    //     // Nếu có FullName, dùng; nếu không, fallback email
-                    //     var guideName = (guideUser.GetType().GetProperty("FullName")?.GetValue(guideUser) as string)
-                    //                     ?? guideUser.Email;
 
-                    //     var isConfirmed = existingBooking.Status == BookingStatus.Confirmed;
-                    //     var subject = isConfirmed
-                    //         ? $"[Travelogue] Xác nhận đặt tour guide: {guideName}"
-                    //         : $"[Travelogue] Đặt tour guide đang chờ thanh toán: {guideName}";
-
-                    //     var body =
-                    //         $"Chào {existingBooking.ContactName},\n\n" +
-                    //         (isConfirmed
-                    //             ? "Đơn đặt tour guide của bạn đã được XÁC NHẬN.\n\n"
-                    //             : "Đơn đặt tour guide của bạn đang CHỜ THANH TOÁN.\n\n") +
-                    //         $"• Mã đơn: {existingBooking.Id}\n" +
-                    //         $"• Hướng dẫn viên: {guideName}\n" +
-                    //         $"• Lịch làm việc: {existingBooking.StartDate:dd/MM/yyyy} → {existingBooking.EndDate:dd/MM/yyyy}\n" +
-                    //         $"• Tổng thanh toán: {(existingBooking.FinalPrice)}\n" +
-                    //         $"\nChúc bạn có chuyến đi thuận lợi!\n";
-
-                    //     await _emailService.SendEmailAsync(
-                    //         new[] { existingBooking.ContactEmail },
-                    //         subject,
-                    //         body
-                    //     );
-                    // }
                     break;
 
                 default:
@@ -1083,7 +1028,11 @@ public class BookingService : IBookingService
                 await _unitOfWork.SaveAsync();
             }
 
-
+            await _emailService.SendEmailAsync(
+                                       new[] { existingBooking.ContactEmail },
+                                       "Đơn booking của bạn đã được XÁC NHẬN",
+                                       "Chi tiết đơn đặt xin liên truy cập ứng dụng để xem chi tiết"
+                                   );
 
             await _unitOfWork.SaveAsync();
             await transaction.CommitAsync();
