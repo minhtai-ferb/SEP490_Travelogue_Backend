@@ -985,8 +985,13 @@ public class TourGuideService : ITourGuideService
             }
             else if (request.RequestType == RejectionRequestType.Booking && request.Booking != null)
             {
-                request.Booking.Status = BookingStatus.Cancelled;
+                request.Booking.Status = BookingStatus.CancelledByProvider;
                 _unitOfWork.BookingRepository.Update(request.Booking);
+
+                var userWallet = await _unitOfWork.WalletRepository.ActiveEntities
+                    .FirstOrDefaultAsync(x => x.UserId == request.Booking.UserId);
+                if (userWallet != null)
+                    userWallet.Balance += request.Booking.FinalPrice;
 
                 await _emailService.SendEmailAsync(
                     new[] { request.Booking.User.Email },
