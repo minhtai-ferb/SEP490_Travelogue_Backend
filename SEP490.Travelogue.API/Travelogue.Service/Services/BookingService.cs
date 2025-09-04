@@ -2082,7 +2082,7 @@ public class BookingService : IBookingService
             var currentUserId = Guid.Parse(_userContextService.GetCurrentUserId());
 
             var isUser = _userContextService.HasRole(AppRole.USER);
-            var isAdminOrModerator = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR);
+            var isAdminOrModerator = _userContextService.HasAnyRole(AppRole.ADMIN, AppRole.MODERATOR, AppRole.TOUR_GUIDE, AppRole.CRAFT_VILLAGE_OWNER);
 
             if (!isUser && !isAdminOrModerator)
             {
